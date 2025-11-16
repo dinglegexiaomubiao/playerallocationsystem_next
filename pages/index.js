@@ -16,6 +16,8 @@ export default function Home() {
   const [draggedPlayerId, setDraggedPlayerId] = useState(null);
   const [selectedHeroes, setSelectedHeroes] = useState([]); // 存储选中的英雄
   const [selectedSynergyPlayers, setSelectedSynergyPlayers] = useState([]); // 存储选中的默契选手
+  const [editingPlayer, setEditingPlayer] = useState(null); // 存储正在编辑的选手
+  const [showEditPlayerModal, setShowEditPlayerModal] = useState(false); // 控制编辑选手模态框显示
   const importFileRef = useRef(null);
 
   // 英雄列表数据
@@ -303,17 +305,25 @@ export default function Home() {
 
   // 创建新选手
   const createNewPlayer = (playerData) => {
-    const newPlayer = {
-      id: Date.now().toString(),
-      ...playerData,
-      heroes: selectedHeroes,
-      synergy_players: selectedSynergyPlayers,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      team_name: "unassigned"
-    };
+    if (editingPlayer) {
+      // 更新现有选手
+      updatePlayer(editingPlayer.id, playerData);
+      setEditingPlayer(null);
+    } else {
+      // 创建新选手
+      const newPlayer = {
+        id: Date.now().toString(),
+        ...playerData,
+        heroes: selectedHeroes,
+        synergy_players: selectedSynergyPlayers,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        team_name: "unassigned"
+      };
+      
+      setUnassignedPlayers([...unassignedPlayers, newPlayer]);
+    }
     
-    setUnassignedPlayers([...unassignedPlayers, newPlayer]);
     setShowNewPlayerModal(false);
     setSelectedHeroes([]);
     setSelectedSynergyPlayers([]);
@@ -442,6 +452,61 @@ export default function Home() {
     } else {
       setSelectedSynergyPlayers([...selectedSynergyPlayers, playerId]);
     }
+  };
+
+  // 编辑选手信息
+  const editPlayer = (player) => {
+    setEditingPlayer(player);
+    // 设置表单字段的值
+    setTimeout(() => {
+      document.getElementById('newPlayerNickname').value = player.nickname;
+      document.getElementById('newPlayerGameId').value = player.game_id;
+      document.getElementById('newPlayerGroupNickname').value = player.group_nickname || '';
+      document.getElementById('newPlayerScore').value = player.score;
+      document.getElementById('newPlayerWinRate').value = player.win_rate || 0;
+      document.getElementById('newPlayerChampionships').value = player.championships || 0;
+      
+      // 设置位置选择
+      const positionCheckboxes = document.querySelectorAll('input[name="positions"]');
+      positionCheckboxes.forEach(checkbox => {
+        checkbox.checked = player.positions.includes(checkbox.value);
+      });
+      
+      // 设置已选择的英雄和默契选手
+      setSelectedHeroes(player.heroes || []);
+      setSelectedSynergyPlayers(player.synergy_players || []);
+    }, 0);
+    
+    setShowNewPlayerModal(true);
+  };
+
+  // 更新选手信息
+  const updatePlayer = (playerId, playerData) => {
+    const updatedPlayers = unassignedPlayers.map(player => {
+      if (player.id === playerId) {
+        return {
+          ...player,
+          ...playerData,
+          heroes: selectedHeroes,
+          synergy_players: selectedSynergyPlayers,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return player;
+    });
+    
+    setUnassignedPlayers(updatedPlayers);
+  };
+
+  // 删除选手
+  const deletePlayer = (playerId) => {
+    const updatedPlayers = unassignedPlayers.filter(player => player.id !== playerId);
+    setUnassignedPlayers(updatedPlayers);
+  };
+
+  // 复制选手游戏ID
+  const copyPlayerGameId = (gameId) => {
+    navigator.clipboard.writeText(gameId);
   };
 
   return (
@@ -591,6 +656,9 @@ export default function Home() {
                   key={player.id} 
                   player={player} 
                   onDragStart={handleDragStart}
+                  onEdit={editPlayer}
+                  onDelete={deletePlayer}
+                  onCopy={copyPlayerGameId}
                 />
               ))}
             </div>
@@ -625,14 +693,24 @@ export default function Home() {
         </div>
       )}
 
-      {/* 新增选手对话框 */}
+      {/* 新增/编辑选手对话框 */}
       {showNewPlayerModal && (
         <div id="newPlayerModal" className="modal active show" style={{display: 'flex'}}>
-          <div className="modal-backdrop" onClick={() => setShowNewPlayerModal(false)}></div>
+          <div className="modal-backdrop" onClick={() => {
+            setShowNewPlayerModal(false);
+            setEditingPlayer(null);
+            setSelectedHeroes([]);
+            setSelectedSynergyPlayers([]);
+          }}></div>
           <div className="modal-content large-modal">
             <div className="modal-header">
-              <h3>新增选手</h3>
-              <button className="modal-close" id="closeNewPlayerModal" onClick={() => setShowNewPlayerModal(false)}>&times;</button>
+              <h3>{editingPlayer ? '编辑选手' : '新增选手'}</h3>
+              <button className="modal-close" id="closeNewPlayerModal" onClick={() => {
+                setShowNewPlayerModal(false);
+                setEditingPlayer(null);
+                setSelectedHeroes([]);
+                setSelectedSynergyPlayers([]);
+              }}>&times;</button>
             </div>
             <div className="modal-body">
               <form id="newPlayerForm" className="new-player-form" onSubmit={(e) => {
@@ -651,6 +729,7 @@ export default function Home() {
                   championships: parseInt(form.newPlayerChampionships.value) || 0
                 };
                 
+                // 在createNewPlayer函数中会检查editingPlayer状态来决定是创建还是更新
                 createNewPlayer(playerData);
               }}>
                 <div className="form-row">

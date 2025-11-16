@@ -1,4 +1,6 @@
-export default function PlayerCard({ player, onRemove, onDragStart }) {
+import { useState } from 'react';
+
+export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete }) {
   // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
@@ -6,6 +8,11 @@ export default function PlayerCard({ player, onRemove, onDragStart }) {
     if (score >= 10000) return 'score-platinum';
     if (score >= 5000) return 'score-gold';
     return 'score-silver';
+  };
+
+  const handleCopyGameID = () => {
+    navigator.clipboard.writeText(player.game_id);
+    // 可以添加一些用户反馈，比如显示"已复制"提示
   };
 
   return (
@@ -93,25 +100,28 @@ export default function PlayerCard({ player, onRemove, onDragStart }) {
         <div className="player-synergy-preview">
           <div className="info-label">默契选手:</div>
           <div className="info-content">
-            {player.synergy_players.slice(0, 2).map((synergyPlayer, index) => (
-              <span key={index} className="synergy-tag small">{synergyPlayer}</span>
+            {player.synergy_players.slice(0, 3).map((partner, index) => (
+              <span key={index} className="hero-tag small">{partner}</span>
             ))}
-            {player.synergy_players.length > 2 && (
-              <span className="synergy-tag small more">+{player.synergy_players.length - 2}</span>
+            {player.synergy_players.length > 3 && (
+              <span className="hero-tag small more">+{player.synergy_players.length - 3}</span>
             )}
           </div>
         </div>
       )}
       
-      {player.synergy_players && player.synergy_players.length > 0 && (
-        <div className="synergy-indicator">
-          <div className="synergy-icon">🔗</div>
-          <div className="synergy-names">
-            {player.synergy_players.slice(0, 2).join(', ')}
-            {player.synergy_players.length > 2 && ` 等${player.synergy_players.length}人`}
-          </div>
-        </div>
-      )}
+      {/* 操作按钮区域 - 始终显示 */}
+      <div className="player-actions">
+        <button className="player-action-btn edit-btn" onClick={() => onEdit && onEdit(player)} title="编辑选手">
+          ✏️ 编辑
+        </button>
+        <button className="player-action-btn copy-btn" onClick={handleCopyGameID} title="复制游戏ID">
+          📋 复制
+        </button>
+        <button className="player-action-btn delete-btn" onClick={() => onDelete && onDelete(player.id)} title="删除选手">
+          🗑️ 删除
+        </button>
+      </div>
     </div>
   );
 }
