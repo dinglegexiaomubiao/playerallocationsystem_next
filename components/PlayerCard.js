@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete }) {
+export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false }) {
   // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
@@ -12,8 +12,75 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
 
   const handleCopyGameID = () => {
     navigator.clipboard.writeText(player.game_id);
-    // 可以添加一些用户反馈，比如显示"已复制"提示
+    // 显示复制成功的提示
+    alert('游戏ID已复制到剪贴板');
   };
+
+  const handleDelete = () => {
+    if (window.confirm(`确定要删除选手 "${player.nickname}" 吗？此操作不可撤销。`)) {
+      if (onDelete) {
+        onDelete(player.id);
+      } else if (onRemove) {
+        onRemove(player.id);
+      }
+    }
+  };
+
+  // 精简版选手卡片
+  if (isSimplified) {
+    return (
+      <div className="player-card simplified">
+        <div className="player-header">
+          <div className="player-info">
+            <div className="player-basic-info">
+              <div className="player-nickname">{player.nickname}</div>
+              <div className="player-game-id">{player.game_id}</div>
+              {player.group_nickname && (
+                <div className="player-group-nickname">{player.group_nickname}</div>
+              )}
+            </div>
+            <div className={`player-score ${getScoreClass(player.score)}`}>
+              {player.score}
+            </div>
+          </div>
+          
+          <div className="player-positions">
+            {player.positions && player.positions.map((position, index) => (
+              <span key={index} className="position-tag">{position}</span>
+            ))}
+          </div>
+          
+          <div className="player-stats">
+            {player.championships > 0 && (
+              <div className="stat-item">
+                <span className="stat-label">冠军:</span>
+                <span className="stat-value">{player.championships}个</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="simplified-player-actions">
+          <button 
+            className="player-action-btn copy-btn small" 
+            onClick={handleCopyGameID} 
+            title="复制游戏ID"
+          >
+            📋
+          </button>
+          {onRemove && (
+            <button 
+              className="player-action-btn delete-btn small" 
+              onClick={handleDelete} 
+              title="从队伍中移除"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -118,7 +185,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
         <button className="player-action-btn copy-btn" onClick={handleCopyGameID} title="复制游戏ID">
           📋 复制
         </button>
-        <button className="player-action-btn delete-btn" onClick={() => onDelete && onDelete(player.id)} title="删除选手">
+        <button className="player-action-btn delete-btn" onClick={handleDelete} title="删除选手">
           🗑️ 删除
         </button>
       </div>

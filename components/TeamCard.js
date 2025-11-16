@@ -1,6 +1,6 @@
 import PlayerCard from './PlayerCard';
 
-export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTeam }) {
+export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTeam, onEditPlayer }) {
   // 计算队伍总分
   const calculateTeamScore = () => {
     return team.players.reduce((total, player) => total + (player.score || 0), 0);
@@ -30,6 +30,7 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
             key={player.id} 
             player={player} 
             onRemove={onRemovePlayer ? () => onRemovePlayer(player.id) : null} 
+            isSimplified={true}
           />
         ))}
       </div>

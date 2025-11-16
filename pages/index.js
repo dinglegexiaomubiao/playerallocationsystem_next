@@ -827,7 +827,7 @@ export default function Home() {
                 </div>
                 <div className="form-actions">
                   <button type="button" id="cancelNewPlayer" className="btn btn-secondary" onClick={() => setShowNewPlayerModal(false)}>取消</button>
-                  <button type="submit" className="btn btn-primary">创建选手</button>
+                  <button type="submit" className="btn btn-primary">{editingPlayer ? '保存修改' : '创建选手'}</button>
                 </div>
               </form>
             </div>

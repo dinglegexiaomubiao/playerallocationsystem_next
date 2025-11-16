@@ -432,32 +432,125 @@ body {
 
 /* 简化版选手卡片 */
 .player-card.simplified {
-    padding: 10px;
-    margin-bottom: 6px;
+  display: flex;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.player-card.simplified .player-info.simplified-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    margin-top: 6px;
+.player-card.simplified:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
-.player-card.simplified .player-info-item {
-    text-align: center;
+.player-card.simplified .player-header {
+  flex: 1;
 }
 
-.player-card.simplified .player-info-label {
-    font-size: 0.65rem;
-    margin-bottom: 1px;
-    color: #b8b8b8;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+.player-card.simplified .player-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.player-card.simplified .player-info-value {
-    font-size: 0.75rem;
-    color: #f0f0f0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+.player-card.simplified .player-basic-info {
+  flex: 1;
+}
+
+.player-card.simplified .player-nickname {
+  font-weight: bold;
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
+.player-card.simplified .player-game-id {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.player-card.simplified .player-group-nickname {
+  color: #909090;
+  font-size: 0.85rem;
+}
+
+.player-card.simplified .player-score {
+  font-weight: bold;
+  font-size: 1.2rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+
+.player-card.simplified .player-positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.player-card.simplified .position-tag {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.player-card.simplified .player-stats {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.player-card.simplified .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.player-card.simplified .stat-label {
+  color: #b0b0b0;
+  font-size: 0.8rem;
+}
+
+.player-card.simplified .stat-value {
+  color: #e0e0e0;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.simplified-player-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 10px;
+}
+
+.player-action-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.player-action-btn.remove-btn {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.player-action-btn.remove-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
 }
 
 .player-card.dragging {
