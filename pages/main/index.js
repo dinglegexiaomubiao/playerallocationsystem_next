@@ -26,6 +26,17 @@ export default function Home() {
   const importFileRef = useRef(null);
   const router = useRouter();
 
+  // 页面加载时检查用户登录状态
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      // 如果没有用户信息，重定向到登录页面
+      router.push('/login');
+    }
+  }, [router]);
+
   // 英雄列表数据
   const heroesList = [
     {"id": 209, "name": "上古巨神", "nickname": "大牛,ET"},
@@ -575,7 +586,7 @@ export default function Home() {
                 <div className="stat-icon">👤</div>
                 <div className="stat-info">
                   <div className="stat-title">用户: {user.name}</div>
-                  <div className="stat-value">登录次数: {user.count}</div>
+                  <div className="stat-value">访问次数: {user.count}</div>
                 </div>
               </div>
             )}
