@@ -1290,22 +1290,7 @@ body {
 
 /* 默契选手选择 */
 .synergy-player-item {
-    background: #1a1a1a;
-    border: 1px solid #333333;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-}
-
-.synergy-player-item:hover {
-    background: #252525;
-    border-color: #505050;
-}
-
-.synergy-player-item.selected {
-    background: #2a2a2a;
-    border-color: #606060;
+  display: none; /* 隐藏旧的默契选手列表样式 */
 }
 
 /* 响应式表单 */

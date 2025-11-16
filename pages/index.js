@@ -20,6 +20,7 @@ export default function Home() {
   const [showEditPlayerModal, setShowEditPlayerModal] = useState(false); // 控制编辑选手模态框显示
   const [modalSearchTerm, setModalSearchTerm] = useState(''); // 添加模态框搜索状态
   const [searchTerm, setSearchTerm] = useState(''); // 添加搜索词状态
+  const [synergySearchTerm, setSynergySearchTerm] = useState(''); // 添加默契选手搜索词状态
   const importFileRef = useRef(null);
 
   // 英雄列表数据
@@ -424,9 +425,9 @@ export default function Home() {
   };
 
   // 打开默契选手选择对话框
-  const openSynergyModal = (e) => {
-    e.preventDefault();
+  const openSynergyModal = () => {
     setShowSynergyModal(true);
+    setSynergySearchTerm(''); // 打开弹窗时清空搜索词
   };
 
   // 确认选择英雄
@@ -928,18 +929,40 @@ export default function Home() {
               <button className="modal-close" id="closeSynergyModal" onClick={() => setShowSynergyModal(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <input type="text" id="synergySearchInput" placeholder="搜索选手昵称..." className="modal-search-input" />
+              <input 
+                type="text" 
+                id="synergySearchInput" 
+                placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置、擅长英雄或默契选手..." 
+                className="modal-search-input" 
+                value={synergySearchTerm}
+                onChange={(e) => setSynergySearchTerm(e.target.value)}
+              />
               <div id="synergyPlayersList" className="modal-players-list">
-                {[...unassignedPlayers, ...teams.flatMap(t => t.players)].map((player, index) => (
-                  <div 
-                    key={index} 
-                    className={`synergy-player-item ${selectedSynergyPlayers.includes(player.id) ? 'selected' : ''}`}
-                    onClick={() => toggleSynergyPlayerSelection(player.id)}
-                  >
-                    <div className="player-nickname">{player.nickname}</div>
-                    <div className="player-game-id">{player.game_id}</div>
-                  </div>
-                ))}
+                {[...unassignedPlayers, ...teams.flatMap(t => t.players)]
+                  .filter(player => {
+                    if (!synergySearchTerm) return true;
+                    
+                    const term = synergySearchTerm.toLowerCase();
+                    return (
+                      (player.nickname && player.nickname.toLowerCase().includes(term)) ||
+                      (player.game_id && player.game_id.toLowerCase().includes(term)) ||
+                      (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
+                      (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
+                      (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
+                      (player.synergy_players && player.synergy_players.some(partner => 
+                        typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
+                      ))
+                    );
+                  })
+                  .map((player, index) => (
+                    <div 
+                      key={index} 
+                      className={`modal-player-item ${selectedSynergyPlayers.includes(player.id) ? 'selected' : ''}`}
+                      onClick={() => toggleSynergyPlayerSelection(player.id)}
+                    >
+                      <PlayerCard player={player} isModalView={true} />
+                    </div>
+                  ))}
               </div>
               <div className="modal-actions">
                 <button id="cancelSynergySelect" className="btn btn-secondary" onClick={() => setShowSynergyModal(false)}>取消</button>

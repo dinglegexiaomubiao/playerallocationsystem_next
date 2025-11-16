@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false }) {
   // 计算分数颜色类
@@ -9,6 +9,39 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
     if (score >= 5000) return 'score-gold';
     return 'score-silver';
   };
+
+  // 生成随机冷色调背景色
+  const getRandomCoolColor = () => {
+    // 定义一些低调的冷色调
+    const coolColors = [
+      '#1e293b', // 默认深蓝灰色
+      '#1e3a5f', // 深蓝色
+      '#2c3e50', // 深青色
+      '#2b3e50', // 深青蓝色
+      '#253a4b', // 深蓝绿色
+      '#2a3b4c', // 深蓝青色
+      '#2d3a4d', // 深紫蓝色
+      '#263238', // 深蓝灰色
+      '#37474f', // 蓝灰色
+      '#2c384a'  // 深蓝紫色
+    ];
+    
+    // 如果是未分配区域的卡片（非简化版且非模态框视图），随机选择一个颜色
+    if (!isSimplified && !isModalView) {
+      const randomIndex = Math.floor(Math.random() * (coolColors.length - 1)) + 1; // 避免选择第一个默认颜色
+      return coolColors[randomIndex];
+    }
+    
+    // 简化版或模态框视图使用默认颜色
+    return coolColors[0];
+  };
+
+  const [cardBackgroundColor, setCardBackgroundColor] = useState(getRandomCoolColor());
+
+  // 组件挂载时设置背景色
+  useEffect(() => {
+    setCardBackgroundColor(getRandomCoolColor());
+  }, []);
 
   const handleCopyGameID = () => {
     navigator.clipboard.writeText(player.game_id);
@@ -114,6 +147,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
     <div 
       className="player-card" 
       draggable
+      style={{ background: cardBackgroundColor }}
       onDragStart={(e) => {
         if (onDragStart) {
           onDragStart(e, player.id);
