@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import PlayerCard from '../../components/PlayerCard';
 import TeamCard from '../../components/TeamCard';
+import { useRouter } from 'next/router';
 
 export default function Home() {
   const [teams, setTeams] = useState([]);
@@ -21,7 +22,9 @@ export default function Home() {
   const [modalSearchTerm, setModalSearchTerm] = useState(''); // 添加模态框搜索状态
   const [searchTerm, setSearchTerm] = useState(''); // 添加搜索词状态
   const [synergySearchTerm, setSynergySearchTerm] = useState(''); // 添加默契选手搜索词状态
+  const [user, setUser] = useState(null); // 存储用户信息
   const importFileRef = useRef(null);
+  const router = useRouter();
 
   // 英雄列表数据
   const heroesList = [
@@ -152,6 +155,17 @@ export default function Home() {
     {"id": 208, "name": "齐天大圣", "nickname": "大圣,Monkey King"},
     {"id": 240, "name": "龙骑士", "nickname": "龙骑,DK"}
   ];
+
+  // 页面加载时检查用户登录状态
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    } else {
+      // 如果没有用户信息，重定向到登录页面
+      router.push('/login');
+    }
+  }, [router]);
 
   // 加载数据
   useEffect(() => {
@@ -554,6 +568,17 @@ export default function Home() {
                 <div className="stat-value" id="teamsCount">{teams.length}</div>
               </div>
             </div>
+            
+            {/* 用户信息卡片 */}
+            {user && (
+              <div className="stat-card user-info">
+                <div className="stat-icon">👤</div>
+                <div className="stat-info">
+                  <div className="stat-title">用户: {user.name}</div>
+                  <div className="stat-value">登录次数: {user.count}</div>
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="header-actions">
