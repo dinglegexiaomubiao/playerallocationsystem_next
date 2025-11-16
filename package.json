@@ -1,8 +1,7 @@
 {
   "name": "next-team-assignment",
-  "version": "1.0.0",
-  "description": "Team Assignment System built with Next.js",
-  "main": "index.js",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,12 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^16.0.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
-  "devDependencies": {
-    "file-loader": "^6.2.0",
-    "url-loader": "^4.1.1"
+    "next": "14.0.3",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }

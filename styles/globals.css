@@ -114,19 +114,26 @@ body {
     text-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
-/* 现代按钮样式 */
+/* 按钮样式 */
 .btn {
-    padding: 12px 24px;
+    padding: 10px 20px;
     border: none;
-    border-radius: 8px;
-    cursor: pointer;
+    border-radius: 6px;
     font-size: 0.9rem;
-    font-weight: 600;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    text-transform: none;
-    letter-spacing: 0.01em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     position: relative;
     overflow: hidden;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .btn::before {
@@ -145,30 +152,37 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #409EFF 100%);
-    color: #ffffff;
-    border: 1px solid #4a5bf1;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #4a5bf1 0%, #5173f8 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-}
-
 .btn-secondary {
-    background: #1f2937;
-    color: #94a3b8;
-    border: 1px solid #2a3441;
-    box-shadow: 0 2px 8px rgba(31, 41, 55, 0.2);
+    background: #374151;
+    color: #e2e8f0;
+    border: 1px solid #4b5563;
 }
 
-.btn-secondary:hover {
-    background: #233649;
-    color: #ffffff;
+.btn-secondary:hover:not(:disabled) {
+    background: #4b5563;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(31, 41, 55, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* 主体内容 */
@@ -278,10 +292,6 @@ body {
     opacity: 0.7;
 }
 
-.team-card.full-team .add-player-btn {
-    display: none;
-}
-
 .team-header {
     display: flex;
     justify-content: space-between;
@@ -372,6 +382,84 @@ body {
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.player-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.player-action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(30, 41, 59, 0.9);
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.player-action-btn:hover {
+    background: rgba(59, 130, 246, 0.9);
+    transform: scale(1.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.edit-btn:hover {
+    background: #3b82f6;
+    border-color: #409EFF;
+}
+
+.delete-btn:hover {
+    background: #ef4444;
+    border-color: #dc2626;
+}
+
+.copy-btn:hover {
+    background: #22c55e;
+    border-color: #16a34a;
+}
+
+/* 简化版选手卡片 */
+.player-card.simplified {
+    padding: 10px;
+    margin-bottom: 6px;
+}
+
+.player-card.simplified .player-info.simplified-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.player-card.simplified .player-info-item {
+    text-align: center;
+}
+
+.player-card.simplified .player-info-label {
+    font-size: 0.65rem;
+    margin-bottom: 1px;
+    color: #b8b8b8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.player-card.simplified .player-info-value {
+    font-size: 0.75rem;
+    color: #f0f0f0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 .player-card.dragging {
     opacity: 0.5;
 }
@@ -451,6 +539,76 @@ body {
 .player-info-value {
     color: #f0f0f0;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 选手卡片底部统计信息 */
+.player-stats {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+/* 擅长英雄和默契选手显示样式 */
+.player-heroes-preview,
+.player-synergy-preview {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.player-heroes-preview .info-label,
+.player-synergy-preview .info-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 4px;
+}
+
+.player-heroes-preview .info-content,
+.player-synergy-preview .info-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.hero-tag.small,
+.synergy-tag.small {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+}
+
+.hero-tag.small.more,
+.synergy-tag.small.more {
+    background: rgba(56, 139, 253, 0.2);
+    color: #94a3b8;
+}
+
+.synergy-tag {
+    background: #1e293b;
+    color: #94a3b8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    border: 1px solid #334155;
+}
+
+.synergy-tag.small {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(51, 65, 85, 0.7);
 }
 
 .score-value {
@@ -548,34 +706,130 @@ body {
     gap: 20px;
 }
 
-/* 简化版选手卡片 */
-.player-card.simplified {
-    padding: 10px;
-    margin-bottom: 6px;
+/* 对话框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
 }
 
-.player-card.simplified .player-info.simplified-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    margin-top: 6px;
+.modal.active {
+    display: flex;
 }
 
-.player-card.simplified .player-info-item {
-    text-align: center;
+.modal.active.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.player-card.simplified .player-info-label {
-    font-size: 0.65rem;
-    margin-bottom: 1px;
-    color: #b8b8b8;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+.modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
 }
 
-.player-card.simplified .player-info-value {
-    font-size: 0.75rem;
-    color: #f0f0f0;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+.modal-content {
+    position: relative;
+    background: #151515;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 0;
+    max-width: 600px;
+    max-height: 80vh;
+    width: 90%;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    margin: auto;
+}
+
+.large-modal {
+    max-width: 800px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid #2a2a2a;
+    background: #1a1a1a;
+}
+
+.modal-header h3 {
+    color: #e0e0e0;
+    font-size: 1.3rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #666666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.modal-close:hover {
+    background: #252525;
+    color: #cccccc;
+}
+
+.modal-body {
+    padding: 20px 25px;
+    max-height: calc(80vh - 120px);
+    overflow-y: auto;
+}
+
+.modal-search-input {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid #404040;
+    background: #1a1a1a;
+    color: #ffffff;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.modal-players-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.modal-player-item {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-player-item:hover {
+    background: #252525;
+    border-color: #505050;
+    transform: translateY(-2px);
+}
+
+.modal-player-item.selected {
+    background: #2a2a2a;
+    border-color: #606060;
 }
 
 /* 中等屏幕响应式设计 */
@@ -686,6 +940,209 @@ body {
 
 .stat-value {
     animation: countUp 0.6s ease-out;
+}
+
+/* 新增选手表单样式 */
+.new-player-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    color: #cccccc;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.form-group input {
+    padding: 12px 15px;
+    border: 1px solid #404040;
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #606060;
+    background: #222222;
+}
+
+.score-preview {
+    margin-top: 5px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.position-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+}
+
+.position-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #a0a0a0;
+    transition: color 0.3s ease;
+}
+
+.position-checkboxes label:hover {
+    color: #cccccc;
+}
+
+.position-checkboxes input[type="checkbox"] {
+    accent-color: #606060;
+}
+
+.heroes-selector, .synergy-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.selected-heroes, .selected-synergy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 40px;
+    padding: 10px;
+    border: 1px solid #404040;
+    border-radius: 8px;
+    background: #1a1a1a;
+}
+
+.selected-hero-tag, .selected-synergy-tag {
+    background: #2a2a2a;
+    color: #cccccc;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    border: 1px solid #505050;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    color: #666666;
+}
+
+.remove-tag:hover {
+    color: #999999;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 英雄选择对话框 */
+.heroes-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.heroes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+.hero-item {
+    padding: 10px;
+    border: 1px solid #404040;
+    border-radius: 8px;
+    background: #1a1a1a;
+    cursor: pointer;
+    text-align: center;
+}
+
+.hero-item:hover {
+    background: #252525;
+    border-color: #505050;
+}
+
+.hero-item.selected {
+    background: #2a2a2a;
+    border-color: #606060;
+}
+
+.hero-name {
+    font-weight: bold;
+    color: #e0e0e0;
+    margin-bottom: 3px;
+}
+
+.hero-nickname {
+    font-size: 0.75rem;
+    color: #999999;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 默契选手选择 */
+.synergy-player-item {
+    background: #1a1a1a;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.synergy-player-item:hover {
+    background: #252525;
+    border-color: #505050;
+}
+
+.synergy-player-item.selected {
+    background: #2a2a2a;
+    border-color: #606060;
+}
+
+/* 响应式表单 */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .position-checkboxes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .heroes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
 }
 
 /* 空状态提示 */

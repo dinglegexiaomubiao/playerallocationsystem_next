@@ -1,43 +1,55 @@
 import PlayerCard from './PlayerCard';
 
-export default function TeamCard({ team, onAddPlayer, onRemoveTeam, onRemovePlayer }) {
-  const isFull = team.players.length >= 5;
-  
+export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTeam }) {
+  // 计算队伍总分
+  const calculateTeamScore = () => {
+    return team.players.reduce((total, player) => total + (player.score || 0), 0);
+  };
+
+  // 获取队伍分数颜色类
+  const getTeamScoreClass = (score) => {
+    if (score >= 80000) return 'score-master';
+    if (score >= 60000) return 'score-diamond';
+    if (score >= 40000) return 'score-platinum';
+    if (score >= 20000) return 'score-gold';
+    return 'score-silver';
+  };
+
   return (
-    <div className="team-card" data-team-id={team.id}>
+    <div className="team-card" onDragOver={(e) => e.preventDefault()}>
       <div className="team-header">
-        <div className="team-info">
-          <h3>{team.name} (ID: {team.id})</h3>
-          <div className="team-stats">
-            总天梯分数: <span className="team-score">0</span>
-            <span className="team-player-count">{team.players.length}/5人</span>
-          </div>
-        </div>
-        <div className="team-actions">
-          <button className="remove-team-btn" onClick={() => onRemoveTeam(team.id)}>删除队伍</button>
+        <h3 className="team-name">{team.name}</h3>
+        <div className={`team-score ${getTeamScoreClass(calculateTeamScore())}`}>
+          {calculateTeamScore()}
         </div>
       </div>
+      
       <div className="team-players">
-        {team.players.length === 0 ? (
-          <div className="empty-state">暂无选手</div>
-        ) : (
-          team.players.map(player => (
-            <PlayerCard 
-              key={player.id} 
-              player={{...player, teamId: team.id}} 
-              isSimplified={true}
-              onRemovePlayer={onRemovePlayer}
-            />
-          ))
-        )}
+        {team.players.map((player) => (
+          <PlayerCard 
+            key={player.id} 
+            player={player} 
+            onRemove={onRemovePlayer ? () => onRemovePlayer(player.id) : null} 
+          />
+        ))}
       </div>
-      {!isFull ? (
-        <button className="add-player-btn" onClick={() => onAddPlayer(team.id)}>
-          + 添加选手
+      
+      <div className="team-footer">
+        <button 
+          className="btn btn-secondary" 
+          onClick={onAddPlayer}
+          disabled={team.players.length >= 5}
+        >
+          + 添加选手 {team.players.length >= 5 ? '(已满)' : `(${team.players.length}/5)`}
         </button>
-      ) : (
-        <div className="team-full-indicator">队伍已满</div>
-      )}
+        <button 
+          className="btn btn-danger" 
+          onClick={onDeleteTeam}
+          style={{marginLeft: '10px'}}
+        >
+          删除队伍
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>比赛选手人员分配系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部区域 -->
+        <header class="header">
+            <h1>比赛选手人员分配系统</h1>
+            <div class="instructions">
+                <p>拖拽选手卡片到队伍中进行分配 | 点击添加按钮选择选手 | 支持搜索和筛选功能</p>
+            </div>
+            
+            <!-- 统计卡片区域 -->
+            <div class="stats-cards">
+                <div class="stat-card total-players">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-title">总选手数</div>
+                        <div class="stat-value" id="totalPlayersCount">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card unassigned-players">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-info">
+                        <div class="stat-title">未分配选手</div>
+                        <div class="stat-value" id="unassignedPlayersCount">0</div>
+                    </div>
+                </div>
+                
+                <div class="stat-card teams">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-info">
+                        <div class="stat-title">队伍数</div>
+                        <div class="stat-value" id="teamsCount">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button id="resetBtn" class="btn btn-secondary">重置分配</button>
+                <button id="saveBtn" class="btn btn-primary">保存配置</button>
+                <button id="exportBtn" class="btn btn-secondary">导出数据</button>
+                <button id="importBtn" class="btn btn-secondary">导入数据</button>
+                <input type="file" id="importFile" style="display: none;" accept=".json">
+            </div>
+        </header>
+        <!-- 主体内容 -->
+        <main class="main-content">
+            <!-- 队伍展示区 -->
+            <section class="teams-section">
+            <div class="section-header">
+                <h2>队伍分配</h2>
+                <div class="section-actions">
+                    <button id="addPlayerBtn" class="btn btn-primary">+ 新增选手</button>
+                    <button id="addTeamBtn" class="btn btn-primary">+ 添加队伍</button>
+                </div>
+            </div>
+                <div id="teamsContainer" class="teams-container">
+                    <!-- 队伍卡片将动态生成 -->
+                </div>
+            </section>
+
+            <!-- 未分配选手池 -->
+            <section class="players-section">
+                <div class="section-header">
+                    <h2>未分配选手池</h2>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置或英雄..." class="search-input">
+                        <div class="position-filters">
+                            <label><input type="checkbox" class="position-filter" value="优势路"> 优势路</label>
+                            <label><input type="checkbox" class="position-filter" value="中单"> 中单</label>
+                            <label><input type="checkbox" class="position-filter" value="劣势路"> 劣势路</label>
+                            <label><input type="checkbox" class="position-filter" value="半辅助"> 半辅助</label>
+                            <label><input type="checkbox" class="position-filter" value="纯辅助"> 纯辅助</label>
+                            <label><input type="checkbox" class="position-filter" value="全才"> 全才</label>
+                        </div>
+                    </div>
+                </div>
+                <div id="unassignedPlayersContainer" class="players-container">
+                    <!-- 选手卡片将动态生成 -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 添加选手到队伍对话框 -->
+    <div id="addPlayerModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加选手到队伍</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="modalSearchInput" placeholder="搜索选手..." class="modal-search-input">
+                <div id="modalPlayersList" class="modal-players-list">
+                    <!-- 选手列表将动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增选手对话框 -->
+    <div id="newPlayerModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>新增选手</h3>
+                <button class="modal-close" id="closeNewPlayerModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="newPlayerForm" class="new-player-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPlayerNickname">选手昵称 *</label>
+                            <input type="text" id="newPlayerNickname" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPlayerGameId">游戏ID *</label>
+                            <input type="text" id="newPlayerGameId" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPlayerGroupNickname">群昵称</label>
+                            <input type="text" id="newPlayerGroupNickname">
+                        </div>
+                        <div class="form-group">
+                            <label for="newPlayerScore">天梯分数 *</label>
+                            <input type="number" id="newPlayerScore" min="0" max="30000" required>
+                            <div class="score-preview" id="scorePreview"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>擅长位置</label>
+                        <div class="position-checkboxes">
+                            <label><input type="checkbox" name="positions" value="优势路"> 优势路</label>
+                            <label><input type="checkbox" name="positions" value="中单"> 中单</label>
+                            <label><input type="checkbox" name="positions" value="劣势路"> 劣势路</label>
+                            <label><input type="checkbox" name="positions" value="半辅助"> 半辅助</label>
+                            <label><input type="checkbox" name="positions" value="纯辅助"> 纯辅助</label>
+                            <label><input type="checkbox" name="positions" value="全才"> 全才</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPlayerHeroes">擅长英雄</label>
+                        <div class="heroes-selector">
+                            <div class="selected-heroes" id="selectedHeroes">
+                                <!-- 已选择的英雄 -->
+                            </div>
+                            <button type="button" id="selectHeroesBtn" class="btn btn-secondary">选择英雄</button>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPlayerWinRate">最近胜率 (%)</label>
+                            <input type="number" id="newPlayerWinRate" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="newPlayerChampionships">冠军数量</label>
+                            <input type="number" id="newPlayerChampionships" min="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>默契选手</label>
+                        <div class="synergy-selector">
+                            <div class="selected-synergy" id="selectedSynergy">
+                                <!-- 已选择的默契选手 -->
+                            </div>
+                            <button type="button" id="selectSynergyBtn" class="btn btn-secondary">添加默契选手</button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelNewPlayer" class="btn btn-secondary">取消</button>
+                        <button type="submit" class="btn btn-primary">创建选手</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 英雄选择对话框 -->
+    <div id="heroesSelectModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择擅长英雄</h3>
+                <button class="modal-close" id="closeHeroesModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="heroesSearchInput" placeholder="搜索英雄名称或别称..." class="modal-search-input">
+                <div class="heroes-list-container">
+                    <div id="heroesList" class="heroes-grid">
+                        <!-- 英雄列表将动态生成 -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelHeroesSelect" class="btn btn-secondary">取消</button>
+                    <button id="confirmHeroesSelect" class="btn btn-primary">确定选择</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 默契选手选择对话框 -->
+    <div id="synergySelectModal" class="modal">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择默契选手</h3>
+                <button class="modal-close" id="closeSynergyModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="synergySearchInput" placeholder="搜索选手昵称..." class="modal-search-input">
+                <div id="synergyPlayersList" class="modal-players-list">
+                    <!-- 选手列表将动态生成 -->
+                </div>
+                <div class="modal-actions">
+                    <button id="cancelSynergySelect" class="btn btn-secondary">取消</button>
+                    <button id="confirmSynergySelect" class="btn btn-primary">确定选择</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
