@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false }) {
+export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false }) {
   // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
@@ -25,6 +25,34 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
       }
     }
   };
+
+  // 弹窗中的精简版选手卡片
+  if (isModalView) {
+    return (
+      <div className="player-card modal-view">
+        <div className="player-header">
+          <div className="player-info">
+            <div className="player-basic-info">
+              <div className="player-nickname">{player.nickname}</div>
+              <div className="player-game-id">{player.game_id}</div>
+              {player.group_nickname && (
+                <div className="player-group-nickname">{player.group_nickname}</div>
+              )}
+            </div>
+            <div className={`player-score ${getScoreClass(player.score)}`}>
+              {player.score}
+            </div>
+          </div>
+          
+          <div className="player-positions">
+            {player.positions && player.positions.map((position, index) => (
+              <span key={index} className="position-tag">{position}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 精简版选手卡片
   if (isSimplified) {

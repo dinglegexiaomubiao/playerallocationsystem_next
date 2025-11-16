@@ -214,36 +214,34 @@ body {
 
 /* 搜索和筛选 */
 .search-container {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .search-input {
-    padding: 10px 15px;
-    border-radius: 8px;
-    border: 1px solid #404040;
-    background: #1a1a1a;
-    color: #ffffff;
-    font-size: 0.9rem;
-    width: 300px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid #404040;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-size: 0.9rem;
+  width: 300px;
 }
 
 .search-input::placeholder {
-    color: #666666;
+  color: #666666;
 }
 
 .search-input:focus {
-    outline: none;
-    border-color: #606060;
-    background: #222222;
+  outline: none;
+  border-color: #606060;
+  background: #222222;
 }
 
 .position-filters {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
+  display: none; /* 隐藏位置筛选器 */
 }
 
 .position-filters label {
@@ -837,7 +835,7 @@ body {
     border: 1px solid #2a2a2a;
     border-radius: 8px;
     padding: 0;
-    max-width: 600px;
+    max-width: 1200px;
     max-height: 80vh;
     width: 90%;
     overflow: hidden;
@@ -923,6 +921,93 @@ body {
 .modal-player-item.selected {
     background: #2a2a2a;
     border-color: #606060;
+}
+
+/* 弹窗中的选手卡片 */
+.player-card.modal-view {
+  display: flex;
+  padding: 10px;
+  background: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  height: 100%;
+}
+
+.player-card.modal-view .player-header {
+  flex: 1;
+}
+
+.player-card.modal-view .player-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.player-card.modal-view .player-basic-info {
+  flex: 1;
+}
+
+.player-card.modal-view .player-nickname {
+  font-weight: bold;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.player-card.modal-view .player-game-id {
+  color: #b0b0b0;
+  font-size: 0.75rem;
+  margin-bottom: 2px;
+}
+
+.player-card.modal-view .player-group-nickname {
+  color: #909090;
+  font-size: 0.7rem;
+}
+
+.player-card.modal-view .player-score {
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.player-card.modal-view .player-positions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.player-card.modal-view .position-tag {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.modal-players-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+  margin-top: 15px;
+}
+
+.modal-player-item {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.modal-player-item:hover {
+  transform: scale(1.05);
 }
 
 /* 中等屏幕响应式设计 */

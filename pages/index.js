@@ -18,6 +18,8 @@ export default function Home() {
   const [selectedSynergyPlayers, setSelectedSynergyPlayers] = useState([]); // 存储选中的默契选手
   const [editingPlayer, setEditingPlayer] = useState(null); // 存储正在编辑的选手
   const [showEditPlayerModal, setShowEditPlayerModal] = useState(false); // 控制编辑选手模态框显示
+  const [modalSearchTerm, setModalSearchTerm] = useState(''); // 添加模态框搜索状态
+  const [searchTerm, setSearchTerm] = useState(''); // 添加搜索词状态
   const importFileRef = useRef(null);
 
   // 英雄列表数据
@@ -403,6 +405,7 @@ export default function Home() {
   const openAddPlayerModal = (teamId) => {
     setSelectedTeamId(teamId);
     setShowAddPlayerModal(true);
+    setModalSearchTerm(''); // 打开弹窗时清空搜索词
   };
 
   // 在对话框中添加选手到队伍
@@ -606,7 +609,14 @@ export default function Home() {
             <div className="section-header">
               <h2>未分配选手池</h2>
               <div className="search-container">
-                <input type="text" id="searchInput" placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置或英雄..." className="search-input" />
+                <input 
+                  type="text" 
+                  id="searchInput" 
+                  placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置或英雄..." 
+                  className="search-input" 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
                 <div className="position-filters">
                   <label><input type="checkbox" className="position-filter" value="优势路" /> 优势路</label>
                   <label><input type="checkbox" className="position-filter" value="中单" /> 中单</label>
@@ -651,16 +661,32 @@ export default function Home() {
                 }
               }}
             >
-              {unassignedPlayers.map(player => (
-                <PlayerCard 
-                  key={player.id} 
-                  player={player} 
-                  onDragStart={handleDragStart}
-                  onEdit={editPlayer}
-                  onDelete={deletePlayer}
-                  onCopy={copyPlayerGameId}
-                />
-              ))}
+              {unassignedPlayers
+                .filter(player => {
+                  if (!searchTerm) return true;
+                  
+                  const term = searchTerm.toLowerCase();
+                  return (
+                    (player.nickname && player.nickname.toLowerCase().includes(term)) ||
+                    (player.game_id && player.game_id.toLowerCase().includes(term)) ||
+                    (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
+                    (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
+                    (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
+                    (player.synergy_players && player.synergy_players.some(partner => 
+                      typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
+                    ))
+                  );
+                })
+                .map(player => (
+                  <PlayerCard 
+                    key={player.id} 
+                    player={player} 
+                    onDragStart={handleDragStart}
+                    onEdit={editPlayer}
+                    onDelete={deletePlayer}
+                    onCopy={copyPlayerGameId}
+                  />
+                ))}
             </div>
           </section>
         </main>
@@ -676,17 +702,40 @@ export default function Home() {
               <button className="modal-close" id="closeModal" onClick={() => setShowAddPlayerModal(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <input type="text" id="modalSearchInput" placeholder="搜索选手..." className="modal-search-input" />
+              <input 
+                type="text" 
+                id="modalSearchInput" 
+                placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置、擅长英雄或默契选手..." 
+                className="modal-search-input" 
+                value={modalSearchTerm}
+                onChange={(e) => setModalSearchTerm(e.target.value)}
+              />
               <div id="modalPlayersList" className="modal-players-list">
-                {unassignedPlayers.map(player => (
-                  <div 
-                    key={player.id} 
-                    className="modal-player-item"
-                    onClick={() => addPlayerFromModal(player.id)}
-                  >
-                    <PlayerCard player={player} />
-                  </div>
-                ))}
+                {unassignedPlayers
+                  .filter(player => {
+                    if (!modalSearchTerm) return true;
+                    
+                    const term = modalSearchTerm.toLowerCase();
+                    return (
+                      (player.nickname && player.nickname.toLowerCase().includes(term)) ||
+                      (player.game_id && player.game_id.toLowerCase().includes(term)) ||
+                      (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
+                      (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
+                      (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
+                      (player.synergy_players && player.synergy_players.some(partner => 
+                        typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
+                      ))
+                    );
+                  })
+                  .map(player => (
+                    <div 
+                      key={player.id} 
+                      className="modal-player-item"
+                      onClick={() => addPlayerFromModal(player.id)}
+                    >
+                      <PlayerCard player={player} isModalView={true} />
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
