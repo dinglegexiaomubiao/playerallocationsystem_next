@@ -1180,13 +1180,27 @@ body {
     color: #a0a0a0;
     transition: color 0.3s ease;
 }
+.position-checkboxes label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #a0a0a0;
+    transition: color 0.3s ease;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    border: 1px solid rgba(59, 130, 246, 0.3); 
+}
 
 .position-checkboxes label:hover {
     color: #cccccc;
 }
 
 .position-checkboxes input[type="checkbox"] {
-    accent-color: #606060;
+    accent-color: #003674;
 }
 
 .heroes-selector, .synergy-selector {
@@ -1251,7 +1265,8 @@ body {
 
 .hero-item {
     padding: 10px;
-    border: 1px solid #404040;
+    border: 1px solid #fff;
+    background-color: linear-gradient(135deg, #2a2a3a 0%, #1a1a2a 100%);
     border-radius: 8px;
     background: #1a1a1a;
     cursor: pointer;

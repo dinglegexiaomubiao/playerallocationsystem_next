@@ -874,6 +874,7 @@ export default function Home() {
             <div className="section-header">
               <h2>队伍分配</h2>
               <div className="section-actions">
+                <button id="resetBtn" className="btn btn-primary" onClick={resetAssignments}>重置分配</button>
                 <button id="addPlayerBtn" className="btn btn-primary" onClick={() => setShowNewPlayerModal(true)}>+ 新增选手</button>
                 <button id="addTeamBtn" className="btn btn-primary" onClick={addTeam}>+ 添加队伍</button>
               </div>
@@ -1114,12 +1115,12 @@ export default function Home() {
                 <div className="form-group">
                   <label>擅长位置</label>
                   <div className="position-checkboxes">
-                    <label><input type="checkbox" name="positions" value="优势路" /> 优势路</label>
-                    <label><input type="checkbox" name="positions" value="中单" /> 中单</label>
-                    <label><input type="checkbox" name="positions" value="劣势路" /> 劣势路</label>
-                    <label><input type="checkbox" name="positions" value="半辅助" /> 半辅助</label>
-                    <label><input type="checkbox" name="positions" value="纯辅助" /> 纯辅助</label>
-                    <label><input type="checkbox" name="positions" value="全才" /> 全才</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="优势路" /> 优势路</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="中单" /> 中单</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="劣势路" /> 劣势路</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="半辅助" /> 半辅助</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="纯辅助" /> 纯辅助</label>
+                    <label className="position-tag"><input type="checkbox" name="positions" value="全才" /> 全才</label>
                   </div>
                 </div>
                 <div className="form-group">
