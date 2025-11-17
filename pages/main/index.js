@@ -666,16 +666,78 @@ export default function Home() {
   };
 
   // 导入配置
-  const importConfig = (event) => {
+  const importConfig = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = JSON.parse(e.target.result);
+        
+        // 更新前端状态
         setTeams(data.teams || []);
         setUnassignedPlayers(data.unassignedPlayers || []);
+        
+        // 将数据导入到数据库
+        // 1. 导入选手数据
+        const allPlayers = [
+          ...(data.unassignedPlayers || []),
+          ...(data.teams || []).flatMap(team => team.players || [])
+        ];
+        
+        // 清理重复的选手数据
+        const uniquePlayers = allPlayers.filter((player, index, self) => 
+          index === self.findIndex(p => p.id === player.id)
+        );
+        
+        // 发送选手数据到API
+        for (const player of uniquePlayers) {
+          try {
+            await fetch('/api/players', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(player),
+            });
+          } catch (error) {
+            console.error('导入选手到数据库失败:', error);
+          }
+        }
+        
+        // 2. 导入队伍数据
+        for (const team of (data.teams || [])) {
+          try {
+            await fetch('/api/teams', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(team),
+            });
+          } catch (error) {
+            console.error('导入队伍到数据库失败:', error);
+          }
+        }
+        
+        // 3. 更新队伍选手关系
+        for (const team of (data.teams || [])) {
+          try {
+            const playerIds = team.players.map(p => p.id);
+            await fetch('/api/team-players', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ teamId: team.id, playerIds }),
+            });
+          } catch (error) {
+            console.error('更新队伍选手关系失败:', error);
+          }
+        }
+        
+        alert('数据导入成功！');
       } catch (error) {
         console.error('导入配置失败:', error);
         alert('导入配置失败，请检查文件格式是否正确');
