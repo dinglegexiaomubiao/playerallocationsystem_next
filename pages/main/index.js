@@ -28,6 +28,9 @@ export default function Home() {
     players: 'loading',
     error: null 
   }); // 添加加载状态
+  // 添加操作loading状态
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const importFileRef = useRef(null);
   const router = useRouter();
 
@@ -255,6 +258,7 @@ export default function Home() {
 
   // 添加队伍
   const addTeam = async () => {
+    setIsAddingTeam(true);
     const newTeam = {
       id: teamIdCounter,
       name: `队伍${teamIdCounter}`,
@@ -276,6 +280,7 @@ export default function Home() {
       if (response.ok) {
         setTeams([...teams, newTeam]);
         setTeamIdCounter(teamIdCounter + 1);
+        alert('队伍添加成功');
       } else {
         throw new Error('添加队伍失败');
       }
@@ -284,6 +289,9 @@ export default function Home() {
       // 即使API调用失败，仍然更新前端状态
       setTeams([...teams, newTeam]);
       setTeamIdCounter(teamIdCounter + 1);
+      alert('队伍添加失败');
+    } finally {
+      setIsAddingTeam(false);
     }
   };
 
@@ -446,6 +454,7 @@ export default function Home() {
 
   // 创建新选手
   const createNewPlayer = async (playerData) => {
+    setIsCreatingPlayer(true);
     if (editingPlayer) {
       // 更新现有选手
       await updatePlayer(editingPlayer.id, playerData);
@@ -481,15 +490,18 @@ export default function Home() {
         if (!response.ok) {
           throw new Error(responseData.error || '添加选手失败');
         }
+        
+        alert('选手添加成功');
       } catch (error) {
         console.error('添加选手到API失败:', error);
-        alert(`添加选手失败: ${error.message}`);
+        alert('选手添加失败');
       }
     }
     
     setShowNewPlayerModal(false);
     setSelectedHeroes([]);
     setSelectedSynergyPlayers([]);
+    setIsCreatingPlayer(false);
   };
 
   // 更新选手信息
@@ -855,6 +867,18 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
+      {/* 全局loading动画 */}
+      {(isAddingTeam || isCreatingPlayer) && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">
+              {isAddingTeam ? '正在添加队伍...' : '正在添加选手...'}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container">
         {/* 头部区域 */}
         <header className="header">
@@ -902,7 +926,7 @@ export default function Home() {
             </div>
             
             {/* 用户信息卡片 */}
-            {user && (
+            {/* {user && (
               <div className="stat-card user-info">
                 <div className="stat-icon">👤</div>
                 <div className="stat-info">
@@ -910,7 +934,7 @@ export default function Home() {
                   <div className="stat-value">访问次数: {user.count}</div>
                 </div>
               </div>
-            )}
+            )} */}
           </div>
           
           {/* <div className="header-actions">
@@ -937,8 +961,12 @@ export default function Home() {
               <h2>队伍分配</h2>
               <div className="section-actions">
                 <button id="resetBtn" className="btn btn-primary" onClick={resetAssignments}>重置分配</button>
-                <button id="addPlayerBtn" className="btn btn-primary" onClick={() => setShowNewPlayerModal(true)}>+ 新增选手</button>
-                <button id="addTeamBtn" className="btn btn-primary" onClick={addTeam}>+ 添加队伍</button>
+                <button id="addPlayerBtn" className="btn btn-primary" onClick={() => setShowNewPlayerModal(true)} disabled={isCreatingPlayer}>
+                  {isCreatingPlayer ? '添加中...' : '+ 新增选手'}
+                </button>
+                <button id="addTeamBtn" className="btn btn-primary" onClick={addTeam} disabled={isAddingTeam}>
+                  {isAddingTeam ? '添加中...' : '+ 添加队伍'}
+                </button>
               </div>
             </div>
             <div 
