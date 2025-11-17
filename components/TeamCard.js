@@ -72,6 +72,7 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
       <div className="team-header">
         <h3 className="team-name">{team.name}</h3>
         <div className={`team-score ${getTeamScoreClass(calculateTeamScore())}`}>
+          天梯总分:
           {calculateTeamScore()}
         </div>
       </div>
