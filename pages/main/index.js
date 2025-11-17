@@ -913,7 +913,7 @@ export default function Home() {
             )}
           </div>
           
-          <div className="header-actions">
+          {/* <div className="header-actions">
             <button id="resetBtn" className="btn btn-secondary" onClick={resetAssignments}>重置分配</button>
             <button id="saveBtn" className="btn btn-primary" onClick={saveConfig}>保存配置</button>
             <button id="exportBtn" className="btn btn-secondary" onClick={saveConfig}>导出数据</button>
@@ -926,7 +926,7 @@ export default function Home() {
               accept=".json"
               onChange={importConfig}
             />
-          </div>
+          </div> */}
         </header>
         
         {/* 主体内容 */}
