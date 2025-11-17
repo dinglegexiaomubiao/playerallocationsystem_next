@@ -180,40 +180,70 @@ export default function Home() {
 
   // 加载数据
   useEffect(() => {
-    // 初始化默认数据
-    const defaultTeams = [];
-    const defaultPlayers = [
-      {
-        "id": "1",
-        "nickname": "Spirit_Moon",
-        "group_nickname": "Spirit_Moon",
-        "game_id": "294993528",
-        "score": 15000,
-        "positions": [
-          "劣势路",
-          "优势路",
-          "中单",
-          "半辅助"
-        ],
-        "heroes": [],
-        "win_rate": 0,
-        "championships": 0,
-        "synergy_players": [],
-        "created_at": "",
-        "updated_at": "",
-        "position_priority": {},
-        "team_name": "unassigned",
-        "synergyPlayers": []
+    const loadData = async () => {
+      try {
+        // 从API加载选手数据
+        const playersResponse = await fetch('/api/players');
+        const { players: playersFromAPI } = await playersResponse.json();
+        
+        // 从API加载队伍数据
+        const teamsResponse = await fetch('/api/teams');
+        const { teams: teamsFromAPI } = await teamsResponse.json();
+
+        // 确定未分配的选手（不在任何队伍中的选手）
+        const assignedPlayerIds = teamsFromAPI.flatMap(team => team.players.map(p => p.id));
+        const unassigned = playersFromAPI.filter(player => !assignedPlayerIds.includes(player.id));
+
+        setTeams(teamsFromAPI);
+        setUnassignedPlayers(unassigned);
+        
+        // 设置队伍ID计数器
+        if (teamsFromAPI.length > 0) {
+          const maxId = Math.max(...teamsFromAPI.map(t => t.id));
+          setTeamIdCounter(maxId + 1);
+        } else {
+          setTeamIdCounter(1);
+        }
+      } catch (error) {
+        console.error('加载数据失败:', error);
+        // 如果API加载失败，使用默认数据
+        const defaultTeams = [];
+        const defaultPlayers = [
+          {
+            "id": "1",
+            "nickname": "Spirit_Moon",
+            "group_nickname": "Spirit_Moon",
+            "game_id": "294993528",
+            "score": 15000,
+            "positions": [
+              "劣势路",
+              "优势路",
+              "中单",
+              "半辅助"
+            ],
+            "heroes": [],
+            "win_rate": 0,
+            "championships": 0,
+            "synergy_players": [],
+            "created_at": "",
+            "updated_at": "",
+            "position_priority": {},
+            "team_name": "unassigned",
+            "synergyPlayers": []
+          }
+        ];
+        
+        setTeams(defaultTeams);
+        setUnassignedPlayers(defaultPlayers);
+        setTeamIdCounter(2); // 从2开始，因为已经有id为1的选手
       }
-    ];
-    
-    setTeams(defaultTeams);
-    setUnassignedPlayers(defaultPlayers);
-    setTeamIdCounter(2); // 从2开始，因为已经有id为1的选手
+    };
+
+    loadData();
   }, []);
 
   // 添加队伍
-  const addTeam = () => {
+  const addTeam = async () => {
     const newTeam = {
       id: teamIdCounter,
       name: `队伍${teamIdCounter}`,
@@ -222,12 +252,32 @@ export default function Home() {
       updated_at: new Date().toISOString()
     };
     
-    setTeams([...teams, newTeam]);
-    setTeamIdCounter(teamIdCounter + 1);
+    // 添加到API
+    try {
+      const response = await fetch('/api/teams', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTeam),
+      });
+      
+      if (response.ok) {
+        setTeams([...teams, newTeam]);
+        setTeamIdCounter(teamIdCounter + 1);
+      } else {
+        throw new Error('添加队伍失败');
+      }
+    } catch (error) {
+      console.error('添加队伍到API失败:', error);
+      // 即使API调用失败，仍然更新前端状态
+      setTeams([...teams, newTeam]);
+      setTeamIdCounter(teamIdCounter + 1);
+    }
   };
 
   // 删除队伍
-  const deleteTeam = (teamId) => {
+  const deleteTeam = async (teamId) => {
     // 找到要删除的队伍
     const teamToDelete = teams.find(team => team.id === teamId);
     if (!teamToDelete) return;
@@ -242,11 +292,29 @@ export default function Home() {
     setUnassignedPlayers([...unassignedPlayers, ...playersToMove]);
     
     // 从队伍列表中移除该队伍
-    setTeams(teams.filter(team => team.id !== teamId));
+    const updatedTeams = teams.filter(team => team.id !== teamId);
+    setTeams(updatedTeams);
+    
+    // 从API中删除队伍
+    try {
+      const response = await fetch('/api/teams', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('删除队伍失败');
+      }
+    } catch (error) {
+      console.error('从API删除队伍失败:', error);
+    }
   };
 
   // 添加选手到队伍
-  const addPlayerToTeam = (playerId, teamId) => {
+  const addPlayerToTeam = async (playerId, teamId) => {
     // 检查队伍是否已满（5人限制）
     const team = teams.find(t => t.id === teamId);
     if (team && team.players.length >= 5) {
@@ -304,10 +372,27 @@ export default function Home() {
     
     setUnassignedPlayers(updatedUnassignedPlayers);
     setTeams(updatedTeams);
+    
+    // 更新API
+    try {
+      const response = await fetch('/api/team-players', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId, playerId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('添加选手到队伍失败');
+      }
+    } catch (error) {
+      console.error('添加选手到队伍API记录失败:', error);
+    }
   };
 
   // 从队伍中移除选手
-  const removePlayerFromTeam = (playerId, teamId) => {
+  const removePlayerFromTeam = async (playerId, teamId) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
     
@@ -329,18 +414,35 @@ export default function Home() {
     // 添加到未分配选手中
     setUnassignedPlayers([...unassignedPlayers, player]);
     setTeams(updatedTeams);
+    
+    // 更新API
+    try {
+      const response = await fetch('/api/team-players', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ teamId, playerId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('从队伍移除选手失败');
+      }
+    } catch (error) {
+      console.error('从队伍API记录中移除选手失败:', error);
+    }
   };
 
   // 创建新选手
-  const createNewPlayer = (playerData) => {
+  const createNewPlayer = async (playerData) => {
     if (editingPlayer) {
       // 更新现有选手
-      updatePlayer(editingPlayer.id, playerData);
+      await updatePlayer(editingPlayer.id, playerData);
       setEditingPlayer(null);
     } else {
       // 创建新选手
       const newPlayer = {
-        id: Date.now().toString(),
+        id: Date.now().toString(), // 使用时间戳作为ID，确保唯一性
         ...playerData,
         heroes: selectedHeroes,
         synergy_players: selectedSynergyPlayers,
@@ -350,6 +452,28 @@ export default function Home() {
       };
       
       setUnassignedPlayers([...unassignedPlayers, newPlayer]);
+      
+      // 添加到API
+      try {
+        console.log('正在发送选手数据到API:', newPlayer);
+        const response = await fetch('/api/players', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newPlayer),
+        });
+        
+        const responseData = await response.json();
+        console.log('API响应状态:', response.status, '响应数据:', responseData);
+        
+        if (!response.ok) {
+          throw new Error(responseData.error || '添加选手失败');
+        }
+      } catch (error) {
+        console.error('添加选手到API失败:', error);
+        alert(`添加选手失败: ${error.message}`);
+      }
     }
     
     setShowNewPlayerModal(false);
@@ -357,8 +481,104 @@ export default function Home() {
     setSelectedSynergyPlayers([]);
   };
 
+  // 更新选手信息
+  const updatePlayer = async (playerId, playerData) => {
+    // 更新未分配选手中的选手信息
+    const updatedUnassignedPlayers = unassignedPlayers.map(player => {
+      if (player.id === playerId) {
+        return {
+          ...player,
+          ...playerData,
+          heroes: selectedHeroes,
+          synergy_players: selectedSynergyPlayers,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return player;
+    });
+    
+    // 更新队伍中的选手信息
+    const updatedTeams = teams.map(team => {
+      const updatedPlayers = team.players.map(player => {
+        if (player.id === playerId) {
+          return {
+            ...player,
+            ...playerData,
+            heroes: selectedHeroes,
+            synergy_players: selectedSynergyPlayers,
+            updated_at: new Date().toISOString()
+          };
+        }
+        return player;
+      });
+      
+      return {
+        ...team,
+        players: updatedPlayers,
+        updated_at: new Date().toISOString()
+      };
+    });
+    
+    setUnassignedPlayers(updatedUnassignedPlayers);
+    setTeams(updatedTeams);
+    
+    // 更新API
+    try {
+      const response = await fetch('/api/players', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ playerId, player: playerData }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '更新选手失败');
+      }
+    } catch (error) {
+      console.error('更新选手API记录失败:', error);
+      alert(`更新选手失败: ${error.message}`);
+    }
+  };
+
+  // 删除选手
+  const deletePlayer = async (playerId) => {
+    if (window.confirm('确定要删除这个选手吗？')) {
+      // 从未分配选手中删除
+      const updatedUnassignedPlayers = unassignedPlayers.filter(player => player.id !== playerId);
+      
+      // 从队伍中删除
+      const updatedTeams = teams.map(team => ({
+        ...team,
+        players: team.players.filter(player => player.id !== playerId),
+        updated_at: new Date().toISOString()
+      }));
+      
+      setUnassignedPlayers(updatedUnassignedPlayers);
+      setTeams(updatedTeams);
+      
+      // 从API中删除
+      try {
+        const response = await fetch('/api/players', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ playerId }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('删除选手失败');
+        }
+      } catch (error) {
+        console.error('从API删除选手失败:', error);
+      }
+    }
+  };
+
   // 重置分配
-  const resetAssignments = () => {
+  const resetAssignments = async () => {
     // 将所有队伍中的选手移回未分配池
     const allPlayers = [...unassignedPlayers];
     teams.forEach(team => {
@@ -373,10 +593,29 @@ export default function Home() {
     
     setUnassignedPlayers(allPlayers);
     setTeams(updatedTeams);
+    
+    // 清空API中的队伍选手关系
+    try {
+      for (const team of teams) {
+        const response = await fetch('/api/team-players', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ teamId: team.id, playerIds: [] }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`重置队伍${team.id}失败`);
+        }
+      }
+    } catch (error) {
+      console.error('重置队伍选手关系失败:', error);
+    }
   };
 
   // 保存配置
-  const saveConfig = () => {
+  const saveConfig = async () => {
     const data = {
       teams,
       unassignedPlayers,
@@ -392,6 +631,27 @@ export default function Home() {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+    
+    // 同步到API
+    try {
+      // 更新所有队伍中的选手关系
+      for (const team of teams) {
+        const playerIds = team.players.map(p => parseInt(p.id));
+        const response = await fetch('/api/team-players', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ teamId: team.id, playerIds }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`保存队伍${team.id}失败`);
+        }
+      }
+    } catch (error) {
+      console.error('保存配置到API失败:', error);
+    }
   };
 
   // 导入配置
@@ -507,30 +767,6 @@ export default function Home() {
     }, 0);
     
     setShowNewPlayerModal(true);
-  };
-
-  // 更新选手信息
-  const updatePlayer = (playerId, playerData) => {
-    const updatedPlayers = unassignedPlayers.map(player => {
-      if (player.id === playerId) {
-        return {
-          ...player,
-          ...playerData,
-          heroes: selectedHeroes,
-          synergy_players: selectedSynergyPlayers,
-          updated_at: new Date().toISOString()
-        };
-      }
-      return player;
-    });
-    
-    setUnassignedPlayers(updatedPlayers);
-  };
-
-  // 删除选手
-  const deletePlayer = (playerId) => {
-    const updatedPlayers = unassignedPlayers.filter(player => player.id !== playerId);
-    setUnassignedPlayers(updatedPlayers);
   };
 
   // 复制选手游戏ID
@@ -931,35 +1167,19 @@ export default function Home() {
               <button className="modal-close" id="closeHeroesModal" onClick={() => setShowHeroesModal(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <input 
-                type="text" 
-                id="heroesSearchInput" 
-                placeholder="搜索英雄名称或别称..." 
-                className="modal-search-input" 
-                value={modalSearchTerm}
-                onChange={(e) => setModalSearchTerm(e.target.value)}
-              />
+              <input type="text" id="heroesSearchInput" placeholder="搜索英雄名称或别称..." className="modal-search-input" />
               <div className="heroes-list-container">
                 <div id="heroesList" className="heroes-grid">
-                  {heroesList
-                    .filter(hero => {
-                      if (!modalSearchTerm) return true;
-                      const term = modalSearchTerm.toLowerCase();
-                      return (
-                        hero.name.toLowerCase().includes(term) ||
-                        hero.nickname.toLowerCase().includes(term)
-                      );
-                    })
-                    .map((hero, index) => (
-                      <div 
-                        key={index} 
-                        className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
-                        onClick={() => toggleHeroSelection(hero.name)}
-                      >
-                        <div className="hero-name">{hero.name}</div>
-                        <div className="hero-nickname">{hero.nickname}</div>
-                      </div>
-                    ))}
+                  {heroesList.map((hero, index) => (
+                    <div 
+                      key={index} 
+                      className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
+                      onClick={() => toggleHeroSelection(hero.name)}
+                    >
+                      <div className="hero-name">{hero.name}</div>
+                      <div className="hero-nickname">{hero.nickname}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="modal-actions">
