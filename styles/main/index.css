@@ -919,9 +919,23 @@ body {
 }
 
 .modal-player-item.selected {
-    background: #fff;
-    border-color: #606060;
+    background: linear-gradient(135deg, #8a2be2, #9370db) !important;
+    border: 2px solid #fff;
+    box-shadow: 0 0 10px rgba(138, 43, 226, 0.7);
+    transform: scale(1.02);
 }
+
+/* 添加随机背景色类 */
+.modal-player-item.cool-bg-1 { background: linear-gradient(135deg, #1a2a3a, #2a3a4a); }
+.modal-player-item.cool-bg-2 { background: linear-gradient(135deg, #1a3a3a, #2a4a4a); }
+.modal-player-item.cool-bg-3 { background: linear-gradient(135deg, #1a3a4a, #2a4a5a); }
+.modal-player-item.cool-bg-4 { background: linear-gradient(135deg, #2a3a5a, #3a4a6a); }
+.modal-player-item.cool-bg-5 { background: linear-gradient(135deg, #2a4a5a, #3a5a6a); }
+.modal-player-item.cool-bg-6 { background: linear-gradient(135deg, #2a4a6a, #3a5a7a); }
+.modal-player-item.cool-bg-7 { background: linear-gradient(135deg, #3a4a6a, #4a5a7a); }
+.modal-player-item.cool-bg-8 { background: linear-gradient(135deg, #3a5a6a, #4a6a7a); }
+.modal-player-item.cool-bg-9 { background: linear-gradient(135deg, #3a5a7a, #4a6a8a); }
+.modal-player-item.cool-bg-10 { background: linear-gradient(135deg, #4a5a7a, #5a6a8a); }
 
 /* 弹窗中的选手卡片 */
 .player-card.modal-view {
@@ -1284,6 +1298,43 @@ body {
 .hero-nickname {
     font-size: 0.75rem;
     color: #999999;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 添加冷色调背景色类 */
+.hero-item.cool-bg-1 { background: linear-gradient(135deg, #1a2a3a, #2a3a4a); }
+.hero-item.cool-bg-2 { background: linear-gradient(135deg, #1a3a3a, #2a4a4a); }
+.hero-item.cool-bg-3 { background: linear-gradient(135deg, #1a3a4a, #2a4a5a); }
+.hero-item.cool-bg-4 { background: linear-gradient(135deg, #2a3a5a, #3a4a6a); }
+.hero-item.cool-bg-5 { background: linear-gradient(135deg, #2a4a5a, #3a5a6a); }
+.hero-item.cool-bg-6 { background: linear-gradient(135deg, #2a4a6a, #3a5a7a); }
+.hero-item.cool-bg-7 { background: linear-gradient(135deg, #3a4a6a, #4a5a7a); }
+.hero-item.cool-bg-8 { background: linear-gradient(135deg, #3a5a6a, #4a6a7a); }
+.hero-item.cool-bg-9 { background: linear-gradient(135deg, #3a5a7a, #4a6a8a); }
+.hero-item.cool-bg-10 { background: linear-gradient(135deg, #4a5a7a, #5a6a8a); }
+
+/* 选中状态的统一样式 */
+.hero-item.selected {
+    background: linear-gradient(135deg, #8a2be2, #9370db) !important;
+    border: 2px solid #fff;
+    box-shadow: 0 0 10px rgba(138, 43, 226, 0.7);
+    transform: scale(1.05);
+}
+
+.hero-item.selected .hero-name {
+    color: #fff;
+}
+
+.hero-item.selected .hero-nickname {
+    color: #e0e0e0;
 }
 
 .modal-actions {

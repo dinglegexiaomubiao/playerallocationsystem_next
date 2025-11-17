@@ -1210,7 +1210,7 @@ export default function Home() {
                   {heroesList.map((hero, index) => (
                     <div 
                       key={index} 
-                      className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
+                      className={`hero-item cool-bg-${(index % 10) + 1} ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
                       onClick={() => toggleHeroSelection(hero.name)}
                     >
                       <div className="hero-name">{hero.name}</div>
@@ -1266,7 +1266,7 @@ export default function Home() {
                   .map((player, index) => (
                     <div 
                       key={index} 
-                      className={`modal-player-item ${selectedSynergyPlayers.includes(player.id) ? 'selected' : ''}`}
+                      className={`modal-player-item cool-bg-${(index % 10) + 1} ${selectedSynergyPlayers.includes(player.id) ? 'selected' : ''}`}
                       onClick={() => toggleSynergyPlayerSelection(player.id)}
                     >
                       <PlayerCard player={player} isModalView={true} />
