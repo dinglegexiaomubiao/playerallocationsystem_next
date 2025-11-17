@@ -23,6 +23,11 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState(''); // 添加搜索词状态
   const [synergySearchTerm, setSynergySearchTerm] = useState(''); // 添加默契选手搜索词状态
   const [user, setUser] = useState(null); // 存储用户信息
+  const [loadingState, setLoadingState] = useState({ 
+    teams: 'loading', 
+    players: 'loading',
+    error: null 
+  }); // 添加加载状态
   const importFileRef = useRef(null);
   const router = useRouter();
 
@@ -39,132 +44,132 @@ export default function Home() {
 
   // 英雄列表数据
   const heroesList = [
-    {"id": 209, "name": "上古巨神", "nickname": "大牛,ET"},
-    {"id": 210, "name": "不朽尸王", "nickname": "尸王,DIRGE"},
-    {"id": 178, "name": "主宰", "nickname": "剑圣,Jugg"},
-    {"id": 272, "name": "亚巴顿", "nickname": "死骑,哑巴,LOA"},
-    {"id": 211, "name": "伐木机", "nickname": "花母鸡,伐木机,Timberraw"},
-    {"id": 241, "name": "修补匠", "nickname": "修补,TK,Tinker"},
-    {"id": 242, "name": "光之守卫", "nickname": "光法,白马,Koti"},
-    {"id": 179, "name": "克林克兹", "nickname": "骨弓,小骷髅,Clinkz"},
-    {"id": 212, "name": "全能骑士", "nickname": "全能,OK"},
-    {"id": 273, "name": "兽王", "nickname": "兽王,bm"},
-    {"id": 213, "name": "军团指挥官", "nickname": "军团,LC"},
-    {"id": 180, "name": "冥界亚龙", "nickname": "毒龙,Vip"},
-    {"id": 214, "name": "冥魂大帝", "nickname": "骷髅王,SNK"},
-    {"id": 274, "name": "凤凰", "nickname": "凤凰,phoanix"},
-    {"id": 303, "name": "凯", "nickname": "鸟人,"},
-    {"id": 275, "name": "剧毒术士", "nickname": "剧毒,veno"},
-    {"id": 181, "name": "力丸", "nickname": "隐刺,SA"},
-    {"id": 215, "name": "半人马战行者", "nickname": "人马,CW"},
-    {"id": 182, "name": "卓尔游侠", "nickname": "小黑,黑弓,DROW"},
-    {"id": 276, "name": "发条技师", "nickname": "发条,clock"},
-    {"id": 183, "name": "变体精灵", "nickname": "水人,波高,morph"},
-    {"id": 277, "name": "司夜刺客", "nickname": "小强,NA"},
-    {"id": 216, "name": "哈斯卡", "nickname": "神灵,单车武士,Hus"},
-    {"id": 217, "name": "噬魂鬼", "nickname": "小狗,IS"},
-    {"id": 184, "name": "圣堂刺客", "nickname": "圣堂,TA"},
-    {"id": 278, "name": "复仇之魂", "nickname": "VS"},
-    {"id": 218, "name": "大地之灵", "nickname": "土猫,Earth"},
-    {"id": 243, "name": "天怒法师", "nickname": "天怒,龙鹰,SKY"},
-    {"id": 244, "name": "天涯墨客", "nickname": "墨客,Grimstroke"},
-    {"id": 185, "name": "天穹守望者", "nickname": "电狗,AW"},
-    {"id": 186, "name": "娜迦海妖", "nickname": "小娜迦,nage"},
-    {"id": 219, "name": "孽主", "nickname": "大屁股,UL"},
-    {"id": 245, "name": "宙斯", "nickname": "宙斯,Zeus"},
-    {"id": 279, "name": "寒冬飞龙", "nickname": "冰龙,WW"},
-    {"id": 220, "name": "小小", "nickname": "小小,山岭,Tiny"},
-    {"id": 280, "name": "工程师", "nickname": "炸弹人,Techics"},
-    {"id": 221, "name": "巨牙海民", "nickname": "海民,Tusk"},
-    {"id": 187, "name": "巨魔战将", "nickname": "巨魔,Troll"},
-    {"id": 246, "name": "巫医", "nickname": "巫医,51,WD"},
-    {"id": 247, "name": "巫妖", "nickname": "巫妖,Lich"},
-    {"id": 248, "name": "帕克", "nickname": "帕克,大头苍蝇,精灵龙,puck"},
-    {"id": 222, "name": "帕吉", "nickname": "屠夫,Pudge"},
-    {"id": 249, "name": "帕格纳", "nickname": "骨法,Pugna"},
-    {"id": 250, "name": "干扰者", "nickname": "萨尔,Disruptor"},
-    {"id": 188, "name": "幻影刺客", "nickname": "幻刺,PA"},
-    {"id": 189, "name": "幻影长矛手", "nickname": "猴子,分身猴,PL"},
-    {"id": 190, "name": "幽鬼", "nickname": "幽鬼,UG,Spe"},
-    {"id": 191, "name": "影魔", "nickname": "影魔,SF"},
-    {"id": 192, "name": "恐怖利刃", "nickname": "魂守,TB"},
-    {"id": 281, "name": "戴泽", "nickname": "暗牧,Dazzle"},
-    {"id": 251, "name": "拉席克", "nickname": "老鹿,TS"},
-    {"id": 252, "name": "拉比克", "nickname": "大魔导,蜡笔,fy,Rubick"},
-    {"id": 223, "name": "撼地者", "nickname": "小牛,ES"},
-    {"id": 193, "name": "敌法师", "nickname": "敌法,AM"},
-    {"id": 224, "name": "斧王", "nickname": "斧王,Axe"},
-    {"id": 194, "name": "斯拉克", "nickname": "小鱼人,弟弟鱼,Slark"},
-    {"id": 225, "name": "斯拉达", "nickname": "大鱼,SL"},
-    {"id": 226, "name": "斯温", "nickname": "流浪,斯温,奥特曼,SV"},
-    {"id": 227, "name": "昆卡", "nickname": "船长,CoCo"},
-    {"id": 228, "name": "暗夜魔王", "nickname": "夜魔,NS"},
-    {"id": 253, "name": "暗影恶魔", "nickname": "毒狗,SD"},
-    {"id": 254, "name": "暗影萨满", "nickname": "小Y,SS"},
-    {"id": 229, "name": "末日使者", "nickname": "末日,Doom"},
-    {"id": 255, "name": "术士", "nickname": "术士,Warlock"},
-    {"id": 256, "name": "杰奇洛", "nickname": "双头龙,Jakiro"},
-    {"id": 230, "name": "树精卫士", "nickname": "大树,TP"},
-    {"id": 195, "name": "森海飞霞", "nickname": "小松鼠,Hoodwink"},
-    {"id": 257, "name": "死亡先知", "nickname": "DP"},
-    {"id": 258, "name": "殁境神蚀者", "nickname": "黑鸟,目光呆滞,OD"},
-    {"id": 259, "name": "水晶侍女", "nickname": "冰女,CM"},
-    {"id": 260, "name": "沉默术士", "nickname": "沉默,SIL"},
-    {"id": 282, "name": "沙王", "nickname": "沙王,鞋子,SK"},
-    {"id": 231, "name": "混沌骑士", "nickname": "混沌,CK"},
-    {"id": 232, "name": "潮汐猎人", "nickname": "潮汐,西瓜皮,TH"},
-    {"id": 196, "name": "灰烬之灵", "nickname": "火猫,ES"},
-    {"id": 233, "name": "炼金术士", "nickname": "炼金,GA"},
-    {"id": 197, "name": "熊战士", "nickname": "拍拍熊,Ursa"},
-    {"id": 198, "name": "狙击手", "nickname": "矮子,火枪,Sniper"},
-    {"id": 284, "name": "独行德鲁伊", "nickname": "德鲁伊,熊德,LD"},
-    {"id": 283, "name": "狼人", "nickname": "狼人,Lycan"},
-    {"id": 234, "name": "獣", "nickname": "畜,Beast"},
-    {"id": 235, "name": "玛尔斯", "nickname": "玛尔斯,Mars"},
-    {"id": 285, "name": "玛西", "nickname": "玛西,女拳,Marci"},
-    {"id": 261, "name": "琼英碧灵", "nickname": "奶绿,琼逼,Muerta"},
-    {"id": 286, "name": "电炎绝手", "nickname": "奶奶,老太婆,Snapfire"},
-    {"id": 262, "name": "痛苦女王", "nickname": "女王,QOP"},
-    {"id": 263, "name": "瘟疫法师", "nickname": "死灵法,Nec"},
-    {"id": 264, "name": "百戏大王", "nickname": "百戏,小丑,Ringmaster"},
-    {"id": 199, "name": "矮人直升机", "nickname": "飞机,gyr"},
-    {"id": 287, "name": "石鳞剑士", "nickname": "滚滚,Pangolier"},
-    {"id": 236, "name": "破晓辰星", "nickname": "大锤,锤妹,DB"},
-    {"id": 288, "name": "祈求者", "nickname": "卡尔,Invoker"},
-    {"id": 265, "name": "神谕者", "nickname": "神谕,Oracle"},
-    {"id": 289, "name": "祸乱之源", "nickname": "祸乱,水桶腰,Bane"},
-    {"id": 290, "name": "米拉娜", "nickname": "白虎,Pom"},
-    {"id": 200, "name": "米波", "nickname": "地狗,米波,Meepo"},
-    {"id": 291, "name": "维萨吉", "nickname": "死灵龙,Vis"},
-    {"id": 201, "name": "编织者", "nickname": "蚂蚁,Weaver"},
-    {"id": 202, "name": "美杜莎", "nickname": "一姐,大娜迦,Med"},
-    {"id": 292, "name": "育母蜘蛛", "nickname": "蜘蛛,Broodmother"},
-    {"id": 266, "name": "自然先知", "nickname": "先知,FUR"},
-    {"id": 293, "name": "艾欧", "nickname": "小精灵,IO"},
-    {"id": 267, "name": "莉娜", "nickname": "莉娜,火女,lina"},
-    {"id": 268, "name": "莱恩", "nickname": "莱恩,若风巫师,Lion"},
-    {"id": 294, "name": "虚无之灵", "nickname": "紫猫,Void Spirit"},
-    {"id": 203, "name": "虚空假面", "nickname": "虚空,J8脸,FV"},
-    {"id": 295, "name": "蝙蝠骑士", "nickname": "蝙蝠,Bat"},
-    {"id": 204, "name": "血魔", "nickname": "血魔,BS"},
-    {"id": 237, "name": "裂魂人", "nickname": "白牛,SB"},
-    {"id": 296, "name": "谜团", "nickname": "谜团,Enigma"},
-    {"id": 205, "name": "赏金猎人", "nickname": "赏金,BH"},
-    {"id": 269, "name": "远古冰魄", "nickname": "冰魂,AA"},
-    {"id": 297, "name": "邪影芳灵", "nickname": "小仙女,花仙,Dark Willow"},
-    {"id": 298, "name": "酒仙", "nickname": "熊猫,PB"},
-    {"id": 238, "name": "钢背兽", "nickname": "刚被,BB猪,BB"},
-    {"id": 299, "name": "陈", "nickname": "圣骑,CHEN"},
-    {"id": 206, "name": "雷泽", "nickname": "电棍,电魂,Razor"},
-    {"id": 207, "name": "露娜", "nickname": "月骑,露娜,Luna"},
-    {"id": 270, "name": "风暴之灵", "nickname": "蓝猫,电猫,Storm"},
-    {"id": 300, "name": "风行者", "nickname": "风行,WR"},
-    {"id": 239, "name": "食人魔魔法师", "nickname": "蓝胖,OM"},
-    {"id": 301, "name": "马格纳斯", "nickname": "猛犸,颠勺,Magnus"},
-    {"id": 271, "name": "魅惑魔女", "nickname": "小鹿,Enchantress"},
-    {"id": 302, "name": "黑暗贤者", "nickname": "黑贤,兔子,DS"},
-    {"id": 208, "name": "齐天大圣", "nickname": "大圣,Monkey King"},
-    {"id": 240, "name": "龙骑士", "nickname": "龙骑,DK"}
+    {"id": 209, "name": "上古巨神", "nickname": "大牛,ET,力量"},
+    {"id": 210, "name": "不朽尸王", "nickname": "尸王,DIRGE,力量"},
+    {"id": 178, "name": "主宰", "nickname": "剑圣,Jugg,敏捷"},
+    {"id": 272, "name": "亚巴顿", "nickname": "死骑,哑巴,LOA,全才"},
+    {"id": 211, "name": "伐木机", "nickname": "花母鸡,伐木机,Timberraw,力量"},
+    {"id": 241, "name": "修补匠", "nickname": "修补,TK,Tinker,智力"},
+    {"id": 242, "name": "光之守卫", "nickname": "光法,白马,Koti,智力"},
+    {"id": 179, "name": "克林克兹", "nickname": "骨弓,小骷髅,Clinkz,敏捷"},
+    {"id": 212, "name": "全能骑士", "nickname": "全能,OK,力量"},
+    {"id": 273, "name": "兽王", "nickname": "兽王,bm,全才"},
+    {"id": 213, "name": "军团指挥官", "nickname": "军团,LC,力量"},
+    {"id": 180, "name": "冥界亚龙", "nickname": "毒龙,Vip,敏捷"},
+    {"id": 214, "name": "冥魂大帝", "nickname": "骷髅王,SNK,力量"},
+    {"id": 274, "name": "凤凰", "nickname": "凤凰,phoanix,力量"},
+    {"id": 303, "name": "凯", "nickname": "鸟人,敏捷"},
+    {"id": 275, "name": "剧毒术士", "nickname": "剧毒,veno,全才"},
+    {"id": 181, "name": "力丸", "nickname": "隐刺,SA,敏捷"},
+    {"id": 215, "name": "半人马战行者", "nickname": "人马,CW,力量"},
+    {"id": 182, "name": "卓尔游侠", "nickname": "小黑,黑弓,DROW,敏捷"},
+    {"id": 276, "name": "发条技师", "nickname": "发条,clock,力量"},
+    {"id": 183, "name": "变体精灵", "nickname": "水人,波高,morph,敏捷"},
+    {"id": 277, "name": "司夜刺客", "nickname": "小强,NA,全才"},
+    {"id": 216, "name": "哈斯卡", "nickname": "神灵,单车武士,Hus,力量"},
+    {"id": 217, "name": "噬魂鬼", "nickname": "小狗,IS,力量"},
+    {"id": 184, "name": "圣堂刺客", "nickname": "圣堂,TA,敏捷"},
+    {"id": 278, "name": "复仇之魂", "nickname": "VS,敏捷"},
+    {"id": 218, "name": "大地之灵", "nickname": "土猫,Earth,力量"},
+    {"id": 243, "name": "天怒法师", "nickname": "天怒,龙鹰,SKY,智力"},
+    {"id": 244, "name": "天涯墨客", "nickname": "墨客,Grimstroke,智力"},
+    {"id": 185, "name": "天穹守望者", "nickname": "电狗,AW,敏捷"},
+    {"id": 186, "name": "娜迦海妖", "nickname": "小娜迦,nage,敏捷"},
+    {"id": 219, "name": "孽主", "nickname": "大屁股,UL,力量"},
+    {"id": 245, "name": "宙斯", "nickname": "宙斯,Zeus,智力"},
+    {"id": 279, "name": "寒冬飞龙", "nickname": "冰龙,WW,,智力"},
+    {"id": 220, "name": "小小", "nickname": "小小,山岭,Tiny,力量"},
+    {"id": 280, "name": "工程师", "nickname": "炸弹人,Techics,全才"},
+    {"id": 221, "name": "巨牙海民", "nickname": "海民,Tusk,力量"},
+    {"id": 187, "name": "巨魔战将", "nickname": "巨魔,Troll,敏捷"},
+    {"id": 246, "name": "巫医", "nickname": "巫医,51,WD,智力"},
+    {"id": 247, "name": "巫妖", "nickname": "巫妖,Lich,智力"},
+    {"id": 248, "name": "帕克", "nickname": "帕克,大头苍蝇,精灵龙,puck,智力"},
+    {"id": 222, "name": "帕吉", "nickname": "屠夫,Pudge,力量"},
+    {"id": 249, "name": "帕格纳", "nickname": "骨法,Pugna,智力"},
+    {"id": 250, "name": "干扰者", "nickname": "萨尔,Disruptor,智力"},
+    {"id": 188, "name": "幻影刺客", "nickname": "幻刺,PA,敏捷"},
+    {"id": 189, "name": "幻影长矛手", "nickname": "猴子,分身猴,PL,敏捷"},
+    {"id": 190, "name": "幽鬼", "nickname": "幽鬼,UG,Spe,全才"},
+    {"id": 191, "name": "影魔", "nickname": "影魔,SF,敏捷"},
+    {"id": 192, "name": "恐怖利刃", "nickname": "魂守,TB,敏捷"},
+    {"id": 281, "name": "戴泽", "nickname": "暗牧,Dazzle,全才"},
+    {"id": 251, "name": "拉席克", "nickname": "老鹿,TS,智力"},
+    {"id": 252, "name": "拉比克", "nickname": "大魔导,蜡笔,fy,Rubick,智力"},
+    {"id": 223, "name": "撼地者", "nickname": "小牛,ES,力量"},
+    {"id": 193, "name": "敌法师", "nickname": "敌法,AM,敏捷"},
+    {"id": 224, "name": "斧王", "nickname": "斧王,Axe,力量"},
+    {"id": 194, "name": "斯拉克", "nickname": "小鱼人,弟弟鱼,Slark,敏捷"},
+    {"id": 225, "name": "斯拉达", "nickname": "大鱼,SL,力量"},
+    {"id": 226, "name": "斯温", "nickname": "流浪,斯温,奥特曼,SV,力量"},
+    {"id": 227, "name": "昆卡", "nickname": "船长,CoCo,力量"},
+    {"id": 228, "name": "暗夜魔王", "nickname": "夜魔,NS,力量"},
+    {"id": 253, "name": "暗影恶魔", "nickname": "毒狗,SD,智力"},
+    {"id": 254, "name": "暗影萨满", "nickname": "小Y,SS,智力"},
+    {"id": 229, "name": "末日使者", "nickname": "末日,Doom,力量"},
+    {"id": 255, "name": "术士", "nickname": "术士,Warlock,智力"},
+    {"id": 256, "name": "杰奇洛", "nickname": "双头龙,Jakiro,智力"},
+    {"id": 230, "name": "树精卫士", "nickname": "大树,TP,力量"},
+    {"id": 195, "name": "森海飞霞", "nickname": "小松鼠,Hoodwink,敏捷"},
+    {"id": 257, "name": "死亡先知", "nickname": "DP,全才"},
+    {"id": 258, "name": "殁境神蚀者", "nickname": "黑鸟,目光呆滞,OD,智力"},
+    {"id": 259, "name": "水晶侍女", "nickname": "冰女,CM,智力"},
+    {"id": 260, "name": "沉默术士", "nickname": "沉默,SIL,力量智力"},
+    {"id": 282, "name": "沙王", "nickname": "沙王,蝎子,SK,全才"},
+    {"id": 231, "name": "混沌骑士", "nickname": "混沌,CK,力量"},
+    {"id": 232, "name": "潮汐猎人", "nickname": "潮汐,西瓜皮,TH,力量"},
+    {"id": 196, "name": "灰烬之灵", "nickname": "火猫,ES,敏捷"},
+    {"id": 233, "name": "炼金术士", "nickname": "炼金,GA,力量"},
+    {"id": 197, "name": "熊战士", "nickname": "拍拍熊,Ursa,敏捷"},
+    {"id": 198, "name": "狙击手", "nickname": "矮子,火枪,Sniper,敏捷"},
+    {"id": 284, "name": "独行德鲁伊", "nickname": "德鲁伊,熊德,LD,敏捷"},
+    {"id": 283, "name": "狼人", "nickname": "狼人,Lycan,力量"},
+    {"id": 234, "name": "獣", "nickname": "畜,Beast,力量"},
+    {"id": 235, "name": "玛尔斯", "nickname": "玛尔斯,Mars,力量"},
+    {"id": 285, "name": "玛西", "nickname": "玛西,女拳,Marci,全才"},
+    {"id": 261, "name": "琼英碧灵", "nickname": "奶绿,琼逼,Muerta,智力"},
+    {"id": 286, "name": "电炎绝手", "nickname": "奶奶,老太婆,Snapfire,全才"},
+    {"id": 262, "name": "痛苦女王", "nickname": "女王,QOP,智力"},
+    {"id": 263, "name": "瘟疫法师", "nickname": "死灵法,Nec,智力"},
+    {"id": 264, "name": "百戏大王", "nickname": "百戏,小丑,Ringmaster,智力"},
+    {"id": 199, "name": "矮人直升机", "nickname": "飞机,gyr,敏捷"},
+    {"id": 287, "name": "石鳞剑士", "nickname": "滚滚,Pangolier,全才"},
+    {"id": 236, "name": "破晓辰星", "nickname": "大锤,锤妹,DB,力量"},
+    {"id": 288, "name": "祈求者", "nickname": "卡尔,Invoker,智力"},
+    {"id": 265, "name": "神谕者", "nickname": "神谕,Oracle,智力"},
+    {"id": 289, "name": "祸乱之源", "nickname": "祸乱,水桶腰,Bane,全才"},
+    {"id": 290, "name": "米拉娜", "nickname": "白虎,Pom,全才"},
+    {"id": 200, "name": "米波", "nickname": "地狗,米波,Meepo,敏捷"},
+    {"id": 291, "name": "维萨吉", "nickname": "死灵龙,Vis,全才"},
+    {"id": 201, "name": "编织者", "nickname": "蚂蚁,Weaver,敏捷"},
+    {"id": 202, "name": "美杜莎", "nickname": "一姐,大娜迦,Med,敏捷"},
+    {"id": 292, "name": "育母蜘蛛", "nickname": "蜘蛛,Broodmother,全才"},
+    {"id": 266, "name": "自然先知", "nickname": "先知,FUR,全才"},
+    {"id": 293, "name": "艾欧", "nickname": "小精灵,IO,全才"},
+    {"id": 267, "name": "莉娜", "nickname": "莉娜,火女,lina,智力"},
+    {"id": 268, "name": "莱恩", "nickname": "莱恩,若风巫师,Lion,智力"},
+    {"id": 294, "name": "虚无之灵", "nickname": "紫猫,Void Spirit,全才"},
+    {"id": 203, "name": "虚空假面", "nickname": "虚空,J8脸,FV,敏捷"},
+    {"id": 295, "name": "蝙蝠骑士", "nickname": "蝙蝠,Bat,全才"},
+    {"id": 204, "name": "血魔", "nickname": "血魔,BS,敏捷"},
+    {"id": 237, "name": "裂魂人", "nickname": "白牛,SB,力量"},
+    {"id": 296, "name": "谜团", "nickname": "谜团,Enigma,全才"},
+    {"id": 205, "name": "赏金猎人", "nickname": "赏金,BH,力量"},
+    {"id": 269, "name": "远古冰魄", "nickname": "冰魂,AA,智力"},
+    {"id": 297, "name": "邪影芳灵", "nickname": "小仙女,花仙,Dark Willow,智力"},
+    {"id": 298, "name": "酒仙", "nickname": "熊猫,PB,全才"},
+    {"id": 238, "name": "钢背兽", "nickname": "刚被,BB猪,BB,力量"},
+    {"id": 299, "name": "陈", "nickname": "圣骑,CHEN,全才"},
+    {"id": 206, "name": "雷泽", "nickname": "电棍,电魂,Razor,敏捷"},
+    {"id": 207, "name": "露娜", "nickname": "月骑,露娜,Luna,敏捷"},
+    {"id": 270, "name": "风暴之灵", "nickname": "蓝猫,电猫,Storm,智力"},
+    {"id": 300, "name": "风行者", "nickname": "风行,WR,全才"},
+    {"id": 239, "name": "食人魔魔法师", "nickname": "蓝胖,OM,力量"},
+    {"id": 301, "name": "马格纳斯", "nickname": "猛犸,颠勺,Magnus,全才"},
+    {"id": 271, "name": "魅惑魔女", "nickname": "小鹿,Enchantress,智力"},
+    {"id": 302, "name": "黑暗贤者", "nickname": "黑贤,兔子,DS,全才"},
+    {"id": 208, "name": "齐天大圣", "nickname": "大圣,Monkey King,敏捷"},
+    {"id": 240, "name": "龙骑士", "nickname": "龙骑,DK,力量"}
   ];
 
   // 页面加载时检查用户登录状态
@@ -196,6 +201,7 @@ export default function Home() {
 
         setTeams(teamsFromAPI);
         setUnassignedPlayers(unassigned);
+        setLoadingState(prev => ({ ...prev, teams: 'loaded', players: 'loaded' }));
         
         // 设置队伍ID计数器
         if (teamsFromAPI.length > 0) {
@@ -206,15 +212,20 @@ export default function Home() {
         }
       } catch (error) {
         console.error('加载数据失败:', error);
+        setLoadingState({
+          teams: 'error',
+          players: 'error',
+          error: '加载数据超时，请刷新页面重试'
+        });
         // 如果API加载失败，使用默认数据
         const defaultTeams = [];
         const defaultPlayers = [
           {
             "id": "1",
-            "nickname": "Spirit_Moon",
-            "group_nickname": "Spirit_Moon",
-            "game_id": "294993528",
-            "score": 15000,
+            "nickname": "111111",
+            "group_nickname": "1111111",
+            "game_id": "1111111",
+            "score": 11111,
             "positions": [
               "劣势路",
               "优势路",
@@ -796,7 +807,11 @@ export default function Home() {
               <div className="stat-icon">👥</div>
               <div className="stat-info">
                 <div className="stat-title">总选手数</div>
-                <div className="stat-value" id="totalPlayersCount">{unassignedPlayers.length + teams.reduce((total, team) => total + team.players.length, 0)}</div>
+                <div className="stat-value" id="totalPlayersCount">
+                  {loadingState.players === 'loading' ? '读取中...' : 
+                   loadingState.players === 'error' ? '加载失败' : 
+                   unassignedPlayers.length + teams.reduce((total, team) => total + team.players.length, 0)}
+                </div>
               </div>
             </div>
             
@@ -804,7 +819,11 @@ export default function Home() {
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
                 <div className="stat-title">未分配选手</div>
-                <div className="stat-value" id="unassignedPlayersCount">{unassignedPlayers.length}</div>
+                <div className="stat-value" id="unassignedPlayersCount">
+                  {loadingState.players === 'loading' ? '读取中...' : 
+                   loadingState.players === 'error' ? '加载失败' : 
+                   unassignedPlayers.length}
+                </div>
               </div>
             </div>
             
@@ -812,7 +831,11 @@ export default function Home() {
               <div className="stat-icon">👥</div>
               <div className="stat-info">
                 <div className="stat-title">队伍数</div>
-                <div className="stat-value" id="teamsCount">{teams.length}</div>
+                <div className="stat-value" id="teamsCount">
+                  {loadingState.teams === 'loading' ? '读取中...' : 
+                   loadingState.teams === 'error' ? '加载失败' : 
+                   teams.length}
+                </div>
               </div>
             </div>
             
@@ -860,20 +883,26 @@ export default function Home() {
               className="teams-container"
               onDragOver={(e) => e.preventDefault()}
             >
-              {teams.map(team => (
-                <div 
-                  key={team.id}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, team.id)}
-                >
-                  <TeamCard 
-                    team={team} 
-                    onAddPlayer={() => openAddPlayerModal(team.id)} 
-                    onRemovePlayer={(playerId) => removePlayerFromTeam(playerId, team.id)} 
-                    onDeleteTeam={() => deleteTeam(team.id)}
-                  />
-                </div>
-              ))}
+              {loadingState.teams === 'loading' ? (
+                <div className="loading-message">队伍信息读取中...</div>
+              ) : loadingState.teams === 'error' ? (
+                <div className="error-message">{loadingState.error || '加载队伍信息失败，请刷新页面重试'}</div>
+              ) : (
+                teams.map(team => (
+                  <div 
+                    key={team.id}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleDrop(e, team.id)}
+                  >
+                    <TeamCard 
+                      team={team} 
+                      onAddPlayer={() => openAddPlayerModal(team.id)} 
+                      onRemovePlayer={(playerId) => removePlayerFromTeam(playerId, team.id)} 
+                      onDeleteTeam={() => deleteTeam(team.id)}
+                    />
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -889,14 +918,15 @@ export default function Home() {
                   className="search-input" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={loadingState.players === 'loading'}
                 />
                 <div className="position-filters">
-                  <label><input type="checkbox" className="position-filter" value="优势路" /> 优势路</label>
-                  <label><input type="checkbox" className="position-filter" value="中单" /> 中单</label>
-                  <label><input type="checkbox" className="position-filter" value="劣势路" /> 劣势路</label>
-                  <label><input type="checkbox" className="position-filter" value="半辅助" /> 半辅助</label>
-                  <label><input type="checkbox" className="position-filter" value="纯辅助" /> 纯辅助</label>
-                  <label><input type="checkbox" className="position-filter" value="全才" /> 全才</label>
+                  <label><input type="checkbox" className="position-filter" value="优势路" disabled={loadingState.players === 'loading'} /> 优势路</label>
+                  <label><input type="checkbox" className="position-filter" value="中单" disabled={loadingState.players === 'loading'} /> 中单</label>
+                  <label><input type="checkbox" className="position-filter" value="劣势路" disabled={loadingState.players === 'loading'} /> 劣势路</label>
+                  <label><input type="checkbox" className="position-filter" value="半辅助" disabled={loadingState.players === 'loading'} /> 半辅助</label>
+                  <label><input type="checkbox" className="position-filter" value="纯辅助" disabled={loadingState.players === 'loading'} /> 纯辅助</label>
+                  <label><input type="checkbox" className="position-filter" value="全才" disabled={loadingState.players === 'loading'} /> 全才</label>
                 </div>
               </div>
             </div>
@@ -934,32 +964,38 @@ export default function Home() {
                 }
               }}
             >
-              {unassignedPlayers
-                .filter(player => {
-                  if (!searchTerm) return true;
-                  
-                  const term = searchTerm.toLowerCase();
-                  return (
-                    (player.nickname && player.nickname.toLowerCase().includes(term)) ||
-                    (player.game_id && player.game_id.toLowerCase().includes(term)) ||
-                    (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
-                    (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
-                    (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
-                    (player.synergy_players && player.synergy_players.some(partner => 
-                      typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
-                    ))
-                  );
-                })
-                .map(player => (
-                  <PlayerCard 
-                    key={player.id} 
-                    player={player} 
-                    onDragStart={handleDragStart}
-                    onEdit={editPlayer}
-                    onDelete={deletePlayer}
-                    onCopy={copyPlayerGameId}
-                  />
-                ))}
+              {loadingState.players === 'loading' ? (
+                <div className="loading-message">选手信息读取中...</div>
+              ) : loadingState.players === 'error' ? (
+                <div className="error-message">{loadingState.error || '加载选手信息失败，请刷新页面重试'}</div>
+              ) : (
+                unassignedPlayers
+                  .filter(player => {
+                    if (!searchTerm) return true;
+                    
+                    const term = searchTerm.toLowerCase();
+                    return (
+                      (player.nickname && player.nickname.toLowerCase().includes(term)) ||
+                      (player.game_id && player.game_id.toLowerCase().includes(term)) ||
+                      (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
+                      (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
+                      (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
+                      (player.synergy_players && player.synergy_players.some(partner => 
+                        typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
+                      ))
+                    );
+                  })
+                  .map(player => (
+                    <PlayerCard 
+                      key={player.id} 
+                      player={player} 
+                      onDragStart={handleDragStart}
+                      onEdit={editPlayer}
+                      onDelete={deletePlayer}
+                      onCopy={copyPlayerGameId}
+                    />
+                  ))
+              )}
             </div>
           </section>
         </main>
