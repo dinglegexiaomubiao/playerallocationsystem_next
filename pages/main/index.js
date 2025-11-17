@@ -931,19 +931,35 @@ export default function Home() {
               <button className="modal-close" id="closeHeroesModal" onClick={() => setShowHeroesModal(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <input type="text" id="heroesSearchInput" placeholder="搜索英雄名称或别称..." className="modal-search-input" />
+              <input 
+                type="text" 
+                id="heroesSearchInput" 
+                placeholder="搜索英雄名称或别称..." 
+                className="modal-search-input" 
+                value={modalSearchTerm}
+                onChange={(e) => setModalSearchTerm(e.target.value)}
+              />
               <div className="heroes-list-container">
                 <div id="heroesList" className="heroes-grid">
-                  {heroesList.map((hero, index) => (
-                    <div 
-                      key={index} 
-                      className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
-                      onClick={() => toggleHeroSelection(hero.name)}
-                    >
-                      <div className="hero-name">{hero.name}</div>
-                      <div className="hero-nickname">{hero.nickname}</div>
-                    </div>
-                  ))}
+                  {heroesList
+                    .filter(hero => {
+                      if (!modalSearchTerm) return true;
+                      const term = modalSearchTerm.toLowerCase();
+                      return (
+                        hero.name.toLowerCase().includes(term) ||
+                        hero.nickname.toLowerCase().includes(term)
+                      );
+                    })
+                    .map((hero, index) => (
+                      <div 
+                        key={index} 
+                        className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
+                        onClick={() => toggleHeroSelection(hero.name)}
+                      >
+                        <div className="hero-name">{hero.name}</div>
+                        <div className="hero-nickname">{hero.nickname}</div>
+                      </div>
+                    ))}
                 </div>
               </div>
               <div className="modal-actions">
