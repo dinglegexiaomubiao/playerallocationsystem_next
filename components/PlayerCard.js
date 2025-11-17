@@ -158,10 +158,10 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
         <button className="remove-player" onClick={() => onRemove(player.id)}>×</button>
       )}
       <div className="player-header">
+        <div className="player-nickname">{player.nickname}</div>
         <div className={`player-score ${getScoreClass(player.score)}`}>
           {player.score}
         </div>
-        <div className="player-nickname">{player.nickname}</div>
       </div>
       
       <div className="player-details">

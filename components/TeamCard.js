@@ -96,9 +96,8 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
           + 添加选手 {team.players.length >= 5 ? '(已满)' : `(${team.players.length}/5)`}
         </button>
         <button 
-          className="btn btn-danger" 
           onClick={onDeleteTeam}
-          style={{marginLeft: '10px'}}
+          className="btn btn-danger btn-spaced"
         >
           删除队伍
         </button>
