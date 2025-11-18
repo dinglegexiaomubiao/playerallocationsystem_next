@@ -37,11 +37,44 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
   };
 
   const [cardBackgroundColor, setCardBackgroundColor] = useState(getRandomCoolColor());
+  const [playerStats, setPlayerStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [errorStats, setErrorStats] = useState(null);
+  const [showDebugInfo, setShowDebugInfo] = useState(false); // 控制调试信息显示
 
   // 组件挂载时设置背景色
   useEffect(() => {
     setCardBackgroundColor(getRandomCoolColor());
   }, []);
+
+  // 获取玩家详细统计数据
+  const fetchPlayerStats = async () => {
+    if (playerStats || loadingStats) return;
+    
+    setLoadingStats(true);
+    setErrorStats(null);
+    try {
+      // 使用player.game_id作为Steam ID参数调用API
+      const response = await fetch(`/api/player-stats?playerId=${player.game_id}`);
+      
+      // 检查响应是否成功
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.stats) {
+        setPlayerStats(data.stats);
+      } else {
+        throw new Error('响应数据格式不正确');
+      }
+    } catch (error) {
+      console.error('获取玩家统计数据失败:', error);
+      setErrorStats(error.message);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
 
   const handleCopyGameID = () => {
     navigator.clipboard.writeText(player.game_id);
@@ -238,6 +271,73 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
           </div>
         </div>
       )}
+      
+      {/* 显示详细统计数据 */}
+      <div className="player-detailed-stats">
+        <button className="stats-toggle-btn" onClick={fetchPlayerStats} disabled={loadingStats}>
+          {loadingStats ? '加载中...' : '查看详细数据'}
+        </button>
+        
+        {errorStats && (
+          <div className="error-message">
+            错误: {errorStats}
+          </div>
+        )}
+        
+        {playerStats && (
+          <div className="detailed-stats-content">
+            <div className="stat-section">
+              <h4>最近胜率</h4>
+              <div className="stat-value">{playerStats.recentWinRate}%</div>
+            </div>
+            
+            <div className="stat-section">
+              <h4>常用英雄</h4>
+              <div className="heroes-list">
+                {playerStats.mostPlayedHeroes.map((hero, index) => (
+                  <div key={index} className="hero-stat-item">
+                    <span className="hero-name">{hero.name}</span>
+                    <span className="hero-stats">{hero.matches}场 / {hero.winRate}%胜率</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="stat-section">
+              <h4>最高胜率英雄</h4>
+              <div className="heroes-list">
+                {playerStats.highestWinRateHeroes.map((hero, index) => (
+                  <div key={index} className="hero-stat-item">
+                    <span className="hero-name">{hero.name}</span>
+                    <span className="hero-stats">{hero.matches}场 / {hero.winRate}%胜率</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* 调试信息切换按钮 */}
+            <div className="debug-toggle">
+              <button 
+                className="debug-toggle-btn" 
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+              >
+                {showDebugInfo ? '隐藏调试信息' : '显示调试信息'}
+              </button>
+              
+              {/* 调试信息 */}
+              {showDebugInfo && playerStats.debug && (
+                <div className="debug-info">
+                  <h4>最近比赛数据:</h4>
+                  <pre>{JSON.stringify(playerStats.debug.recentMatches, null, 2)}</pre>
+                  
+                  <h4>英雄统计数据:</h4>
+                  <pre>{JSON.stringify(playerStats.debug.heroesData, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
       
       {/* 操作按钮区域 - 始终显示 */}
       <div className="player-actions">
