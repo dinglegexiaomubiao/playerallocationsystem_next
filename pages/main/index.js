@@ -297,19 +297,6 @@ export default function Home() {
 
   // 删除队伍
   const deleteTeam = async (teamId) => {
-    // 找到要删除的队伍
-    const teamToDelete = teams.find(team => team.id === teamId);
-    if (!teamToDelete) return;
-    
-    // 将队伍中的选手移回未分配池
-    const playersToMove = teamToDelete.players.map(player => ({
-      ...player,
-      team_name: "unassigned"
-    }));
-    
-    // 更新未分配选手列表
-    setUnassignedPlayers([...unassignedPlayers, ...playersToMove]);
-    
     // 从队伍列表中移除该队伍
     const updatedTeams = teams.filter(team => team.id !== teamId);
     setTeams(updatedTeams);
@@ -341,45 +328,17 @@ export default function Home() {
       return;
     }
 
-    // 找到选手
-    let player = null;
-    let updatedUnassignedPlayers = [];
-    
-    // 先在未分配选手中查找
-    const playerIndex = unassignedPlayers.findIndex(p => p.id === playerId);
-    if (playerIndex !== -1) {
-      player = {...unassignedPlayers[playerIndex]};
-      updatedUnassignedPlayers = unassignedPlayers.filter((_, index) => index !== playerIndex);
-    } else {
-      // 在队伍中查找
-      let found = false;
-      const updatedTeams = teams.map(team => {
-        if (found) return team;
-        
-        const pIndex = team.players.findIndex(p => p.id === playerId);
-        if (pIndex !== -1) {
-          player = {...team.players[pIndex]};
-          found = true;
-          return {
-            ...team,
-            players: team.players.filter((_, index) => index !== pIndex),
-            updated_at: new Date().toISOString()
-          };
-        }
-        return team;
-      });
-      
-      if (found) {
-        setTeams(updatedTeams);
-        updatedUnassignedPlayers = unassignedPlayers;
-      }
-    }
-    
+    // 找到选手（只在所有选手中查找，不区分是否已分配）
+    const player = [...unassignedPlayers, ...teams.flatMap(t => t.players)].find(p => p.id === playerId);
     if (!player) return;
-    
+
     // 添加到目标队伍中
     const updatedTeams = teams.map(team => {
       if (team.id === teamId) {
+        // 检查选手是否已经在该队伍中，避免重复添加
+        if (team.players.some(p => p.id === playerId)) {
+          return team;
+        }
         return {
           ...team,
           players: [...team.players, player],
@@ -388,8 +347,7 @@ export default function Home() {
       }
       return team;
     });
-    
-    setUnassignedPlayers(updatedUnassignedPlayers);
+
     setTeams(updatedTeams);
     
     // 更新API
@@ -415,9 +373,6 @@ export default function Home() {
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
     
-    const player = team.players.find(p => p.id === playerId);
-    if (!player) return;
-    
     // 从队伍中移除选手
     const updatedTeams = teams.map(t => {
       if (t.id === teamId) {
@@ -430,8 +385,6 @@ export default function Home() {
       return t;
     });
     
-    // 添加到未分配选手中
-    setUnassignedPlayers([...unassignedPlayers, player]);
     setTeams(updatedTeams);
     
     // 更新API
@@ -602,19 +555,13 @@ export default function Home() {
 
   // 重置分配
   const resetAssignments = async () => {
-    // 将所有队伍中的选手移回未分配池
-    const allPlayers = [...unassignedPlayers];
-    teams.forEach(team => {
-      allPlayers.push(...team.players);
-    });
-    
+    // 清空所有队伍中的选手
     const updatedTeams = teams.map(team => ({
       ...team,
       players: [],
       updated_at: new Date().toISOString()
     }));
     
-    setUnassignedPlayers(allPlayers);
     setTeams(updatedTeams);
     
     // 清空API中的队伍选手关系
@@ -1000,7 +947,7 @@ export default function Home() {
           {/* 未分配选手池 */}
           <section className="players-section">
             <div className="section-header">
-              <h2>未分配选手池</h2>
+              <h2>参赛选手</h2>
               <div className="search-container">
                 <input 
                   type="text" 
@@ -1028,29 +975,19 @@ export default function Home() {
               onDrop={(e) => {
                 e.preventDefault();
                 if (draggedPlayerId) {
-                  // 从队伍中移除选手到未分配池
-                  const updatedTeams = [...teams];
-                  let found = false;
-                  
-                  for (let i = 0; i < updatedTeams.length; i++) {
-                    const team = updatedTeams[i];
-                    const playerIndex = team.players.findIndex(p => p.id === draggedPlayerId);
-                    
-                    if (playerIndex !== -1) {
-                      const player = team.players[playerIndex];
-                      updatedTeams[i] = {
+                  // 从队伍中移除选手，但不添加到未分配池
+                  const updatedTeams = teams.map(team => {
+                    if (team.players.some(p => p.id === draggedPlayerId)) {
+                      return {
                         ...team,
-                        players: team.players.filter((_, index) => index !== playerIndex),
+                        players: team.players.filter(p => p.id !== draggedPlayerId),
                         updated_at: new Date().toISOString()
                       };
-                      
-                      setUnassignedPlayers([...unassignedPlayers, player]);
-                      setTeams(updatedTeams);
-                      found = true;
-                      break;
                     }
-                  }
+                    return team;
+                  });
                   
+                  setTeams(updatedTeams);
                   setDraggedPlayerId(null);
                 }
               }}

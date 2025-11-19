@@ -193,7 +193,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
       <div className="player-header">
         <div className="player-nickname">{player.nickname}</div>
         <div className={`player-score ${getScoreClass(player.score)}`}>
-          {player.score}
+          天梯分数:{player.score}
         </div>
       </div>
       
