@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false }) {
+export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false, className = '' }) {
   // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
@@ -178,7 +178,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
 
   return (
     <div 
-      className="player-card" 
+      className={`player-card ${className}`} 
       draggable
       style={{ background: cardBackgroundColor }}
       onDragStart={(e) => {

@@ -1449,3 +1449,35 @@ body {
   border-radius: 4px;
   margin: 1rem;
 }
+
+/* 选手区域分隔线 */
+.player-section-divider {
+  grid-column: 1 / -1; /* 跨越整个网格宽度 */
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.player-section-divider::before {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #4a5568, transparent);
+}
+
+.player-section-divider .divider-text {
+  padding: 0 15px;
+  color: #4a5568;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* 已分配选手卡片的特殊样式 */
+.player-card.assigned-player {
+  background-color: #1e3a5f !important;
+  border: 2px solid #48bb78;
+  box-shadow: 0 0 10px rgba(72, 187, 120, 0.3);
+}

@@ -944,7 +944,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* 未分配选手池 */}
+          {/* 参赛选手池 */}
           <section className="players-section">
             <div className="section-header">
               <h2>参赛选手</h2>
@@ -997,8 +997,14 @@ export default function Home() {
               ) : loadingState.players === 'error' ? (
                 <div className="error-message">{loadingState.error || '加载选手信息失败，请刷新页面重试'}</div>
               ) : (
-                unassignedPlayers
-                  .filter(player => {
+                (() => {
+                  // 获取所有已分配的选手（从各个队伍中）
+                  const assignedPlayers = teams.flatMap(team => team.players);
+                  // 过滤并排序所有选手：已分配的在前，未分配的在后
+                  const allPlayers = [
+                    ...assignedPlayers, 
+                    ...unassignedPlayers
+                  ].filter(player => {
                     if (!searchTerm) return true;
                     
                     const term = searchTerm.toLowerCase();
@@ -1012,17 +1018,38 @@ export default function Home() {
                         typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
                       ))
                     );
-                  })
-                  .map(player => (
-                    <PlayerCard 
-                      key={player.id} 
-                      player={player} 
-                      onDragStart={handleDragStart}
-                      onEdit={editPlayer}
-                      onDelete={deletePlayer}
-                      onCopy={copyPlayerGameId}
-                    />
-                  ))
+                  });
+
+                  return (
+                    <>
+                      {allPlayers.map((player, index) => {
+                        // 检查是否需要添加分隔线（当前是第一个未分配选手且前面有已分配选手）
+                        const isUnassignedPlayer = unassignedPlayers.some(p => p.id === player.id);
+                        const isAssignedPlayer = assignedPlayers.some(p => p.id === player.id);
+                        const showDivider = isUnassignedPlayer && index > 0 && assignedPlayers.length > 0 && index === assignedPlayers.length;
+                        
+                        return (
+                          <>
+                            {showDivider && (
+                              <div className="player-section-divider">
+                                <span className="divider-text">未分配选手</span>
+                              </div>
+                            )}
+                            <PlayerCard 
+                              key={player.id} 
+                              player={player} 
+                              onDragStart={handleDragStart}
+                              onEdit={editPlayer}
+                              onDelete={deletePlayer}
+                              onCopy={copyPlayerGameId}
+                              className={isAssignedPlayer ? 'assigned-player' : ''}
+                            />
+                          </>
+                        );
+                      })}
+                    </>
+                  );
+                })()
               )}
             </div>
           </section>
