@@ -7,14 +7,7 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
     return team.players.reduce((total, player) => total + (player.score || 0), 0);
   };
 
-  // 获取队伍分数颜色类
-  const getTeamScoreClass = (score) => {
-    if (score >= 80000) return 'score-master';
-    if (score >= 60000) return 'score-diamond';
-    if (score >= 40000) return 'score-platinum';
-    if (score >= 20000) return 'score-gold';
-    return 'score-silver';
-  };
+
 
   // 生成随机冷色调背景色
   const getRandomCoolColor = () => {
@@ -71,12 +64,11 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
     >
       <div className="team-header">
         <h3 className="team-name">{team.name}</h3>
-        <div className={`team-score ${getTeamScoreClass(calculateTeamScore())}`}>
+        <div className="team-score">
           天梯总分:
           {calculateTeamScore()}
         </div>
       </div>
-      
       <div className="team-players">
         {team.players.map((player) => (
           <PlayerCard 

@@ -458,6 +458,7 @@ body {
 
 .player-card.simplified .player-basic-info {
   flex: 1;
+  width: 100px;
 }
 
 .player-card.simplified .player-nickname {

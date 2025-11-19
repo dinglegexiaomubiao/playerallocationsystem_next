@@ -128,14 +128,14 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
           <div className="player-info">
             <div className="player-basic-info">
               <div className="player-nickname">{player.nickname}</div>
-              <div className="player-game-id">{player.game_id}</div>
-              {player.group_nickname && (
+              <div className="player-group-nickname">天梯分:{player.score}</div>
+              {/* {player.group_nickname && (
                 <div className="player-group-nickname">{player.group_nickname}</div>
-              )}
+              )} */}
             </div>
-            <div className={`player-score ${getScoreClass(player.score)}`}>
+            {/* <div className={`player-score ${getScoreClass(player.score)}`}>
               {player.score}
-            </div>
+            </div> */}
           </div>
           
           <div className="player-positions">
