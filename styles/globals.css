@@ -684,6 +684,7 @@ body {
 }
 
 .error-message {
+    width: 100%;
     color: #f87171;
     font-size: 0.8rem;
     margin-top: 8px;
@@ -738,10 +739,16 @@ body {
 
 .detailed-stats-content {
     margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
 }
 
 .detailed-stats-content .stat-section {
     margin-bottom: 15px;
+    width: 100%;
 }
 
 .detailed-stats-content h4 {

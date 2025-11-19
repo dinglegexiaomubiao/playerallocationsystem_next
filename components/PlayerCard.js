@@ -280,7 +280,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
         
         {errorStats && (
           <div className="error-message">
-            错误: {errorStats}
+            错误:数据有误 
           </div>
         )}
         
@@ -316,15 +316,13 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
             </div>
             
             {/* 调试信息切换按钮 */}
-            <div className="debug-toggle">
+            {/* <div className="debug-toggle">
               <button 
                 className="debug-toggle-btn" 
                 onClick={() => setShowDebugInfo(!showDebugInfo)}
               >
                 {showDebugInfo ? '隐藏调试信息' : '显示调试信息'}
               </button>
-              
-              {/* 调试信息 */}
               {showDebugInfo && playerStats.debug && (
                 <div className="debug-info">
                   <h4>最近比赛数据:</h4>
@@ -334,7 +332,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
                   <pre>{JSON.stringify(playerStats.debug.heroesData, null, 2)}</pre>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         )}
       </div>
