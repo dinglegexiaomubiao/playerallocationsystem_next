@@ -1219,7 +1219,16 @@ export default function Home() {
                 <div className="random-message-header">
                   <span className="random-message-username">{randomMessage.username}</span>
                   <span className="random-message-time">
-                    {new Date(randomMessage.created_at).toLocaleString('zh-CN')}
+                    {new Date(randomMessage.created_at).toLocaleString('zh-CN', {
+                      timeZone: 'Asia/Shanghai',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false
+                    })}
                   </span>
                 </div>
                 <div className="random-message-text">{randomMessage.content}</div>
@@ -1259,7 +1268,16 @@ export default function Home() {
                         <div className="message-header">
                           <span className="message-username">{message.username}</span>
                           <span className="message-time">
-                            {new Date(message.created_at).toLocaleString('zh-CN')}
+                            {new Date(message.created_at).toLocaleString('zh-CN', {
+                              timeZone: 'Asia/Shanghai',
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                              hour12: false
+                            })}
                           </span>
                         </div>
                         <div className="message-content">{message.content}</div>

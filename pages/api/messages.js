@@ -32,9 +32,12 @@ export default async function handler(req, res) {
           return;
         }
         
+        // 获取当前中国时区时间
+        const chinaTime = new Date().toLocaleString("sv-SE", {timeZone: "Asia/Shanghai"});
+        
         const postResult = await client.query(
-          'INSERT INTO public.messages (username, content) VALUES ($1, $2) RETURNING *',
-          [username, content]
+          'INSERT INTO public.messages (username, content, created_at) VALUES ($1, $2, $3) RETURNING *',
+          [username, content, chinaTime]
         );
         res.status(201).json(postResult.rows[0]);
         break;
