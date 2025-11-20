@@ -85,7 +85,7 @@ export default function Home() {
   
   // 启动随机显示留言功能
   const startRandomMessageDisplay = (messagesData) => {
-    if (messagesData.length > 0 && !showMessageBoard) {
+    if (messagesData.length > 0) {
       // 立即显示一条随机留言
       showRandomMessageFunc(messagesData);
       
@@ -1182,22 +1182,7 @@ export default function Home() {
         {/* 留言板悬浮按钮 */}
         <button 
           className="message-board-toggle"
-          onClick={() => {
-            setShowMessageBoard(!showMessageBoard);
-            // 当留言板关闭时，重新启动随机消息显示
-            if (showMessageBoard) {
-              if (messages.length > 0) {
-                startRandomMessageDisplay(messages);
-              }
-            } else {
-              // 当打开留言板时，清除随机消息显示
-              if (randomMessageInterval.current) {
-                clearInterval(randomMessageInterval.current);
-                randomMessageInterval.current = null;
-              }
-              setShowRandomMessage(false);
-            }
-          }}
+          onClick={() => setShowMessageBoard(!showMessageBoard)}
         >
           <span className="message-board-icon">💬</span>
           留言板
@@ -1234,13 +1219,7 @@ export default function Home() {
                 <h3>留言板</h3>
                 <button 
                   className="close-message-board"
-                  onClick={() => {
-                    setShowMessageBoard(false);
-                    // 重新启动随机消息显示
-                    if (messages.length > 0) {
-                      startRandomMessageDisplay(messages);
-                    }
-                  }}
+                  onClick={() => setShowMessageBoard(false)}
                 >
                   ×
                 </button>
