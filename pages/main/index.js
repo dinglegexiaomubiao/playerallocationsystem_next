@@ -33,6 +33,14 @@ export default function Home() {
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const importFileRef = useRef(null);
   const router = useRouter();
+  
+  // 留言板相关状态
+  const [showMessageBoard, setShowMessageBoard] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState({ username: '', content: '' });
+  const [showRandomMessage, setShowRandomMessage] = useState(false);
+  const [randomMessage, setRandomMessage] = useState(null);
+  const randomMessageInterval = useRef(null);
 
   // 页面加载时检查用户登录状态
   useEffect(() => {
@@ -44,6 +52,122 @@ export default function Home() {
       router.push('/login');
     }
   }, [router]);
+
+  // 页面加载时获取留言
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch('/api/messages');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const messagesData = await response.json();
+        setMessages(messagesData);
+        
+        // 如果有留言，启动随机显示留言功能
+        if (messagesData.length > 0) {
+          startRandomMessageDisplay(messagesData);
+        }
+      } catch (error) {
+        console.error('获取留言失败:', error);
+      }
+    };
+    
+    fetchMessages();
+    
+    return () => {
+      // 清除定时器
+      if (randomMessageInterval.current) {
+        clearInterval(randomMessageInterval.current);
+      }
+    };
+  }, []);
+  
+  // 启动随机显示留言功能
+  const startRandomMessageDisplay = (messagesData) => {
+    if (messagesData.length > 0 && !showMessageBoard) {
+      // 立即显示一条随机留言
+      showRandomMessageFunc(messagesData);
+      
+      // 每隔一段时间显示一条随机留言
+      randomMessageInterval.current = setInterval(() => {
+        showRandomMessageFunc(messagesData);
+      }, 10000); // 10秒显示一次
+      
+      setShowRandomMessage(true);
+    }
+  };
+  
+  // 显示随机留言
+  const showRandomMessageFunc = (messagesData) => {
+    if (messagesData.length > 0) {
+      const randomIndex = Math.floor(Math.random() * messagesData.length);
+      setRandomMessage(messagesData[randomIndex]);
+    }
+  };
+  
+  // 提交新留言
+  const handleSubmitMessage = async (e) => {
+    e.preventDefault();
+    
+    if (!newMessage.username.trim() || !newMessage.content.trim()) {
+      alert('请填写用户名和留言内容');
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newMessage),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const message = await response.json();
+      setMessages([message, ...messages]);
+      setNewMessage({ username: '', content: '' });
+      
+      // 如果这是第一条留言，启动随机显示功能
+      if (messages.length === 0) {
+        startRandomMessageDisplay([message, ...messages]);
+      }
+    } catch (error) {
+      console.error('提交留言失败:', error);
+      alert('提交留言失败，请稍后重试: ' + error.message);
+    }
+  };
+  
+  // 为留言点赞
+  const likeMessage = async (messageId, currentLikes) => {
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: messageId, likes: currentLikes + 1 }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const updatedMessage = await response.json();
+      setMessages(messages.map(msg => 
+        msg.id === messageId ? updatedMessage : msg
+      ));
+    } catch (error) {
+      console.error('点赞失败:', error);
+      alert('点赞失败: ' + error.message);
+    }
+  };
 
   // 英雄列表数据
   const heroesList = [
@@ -1054,6 +1178,133 @@ export default function Home() {
             </div>
           </section>
         </main>
+        
+        {/* 留言板悬浮按钮 */}
+        <button 
+          className="message-board-toggle"
+          onClick={() => {
+            setShowMessageBoard(!showMessageBoard);
+            // 当留言板关闭时，重新启动随机消息显示
+            if (showMessageBoard) {
+              if (messages.length > 0) {
+                startRandomMessageDisplay(messages);
+              }
+            } else {
+              // 当打开留言板时，清除随机消息显示
+              if (randomMessageInterval.current) {
+                clearInterval(randomMessageInterval.current);
+                randomMessageInterval.current = null;
+              }
+              setShowRandomMessage(false);
+            }
+          }}
+        >
+          <span className="message-board-icon">💬</span>
+          留言板
+        </button>
+        
+        {/* 随机留言显示框 */}
+        {showRandomMessage && randomMessage && (
+          <div className="random-message-container">
+            <div className="random-message">
+              <div className="random-message-content">
+                <div className="random-message-header">
+                  <span className="random-message-username">{randomMessage.username}</span>
+                  <span className="random-message-time">
+                    {new Date(randomMessage.created_at).toLocaleString('zh-CN')}
+                  </span>
+                </div>
+                <div className="random-message-text">{randomMessage.content}</div>
+              </div>
+              <button 
+                className="close-random-message"
+                onClick={() => setShowRandomMessage(false)}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* 留言板 */}
+        {showMessageBoard && (
+          <div className="message-board-overlay">
+            <div className="message-board">
+              <div className="message-board-header">
+                <h3>留言板</h3>
+                <button 
+                  className="close-message-board"
+                  onClick={() => {
+                    setShowMessageBoard(false);
+                    // 重新启动随机消息显示
+                    if (messages.length > 0) {
+                      startRandomMessageDisplay(messages);
+                    }
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="message-board-content">
+                {/* 留言列表 */}
+                <div className="messages-list">
+                  {messages.length === 0 ? (
+                    <div className="no-messages">暂无留言</div>
+                  ) : (
+                    messages.map(message => (
+                      <div key={message.id} className="message-item">
+                        <div className="message-header">
+                          <span className="message-username">{message.username}</span>
+                          <span className="message-time">
+                            {new Date(message.created_at).toLocaleString('zh-CN')}
+                          </span>
+                        </div>
+                        <div className="message-content">{message.content}</div>
+                        <div className="message-actions">
+                          <button 
+                            className="like-button"
+                            onClick={() => likeMessage(message.id, message.likes || 0)}
+                          >
+                            👍 {message.likes || 0}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+                
+                {/* 留言输入表单 */}
+                <div className="message-form">
+                  <h4>发表留言</h4>
+                  <form onSubmit={handleSubmitMessage}>
+                    <div className="form-group">
+                      <input
+                        type="text"
+                        placeholder="用户名"
+                        value={newMessage.username}
+                        onChange={(e) => setNewMessage({...newMessage, username: e.target.value})}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <textarea
+                        placeholder="留言内容"
+                        value={newMessage.content}
+                        onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
+                        className="form-textarea"
+                        rows="3"
+                      />
+                    </div>
+                    <div className="form-actions">
+                      <button type="submit" className="btn btn-primary">发表留言</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 添加选手到队伍对话框 */}
