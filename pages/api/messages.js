@@ -40,18 +40,48 @@ export default async function handler(req, res) {
         break;
         
       case 'PUT':
-        // 为消息点赞
-        const { id, likes } = req.body;
+        // 为消息点赞/取消点赞 - 使用原子操作防止并发问题
+        const { id, action } = req.body;
         
         if (!id) {
           res.status(400).json({ error: '消息ID不能为空' });
           return;
         }
         
-        const putResult = await client.query(
-          'UPDATE public.messages SET likes = $1 WHERE id = $2 RETURNING *',
-          [likes, id]
-        );
+        let query, params;
+        if (action === 'unlike') {
+          // 先获取当前点赞数，然后减少点赞数，但不能小于0
+          const currentResult = await client.query(
+            'SELECT likes FROM public.messages WHERE id = $1',
+            [id]
+          );
+          
+          // 如果消息不存在
+          if (currentResult.rowCount === 0) {
+            res.status(404).json({ error: '消息不存在' });
+            return;
+          }
+          
+          // 计算新的点赞数（不低于0）
+          const newLikes = Math.max((currentResult.rows[0].likes || 0) - 1, 0);
+          
+          query = 'UPDATE public.messages SET likes = $1 WHERE id = $2 RETURNING *';
+          params = [newLikes, id];
+        } else {
+          // 增加点赞数
+          query = 'UPDATE public.messages SET likes = likes + 1 WHERE id = $1 RETURNING *';
+          params = [id];
+        }
+        
+        // 执行更新操作
+        const putResult = await client.query(query, params);
+        
+        // 如果没有更新任何行，说明消息不存在
+        if (putResult.rowCount === 0) {
+          res.status(404).json({ error: '消息不存在' });
+          return;
+        }
+        
         res.status(200).json(putResult.rows[0]);
         break;
         

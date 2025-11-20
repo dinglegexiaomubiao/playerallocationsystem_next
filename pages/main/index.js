@@ -143,15 +143,25 @@ export default function Home() {
     }
   };
   
-  // 为留言点赞
-  const likeMessage = async (messageId, currentLikes) => {
+  // 为留言点赞/取消点赞
+  const [likedMessages, setLikedMessages] = useState(new Set());
+
+  const likeMessage = async (messageId) => {
     try {
+      // 判断是点赞还是取消点赞
+      const isLiked = likedMessages.has(messageId);
+      const action = isLiked ? 'unlike' : 'like'; // 尽管后端暂时只处理like，但我们保留扩展性
+      
+      // 发送请求到后端，让后端处理点赞数的增减
       const response = await fetch('/api/messages', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ id: messageId, likes: currentLikes + 1 }),
+        body: JSON.stringify({ 
+          id: messageId,
+          action: action
+        }),
       });
       
       if (!response.ok) {
@@ -160,9 +170,22 @@ export default function Home() {
       }
       
       const updatedMessage = await response.json();
+      
+      // 更新消息列表
       setMessages(messages.map(msg => 
         msg.id === messageId ? updatedMessage : msg
       ));
+      
+      // 切换本地点赞状态
+      setLikedMessages(prev => {
+        const newLiked = new Set(prev);
+        if (newLiked.has(messageId)) {
+          newLiked.delete(messageId);
+        } else {
+          newLiked.add(messageId);
+        }
+        return newLiked;
+      });
     } catch (error) {
       console.error('点赞失败:', error);
       alert('点赞失败: ' + error.message);
@@ -925,7 +948,7 @@ export default function Home() {
     setShowNewPlayerModal(true);
   };
 
-  // 复制选手游戏ID
+  // 复制选手steamID
   const copyPlayerGameId = (gameId) => {
     navigator.clipboard.writeText(gameId);
   };
@@ -1076,7 +1099,7 @@ export default function Home() {
                 <input 
                   type="text" 
                   id="searchInput" 
-                  placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置或英雄..." 
+                  placeholder="搜索选手昵称、steamID、群昵称、擅长位置或英雄..." 
                   className="search-input" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -1243,9 +1266,10 @@ export default function Home() {
                         <div className="message-actions">
                           <button 
                             className="like-button"
-                            onClick={() => likeMessage(message.id, message.likes || 0)}
+                            onClick={() => likeMessage(message.id)}
                           >
-                            👍 {message.likes || 0}
+                            {likedMessages.has(message.id) ? '👍 取消点赞 ' : '👍 点赞 '}
+                            {message.likes || 0}
                           </button>
                         </div>
                       </div>
@@ -1299,7 +1323,7 @@ export default function Home() {
               <input 
                 type="text" 
                 id="modalSearchInput" 
-                placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置、擅长英雄或默契选手..." 
+                placeholder="搜索选手昵称、steamID、群昵称、擅长位置、擅长英雄或默契选手..." 
                 className="modal-search-input" 
                 value={modalSearchTerm}
                 onChange={(e) => setModalSearchTerm(e.target.value)}
@@ -1381,7 +1405,7 @@ export default function Home() {
                     <input type="text" id="newPlayerNickname" required />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="newPlayerGameId">游戏ID *</label>
+                    <label htmlFor="newPlayerGameId">steamID *</label>
                     <input type="text" id="newPlayerGameId" required />
                   </div>
                 </div>
@@ -1525,7 +1549,7 @@ export default function Home() {
               <input 
                 type="text" 
                 id="synergySearchInput" 
-                placeholder="搜索选手昵称、游戏ID、群昵称、擅长位置、擅长英雄或默契选手..." 
+                placeholder="搜索选手昵称、steamID、群昵称、擅长位置、擅长英雄或默契选手..." 
                 className="modal-search-input" 
                 value={synergySearchTerm}
                 onChange={(e) => setSynergySearchTerm(e.target.value)}

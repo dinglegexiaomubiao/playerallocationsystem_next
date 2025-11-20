@@ -79,7 +79,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
   const handleCopyGameID = () => {
     navigator.clipboard.writeText(player.game_id);
     // 显示复制成功的提示
-    alert('游戏ID已复制到剪贴板');
+    alert('steamID已复制到剪贴板');
   };
 
   const handleDelete = () => {
@@ -158,7 +158,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
           <button 
             className="player-action-btn copy-btn small" 
             onClick={handleCopyGameID} 
-            title="复制游戏ID"
+            title="复制steamID"
           >
             📋
           </button>
@@ -199,7 +199,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
       
       <div className="player-details">
         <div className="detail-item">
-          <span className="detail-label">游戏ID:</span>
+          <span className="detail-label">steamID:</span>
           <span className="detail-value">{player.game_id}</span>
         </div>
         {player.group_nickname && (
@@ -342,7 +342,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
         <button className="player-action-btn edit-btn" onClick={() => onEdit && onEdit(player)} title="编辑选手">
           ✏️ 编辑
         </button>
-        <button className="player-action-btn copy-btn" onClick={handleCopyGameID} title="复制游戏ID">
+        <button className="player-action-btn copy-btn" onClick={handleCopyGameID} title="复制steamID">
           📋 复制
         </button>
         <button className="player-action-btn delete-btn" onClick={handleDelete} title="删除选手">
