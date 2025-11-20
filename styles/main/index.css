@@ -1459,7 +1459,7 @@ body {
   position: relative;
 }
 
-.player-section-divider::before {
+.player-section-divider::after {
   content: '';
   flex: 1;
   height: 1px;
