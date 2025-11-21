@@ -353,10 +353,18 @@ export default function Home() {
         setUnassignedPlayers(unassigned);
         setLoadingState(prev => ({ ...prev, teams: 'loaded', players: 'loaded' }));
         
-        // 设置队伍ID计数器
+        // 设置队伍ID计数器为当前未使用的最小正整数ID
         if (teamsFromAPI.length > 0) {
-          const maxId = Math.max(...teamsFromAPI.map(t => t.id));
-          setTeamIdCounter(maxId + 1);
+          const usedIds = teamsFromAPI.map(t => t.id).sort((a, b) => a - b);
+          let nextId = 1;
+          for (const id of usedIds) {
+            if (id === nextId) {
+              nextId++;
+            } else if (id > nextId) {
+              break;
+            }
+          }
+          setTeamIdCounter(nextId);
         } else {
           setTeamIdCounter(1);
         }
@@ -406,9 +414,21 @@ export default function Home() {
   // 添加队伍
   const addTeam = async () => {
     setIsAddingTeam(true);
+    
+    // 查找当前未使用的最小正整数ID
+    const usedIds = teams.map(t => t.id).sort((a, b) => a - b);
+    let newId = 1;
+    for (const id of usedIds) {
+      if (id === newId) {
+        newId++;
+      } else if (id > newId) {
+        break;
+      }
+    }
+    
     const newTeam = {
-      id: teamIdCounter,
-      name: `队伍${teamIdCounter}`,
+      id: newId,
+      name: `队伍${newId}`,
       players: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -426,7 +446,17 @@ export default function Home() {
       
       if (response.ok) {
         setTeams([...teams, newTeam]);
-        setTeamIdCounter(teamIdCounter + 1);
+        // 更新ID计数器为下一个可用ID
+        const nextUsedIds = [...usedIds, newId].sort((a, b) => a - b);
+        let nextId = 1;
+        for (const id of nextUsedIds) {
+          if (id === nextId) {
+            nextId++;
+          } else if (id > nextId) {
+            break;
+          }
+        }
+        setTeamIdCounter(nextId);
         alert('队伍添加成功');
       } else {
         throw new Error('添加队伍失败');
@@ -435,7 +465,17 @@ export default function Home() {
       console.error('添加队伍到API失败:', error);
       // 即使API调用失败，仍然更新前端状态
       setTeams([...teams, newTeam]);
-      setTeamIdCounter(teamIdCounter + 1);
+      // 更新ID计数器为下一个可用ID
+      const nextUsedIds = [...usedIds, newId].sort((a, b) => a - b);
+      let nextId = 1;
+      for (const id of nextUsedIds) {
+        if (id === nextId) {
+          nextId++;
+        } else if (id > nextId) {
+          break;
+        }
+      }
+      setTeamIdCounter(nextId);
       alert('队伍添加失败');
     } finally {
       setIsAddingTeam(false);
@@ -976,7 +1016,7 @@ export default function Home() {
       <div className="container">
         {/* 头部区域 */}
         <header className="header">
-          <h1>比赛选手人员分配系统</h1>
+          <h1>商K杯</h1>
           <div className="instructions">
             <p>拖拽选手卡片到队伍中进行分配 | 点击添加按钮选择选手 | 支持搜索和筛选功能</p>
           </div>
@@ -984,7 +1024,7 @@ export default function Home() {
           {/* 统计卡片区域 */}
           <div className="stats-cards">
             <div className="stat-card total-players">
-              <div className="stat-icon">👥</div>
+              <div className="stat-icon">🎮</div>
               <div className="stat-info">
                 <div className="stat-title">总选手数</div>
                 <div className="stat-value" id="totalPlayersCount">
@@ -1019,16 +1059,14 @@ export default function Home() {
               </div>
             </div>
             
-            {/* 用户信息卡片 */}
-            {/* {user && (
               <div className="stat-card user-info">
-                <div className="stat-icon">👤</div>
+                <div className="stat-icon">🏆</div>
                 <div className="stat-info">
-                  <div className="stat-title">用户: {user.name}</div>
-                  <div className="stat-value">访问次数: {user.count}</div>
+                  <div className="stat-title">第4届</div>
+                  <div className="stat-value">冠军队伍:</div>
                 </div>
               </div>
-            )} */}
+
           </div>
           
           {/* <div className="header-actions">
