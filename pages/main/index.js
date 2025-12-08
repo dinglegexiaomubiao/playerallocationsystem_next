@@ -1016,7 +1016,7 @@ export default function Home() {
       <div className="container">
         {/* 头部区域 */}
         <header className="header">
-          <h1>商K杯</h1>
+          <h1>Dom的比赛纪录</h1>
           <div className="instructions">
             <p>拖拽选手卡片到队伍中进行分配 | 点击添加按钮选择选手 | 支持搜索和筛选功能</p>
           </div>
@@ -1026,7 +1026,7 @@ export default function Home() {
             <div className="stat-card total-players">
               <div className="stat-icon">🎮</div>
               <div className="stat-info">
-                <div className="stat-title">总选手数</div>
+                <div className="stat-title">本次参加人数</div>
                 <div className="stat-value" id="totalPlayersCount">
                   {loadingState.players === 'loading' ? '读取中...' : 
                    loadingState.players === 'error' ? '加载失败' : 
@@ -1038,7 +1038,7 @@ export default function Home() {
             <div className="stat-card unassigned-players">
               <div className="stat-icon">⏳</div>
               <div className="stat-info">
-                <div className="stat-title">未分配选手</div>
+                <div className="stat-title">未进队人数</div>
                 <div className="stat-value" id="unassignedPlayersCount">
                   {loadingState.players === 'loading' ? '读取中...' : 
                    loadingState.players === 'error' ? '加载失败' : 
@@ -1050,7 +1050,7 @@ export default function Home() {
             <div className="stat-card teams">
               <div className="stat-icon">👥</div>
               <div className="stat-info">
-                <div className="stat-title">队伍数</div>
+                <div className="stat-title">参与队伍数</div>
                 <div className="stat-value" id="teamsCount">
                   {loadingState.teams === 'loading' ? '读取中...' : 
                    loadingState.teams === 'error' ? '加载失败' : 
@@ -1063,7 +1063,7 @@ export default function Home() {
                 <div className="stat-icon">🏆</div>
                 <div className="stat-info">
                   <div className="stat-title">第4届</div>
-                  <div className="stat-value">冠军队伍:</div>
+                  <div className="stat-value">冠军队伍:3</div>
                 </div>
               </div>
 
@@ -1090,7 +1090,7 @@ export default function Home() {
           {/* 队伍展示区 */}
           <section className="teams-section">
             <div className="section-header">
-              <h2>队伍分配</h2>
+              <h2>参赛队伍及人员</h2>
               <div className="section-actions">
                 <button id="resetBtn" className="btn btn-primary" onClick={resetAssignments}>重置分配</button>
                 <button id="addPlayerBtn" className="btn btn-primary" onClick={() => setShowNewPlayerModal(true)} disabled={isCreatingPlayer}>
