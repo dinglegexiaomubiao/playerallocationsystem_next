@@ -4,6 +4,10 @@ import PlayerCard from '../../components/PlayerCard';
 import TeamCard from '../../components/TeamCard';
 import { useRouter } from 'next/router';
 
+// 在文件顶部导入新增的组件
+import TournamentSelector from '../../components/TournamentSelector';
+import EditTournamentResults from '../../components/EditTournamentResults';
+
 export default function Home() {
   const [teams, setTeams] = useState([]);
   const [unassignedPlayers, setUnassignedPlayers] = useState([]);
@@ -994,13 +998,86 @@ export default function Home() {
     navigator.clipboard.writeText(gameId);
   };
 
+  // 添加赛季相关的状态
+  const [currentTournament, setCurrentTournament] = useState(null);
+  const [showTournamentSelector, setShowTournamentSelector] = useState(false);
+  const [showEditTournamentResults, setShowEditTournamentResults] = useState(false);
+  const [isSwitchingTournament, setIsSwitchingTournament] = useState(false);
+  
+  // 获取指定赛季的数据
+  const fetchTournamentData = async (tournamentId) => {
+    try {
+      // 获取队伍数据
+      const teamsResponse = await fetch(`/api/teams?tournament_id=${tournamentId}`);
+      const teamsData = await teamsResponse.json();
+      
+      // 获取选手数据
+      const playersResponse = await fetch(`/api/players?tournament_id=${tournamentId}`);
+      const playersData = await playersResponse.json();
+      
+      if (teamsData.success && playersData.success) {
+        setTeams(teamsData.teams);
+        
+        // 根据当前赛季确定未分配的选手
+        const assignedPlayerIds = teamsData.teams.flatMap(team => team.players.map(p => p.id));
+        const unassigned = playersData.players.filter(player => !assignedPlayerIds.includes(player.id));
+        setUnassignedPlayers(unassigned);
+      }
+    } catch (error) {
+      console.error('获取赛季数据失败:', error);
+    }
+  };
+  
+  // 处理赛季选择
+  const handleTournamentSelect = (tournament) => {
+    setIsSwitchingTournament(true);
+    setCurrentTournament(tournament);
+    fetchTournamentData(tournament.id).finally(() => {
+      setIsSwitchingTournament(false);
+    });
+  };
+  
+  // 处理赛季结果保存
+  const handleSaveTournamentResults = (updatedTournament) => {
+    setCurrentTournament(updatedTournament);
+  };
+  
+  // 初始化时加载第一个赛季
+  useEffect(() => {
+    const loadInitialTournament = async () => {
+      try {
+        const response = await fetch('/api/tournaments');
+        const data = await response.json();
+        if (data.success && data.tournaments.length > 0) {
+          const latestTournament = data.tournaments[0];
+          setCurrentTournament(latestTournament);
+          fetchTournamentData(latestTournament.id);
+        }
+      } catch (error) {
+        console.error('加载初始赛季失败:', error);
+      }
+    };
+    
+    loadInitialTournament();
+  }, []);
+
   return (
-    <>
+    <div className="container">
       <Head>
         <title>Dom的活动记录</title>
         <meta name="description" content="比赛选手人员分配系统" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+
+      {/* 赛季切换 Loading 动画 */}
+      {isSwitchingTournament && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">切换赛季中...</div>
+          </div>
+        </div>
+      )}
 
       {/* 全局loading动画 */}
       {(isAddingTeam || isCreatingPlayer) && (
@@ -1063,27 +1140,38 @@ export default function Home() {
               <div className="stat-card user-info">
                 <div className="stat-icon">🏆</div>
                 <div className="stat-info">
-                  <div className="stat-title">第4届</div>
-                  <div className="stat-value">冠军队伍:3</div>
+                  <div className="stat-title">
+                    {currentTournament ? `第${currentTournament.id}届:${currentTournament.name}` : '赛季信息'}
+                  </div>
+                  <div className="stat-value">
+                    {currentTournament?.champion_team_id 
+                      ? `冠军队伍:${currentTournament.champion_team_id}` 
+                      : '暂无冠军信息'}
+                  </div>
                 </div>
               </div>
 
           </div>
           
-          {/* <div className="header-actions">
-            <button id="resetBtn" className="btn btn-secondary" onClick={resetAssignments}>重置分配</button>
-            <button id="saveBtn" className="btn btn-primary" onClick={saveConfig}>保存配置</button>
-            <button id="exportBtn" className="btn btn-secondary" onClick={saveConfig}>导出数据</button>
-            <button id="importBtn" className="btn btn-secondary" onClick={() => importFileRef.current.click()}>导入数据</button>
-            <input 
-              type="file" 
-              id="importFile" 
-              ref={importFileRef}
-              style={{display: 'none'}} 
-              accept=".json"
-              onChange={importConfig}
-            />
-          </div> */}
+          <div className="tournament-controls">
+            <button 
+              className="tournament-button"
+              onClick={() => setShowTournamentSelector(true)}
+            >
+              {currentTournament ? currentTournament.name : '选择赛季'} ▼
+            </button>
+            {currentTournament && (
+              <button 
+                className="edit-results-button"
+                onClick={() => {
+                  // 打开编辑赛季结果的模态框
+                  setShowEditTournamentResults(true);
+                }}
+              >
+                编辑结果
+              </button>
+            )}
+          </div>
         </header>
         
         {/* 主体内容 */}
@@ -1646,6 +1734,25 @@ export default function Home() {
           </div>
         </div>
       )}
-    </>
+      
+      {/* 赛季选择器模态框 */}
+      {showTournamentSelector && (
+        <TournamentSelector
+          currentTournament={currentTournament}
+          onTournamentSelect={handleTournamentSelect}
+          onClose={() => setShowTournamentSelector(false)}
+        />
+      )}
+      
+      {/* 编辑赛季结果模态框 */}
+      {showEditTournamentResults && (
+        <EditTournamentResults
+          tournament={currentTournament}
+          teams={teams}
+          onSave={handleSaveTournamentResults}
+          onClose={() => setShowEditTournamentResults(false)}
+        />
+      )}
+    </div>
   );
 }
