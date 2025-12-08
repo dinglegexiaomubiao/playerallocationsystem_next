@@ -997,7 +997,7 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>比赛选手人员分配系统</title>
+        <title>Dom的活动记录</title>
         <meta name="description" content="比赛选手人员分配系统" />
         <link rel="icon" href="/favicon.ico" />
       </Head>

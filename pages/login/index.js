@@ -52,7 +52,7 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>登录 - 比赛选手人员分配系统</title>
+        <title>登录 - Dom的比赛记录</title>
         <meta name="description" content="比赛选手人员分配系统登录页面" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -60,8 +60,8 @@ export default function Login() {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <h1>比赛选手人员分配系统</h1>
-            <p>请输入您的用户名登录系统</p>
+            <h1>Dom的比赛记录</h1>
+            <p>请输入您的用户名</p>
           </div>
           
           <form onSubmit={handleSubmit} className="login-form">
