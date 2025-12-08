@@ -43,15 +43,16 @@ export default function Home() {
   const randomMessageInterval = useRef(null);
 
   // 页面加载时检查用户登录状态
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    } else {
-      // 如果没有用户信息，重定向到登录页面
-      router.push('/login');
-    }
-  }, [router]);
+  // 如果没有用户信息，重定向到登录页面
+  // useEffect(() => {
+  //   const storedUser = localStorage.getItem('user');
+  //   if (storedUser) {
+  //     setUser(JSON.parse(storedUser));
+  //   } else {
+      
+  //     router.push('/login');
+  //   }
+  // }, [router]);
 
   // 页面加载时获取留言
   useEffect(() => {
