@@ -33,13 +33,29 @@ const EditTournamentResults = ({
     e.preventDefault();
     
     try {
-      const response = await fetch(`/api/tournaments/${tournament.id}`, {
+      const response = await fetch(`/api/tournaments/${encodeURIComponent(tournament.id)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
       });
+      
+      // 检查响应状态
+      if (!response.ok) {
+        const errorMessage = `HTTP error! status: ${response.status}`;
+        console.error('API请求失败:', errorMessage);
+        console.error('请求URL:', `/api/tournaments/${encodeURIComponent(tournament.id)}`);
+        console.error('请求体:', formData);
+        throw new Error(errorMessage);
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('非JSON响应:', text);
+        throw new Error('服务器返回了非JSON响应');
+      }
       
       const result = await response.json();
       if (result.success) {
@@ -50,7 +66,7 @@ const EditTournamentResults = ({
       }
     } catch (error) {
       console.error('保存失败:', error);
-      alert('保存失败');
+      alert('保存失败: ' + error.message);
     }
   };
 

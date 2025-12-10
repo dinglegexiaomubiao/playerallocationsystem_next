@@ -1,4 +1,4 @@
-// Next.js API route for tournaments management
+// Next.js API route for managing individual tournament
 import { Pool } from 'pg';
 
 // 创建数据库连接池
@@ -11,14 +11,15 @@ const pool = new Pool({
 
 export default async function handler(req, res) {
   const { method } = req;
+  const { id } = req.query;
   const client = await pool.connect();
 
   try {
     switch (method) {
       case 'GET':
-        // 获取所有赛季信息
-        const tournamentsResult = await client.query(`
-          SELECT 
+        // 获取指定赛季信息
+        const tournamentResult = await client.query(
+          `SELECT 
             id, 
             name, 
             start_date, 
@@ -32,43 +33,25 @@ export default async function handler(req, res) {
             status,
             created_at
           FROM public.tournaments 
-          ORDER BY id
-        `);
+          WHERE id = $1`,
+          [id]
+        );
         
-        res.status(200).json({
-          success: true,
-          tournaments: tournamentsResult.rows
-        });
-        break;
-
-      case 'POST':
-        // 创建新赛季
-        const { name, start_date, end_date } = req.body;
-        
-        if (!name) {
-          return res.status(400).json({
+        if (tournamentResult.rowCount === 0) {
+          return res.status(404).json({
             success: false,
-            message: '赛季名称不能为空'
+            message: '赛季未找到'
           });
         }
         
-        const insertResult = await client.query(
-          `INSERT INTO public.tournaments 
-           (name, start_date, end_date, status, created_at) 
-           VALUES ($1, $2, $3, $4, $5) 
-           RETURNING *`,
-          [name, start_date, end_date, 'planned', new Date().toISOString()]
-        );
-        
-        res.status(201).json({
+        res.status(200).json({
           success: true,
-          tournament: insertResult.rows[0]
+          tournament: tournamentResult.rows[0]
         });
         break;
 
       case 'PUT':
         // 更新赛季信息
-        const { id } = req.query;
         const updateData = req.body;
         
         if (!id) {
@@ -105,12 +88,32 @@ export default async function handler(req, res) {
         });
         break;
 
+      case 'DELETE':
+        // 删除赛季
+        const deleteResult = await client.query(
+          'DELETE FROM public.tournaments WHERE id = $1 RETURNING id',
+          [id]
+        );
+        
+        if (deleteResult.rowCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: '赛季未找到'
+          });
+        }
+        
+        res.status(200).json({
+          success: true,
+          message: '赛季删除成功'
+        });
+        break;
+
       default:
-        res.setHeader('Allow', ['GET', 'POST', 'PUT']);
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
         res.status(405).end(`Method ${method} Not Allowed`);
     }
   } catch (error) {
-    console.error('Tournaments API error:', error);
+    console.error('Tournament API error:', error);
     res.status(500).json({
       success: false,
       message: '服务器内部错误',
