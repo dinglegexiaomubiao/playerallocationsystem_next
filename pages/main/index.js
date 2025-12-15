@@ -1003,7 +1003,7 @@ export default function Home() {
   const [showTournamentSelector, setShowTournamentSelector] = useState(false);
   const [showEditTournamentResults, setShowEditTournamentResults] = useState(false);
   const [isSwitchingTournament, setIsSwitchingTournament] = useState(false);
-  
+  const [tournaments, setTournaments] = useState([]);
   // 获取指定赛季的数据
   const fetchTournamentData = async (tournamentId) => {
     try {
@@ -1037,9 +1037,25 @@ export default function Home() {
     });
   };
   
-  // 处理赛季结果保存
+  // 处理保存赛季结果
   const handleSaveTournamentResults = (updatedTournament) => {
-    setCurrentTournament(updatedTournament);
+    if (updatedTournament) {
+      // 更新当前赛季信息
+      setCurrentTournament(updatedTournament);
+      
+      // 更新赛季列表
+      setTournaments(prev => prev.map(t => 
+        t.id === updatedTournament.id ? updatedTournament : t
+      ));
+    } else {
+      // 赛季被删除
+      setCurrentTournament(null);
+      setTournaments(prev => prev.filter(t => t.id !== currentTournament.id));
+      
+      // 重置队伍和选手数据
+      setTeams([]);
+      setUnassignedPlayers([]);
+    }
   };
   
   // 初始化时加载第一个赛季
@@ -1048,16 +1064,20 @@ export default function Home() {
       try {
         const response = await fetch('/api/tournaments');
         const data = await response.json();
-        if (data.success && data.tournaments.length > 0) {
-          const latestTournament = data.tournaments[0];
-          setCurrentTournament(latestTournament);
-          fetchTournamentData(latestTournament.id);
+        if (data.success) {
+          setTournaments(data.tournaments);
+          if (data.tournaments.length > 0) {
+            const firstTournament = data.tournaments[0];
+            setCurrentTournament(firstTournament);
+            // 加载第一个赛季的数据
+            await fetchTournamentData(firstTournament.id);
+          }
         }
       } catch (error) {
-        console.error('加载初始赛季失败:', error);
+        console.error('加载赛季数据失败:', error);
       }
     };
-    
+
     loadInitialTournament();
   }, []);
 
