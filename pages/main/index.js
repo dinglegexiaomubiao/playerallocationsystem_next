@@ -1011,14 +1011,14 @@ export default function Home() {
       const teamsResponse = await fetch(`/api/teams?tournament_id=${tournamentId}`);
       const teamsData = await teamsResponse.json();
       
-      // 获取选手数据
+      // 获取选手数据（该赛季的所有选手）
       const playersResponse = await fetch(`/api/players?tournament_id=${tournamentId}`);
       const playersData = await playersResponse.json();
       
       if (teamsData.success && playersData.success) {
         setTeams(teamsData.teams);
         
-        // 根据当前赛季确定未分配的选手
+        // 从所有选手中排除已分配到队伍的选手，得到真正未分配的选手
         const assignedPlayerIds = teamsData.teams.flatMap(team => team.players.map(p => p.id));
         const unassigned = playersData.players.filter(player => !assignedPlayerIds.includes(player.id));
         setUnassignedPlayers(unassigned);
@@ -1036,7 +1036,6 @@ export default function Home() {
       setIsSwitchingTournament(false);
     });
   };
-  
   // 处理保存赛季结果
   const handleSaveTournamentResults = (updatedTournament) => {
     if (updatedTournament) {
