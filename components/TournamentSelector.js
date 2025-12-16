@@ -135,6 +135,12 @@ const TournamentSelector = ({
                       {tournament.runner_up_team_id && (
                         <span className="runner-up">亚军: 队伍{tournament.runner_up_team_id}</span>
                       )}
+                      {tournament.third_place_team_id && (
+                        <span className="runner-up">季军: 队伍{tournament.third_place_team_id}</span>
+                      )}
+                      {tournament.sponsor_info && (
+                        <span className="runner-up">赞助商{tournament.sponsor_info}</span>
+                      )}
                     </div>
                   </div>
                 ))}
