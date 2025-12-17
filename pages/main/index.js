@@ -1127,7 +1127,7 @@ export default function Home() {
                 <div className="stat-value" id="totalPlayersCount">
                   {loadingState.players === 'loading' ? '读取中...' : 
                    loadingState.players === 'error' ? '加载失败' : 
-                   unassignedPlayers.length + teams.reduce((total, team) => total + team.players.length, 0)}
+                   unassignedPlayers.length + teams.reduce((total, team) => total + (team.players?.length || 0), 0)}
                 </div>
               </div>
             </div>
