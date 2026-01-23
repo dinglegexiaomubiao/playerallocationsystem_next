@@ -7,8 +7,8 @@ export default async function handler(req, res) {
   switch (method) {
     case 'POST':
       try {
-        const { teamId, playerId, tournamentId } = req.body;
-        await addPlayerToTeam(teamId, playerId, tournamentId);
+        const { teamId, playerId, tournament_id } = req.body;
+        await addPlayerToTeam(teamId, playerId, tournament_id);
         res.status(201).json({ message: '选手添加到队伍成功' });
       } catch (error) {
         console.error('添加选手到队伍错误:', error);
@@ -18,8 +18,8 @@ export default async function handler(req, res) {
 
     case 'DELETE':
       try {
-        const { teamId, playerId, tournamentId } = req.body;
-        await removePlayerFromTeam(teamId, playerId, tournamentId);
+        const { teamId, playerId, tournament_id } = req.body;
+        await removePlayerFromTeam(teamId, playerId, tournament_id);
         res.status(200).json({ message: '选手从队伍移除成功' });
       } catch (error) {
         console.error('从队伍移除选手错误:', error);
@@ -29,8 +29,8 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
-        const { teamId, playerIds, tournamentId } = req.body;
-        await updateTeamPlayers(teamId, playerIds, tournamentId);
+        const { teamId, playerIds } = req.body;
+        await updateTeamPlayers(teamId, playerIds);
         res.status(200).json({ message: '队伍选手更新成功' });
       } catch (error) {
         console.error('更新队伍选手错误:', error);
