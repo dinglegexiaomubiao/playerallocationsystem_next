@@ -1,5 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllPlayers } from '../../lib/db';
+import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, pool } from '../../lib/db';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -35,8 +35,8 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
-        const player = req.body;
-        const newPlayer = await addPlayer(player);
+        const { tournament_id, ...playerData } = req.body;
+        const newPlayer = await addPlayer(playerData, tournament_id);
         res.status(201).json({ success: true, player: newPlayer });
       } catch (error) {
         console.error('创建选手错误:', error);
@@ -46,8 +46,32 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
-        const { id, ...updates } = req.body;
+        const { id, tournament_id, ...updates } = req.body;
         const updatedPlayer = await updatePlayer(id, updates);
+        
+        // 如果提供了tournament_id，更新选手与赛季的关联
+        if (tournament_id) {
+          const client = await pool.connect();
+          try {
+            // 检查是否已存在关联
+            const existing = await client.query(
+              'SELECT * FROM public.player_tournament_participations WHERE player_id = $1 AND tournament_id = $2',
+              [id, tournament_id]
+            );
+            
+            if (existing.rows.length === 0) {
+              // 如果不存在关联，则创建新的关联
+              await client.query(
+                `INSERT INTO public.player_tournament_participations (player_id, tournament_id, created_at)
+                 VALUES ($1, $2, $3)`,
+                [id, tournament_id, new Date().toISOString()]
+              );
+            }
+          } finally {
+            client.release();
+          }
+        }
+        
         res.status(200).json({ success: true, player: updatedPlayer });
       } catch (error) {
         console.error('更新选手错误:', error);

@@ -114,7 +114,7 @@ export default async function handler(req, res) {
         t.tournament_id,
         tour.name AS tournament_name
       FROM teams t
-      LEFT JOIN tournaments tour ON t.tournament_id::integer = tour.id
+      LEFT JOIN tournaments tour ON t.tournament_id = tour.id
       ORDER BY t.tournament_id, t.id
       LIMIT 10
     `;
@@ -130,7 +130,7 @@ export default async function handler(req, res) {
         tp.tournament_id,
         tour.name AS tournament_name
       FROM team_players tp
-      LEFT JOIN tournaments tour ON tp.tournament_id::integer = tour.id
+      LEFT JOIN tournaments tour ON tp.tournament_id = tour.id
       ORDER BY tp.tournament_id, tp.team_id
       LIMIT 10
     `;
@@ -148,8 +148,8 @@ export default async function handler(req, res) {
         tour.name AS tournament_name,
         p.nickname AS player_name
       FROM player_tournament_participations ptp
-      LEFT JOIN tournaments tour ON ptp.tournament_id::integer = tour.id
-      LEFT JOIN players p ON ptp.player_id::integer = p.id
+      LEFT JOIN tournaments tour ON ptp.tournament_id = tour.id
+      LEFT JOIN players p ON ptp.player_id = p.id
       ORDER BY ptp.tournament_id, ptp.final_rank
       LIMIT 10
     `;

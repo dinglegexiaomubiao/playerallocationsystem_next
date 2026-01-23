@@ -1,5 +1,6 @@
 // Next.js API route for tournaments management
 import { Pool } from 'pg';
+import { initDatabase } from '../../lib/db'; // 导入数据库初始化函数
 
 // 创建数据库连接池
 const pool = new Pool({
@@ -14,6 +15,9 @@ export default async function handler(req, res) {
   const client = await pool.connect();
 
   try {
+    // 确保数据库表已初始化
+    await initDatabase();
+    
     switch (method) {
       case 'GET':
         // 获取所有赛季信息

@@ -420,6 +420,13 @@ export default function Home() {
   const addTeam = async () => {
     setIsAddingTeam(true);
     
+    // 检查当前是否有选中的赛季
+    if (!currentTournament?.id) {
+      alert('请先选择一个赛季，然后才能添加队伍！');
+      setIsAddingTeam(false);
+      return;
+    }
+    
     // 查找当前未使用的最小正整数ID
     const usedIds = teams.map(t => t.id).sort((a, b) => a - b);
     let newId = 1;
@@ -441,12 +448,17 @@ export default function Home() {
     
     // 添加到API
     try {
+      const payload = {
+        ...newTeam,
+        tournament_id: currentTournament?.id  // 传递当前选中的赛季ID
+      };
+      
       const response = await fetch('/api/teams', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newTeam),
+        body: JSON.stringify(payload),
       });
       
       if (response.ok) {
@@ -464,24 +476,12 @@ export default function Home() {
         setTeamIdCounter(nextId);
         alert('队伍添加成功');
       } else {
-        throw new Error('添加队伍失败');
+        const errorData = await response.json();
+        throw new Error(errorData.error || '添加队伍失败');
       }
     } catch (error) {
       console.error('添加队伍到API失败:', error);
-      // 即使API调用失败，仍然更新前端状态
-      setTeams([...teams, newTeam]);
-      // 更新ID计数器为下一个可用ID
-      const nextUsedIds = [...usedIds, newId].sort((a, b) => a - b);
-      let nextId = 1;
-      for (const id of nextUsedIds) {
-        if (id === nextId) {
-          nextId++;
-        } else if (id > nextId) {
-          break;
-        }
-      }
-      setTeamIdCounter(nextId);
-      alert('队伍添加失败');
+      alert(`队伍添加失败: ${error.message}`);
     } finally {
       setIsAddingTeam(false);
     }
@@ -544,12 +544,18 @@ export default function Home() {
     
     // 更新API
     try {
+      const payload = {
+        teamId,
+        playerId,
+        tournament_id: currentTournament?.id  // 传递当前选中的赛季ID
+      };
+      
       const response = await fetch('/api/team-players', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ teamId, playerId }),
+        body: JSON.stringify(payload),
       });
       
       if (!response.ok) {
@@ -586,7 +592,11 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ teamId, playerId }),
+        body: JSON.stringify({ 
+          teamId, 
+          playerId,
+          tournament_id: currentTournament?.id  // 传递当前选中的赛季ID
+        }),
       });
       
       if (!response.ok) {
@@ -621,12 +631,17 @@ export default function Home() {
       // 添加到API
       try {
         console.log('正在发送选手数据到API:', newPlayer);
+        const payload = {
+          ...newPlayer,
+          tournament_id: currentTournament?.id  // 传递当前选中的赛季ID
+        };
+        
         const response = await fetch('/api/players', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(newPlayer),
+          body: JSON.stringify(payload),
         });
         
         const responseData = await response.json();
