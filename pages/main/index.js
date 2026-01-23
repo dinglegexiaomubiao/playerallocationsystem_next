@@ -540,7 +540,11 @@ export default function Home() {
       return team;
     });
 
+    // 从未分配选手列表中移除该选手
+    const updatedUnassignedPlayers = unassignedPlayers.filter(p => p.id !== playerId);
+
     setTeams(updatedTeams);
+    setUnassignedPlayers(updatedUnassignedPlayers);
     
     // 更新API
     try {
@@ -563,6 +567,10 @@ export default function Home() {
       }
     } catch (error) {
       console.error('添加选手到队伍API记录失败:', error);
+      
+      // 如果API失败，撤销状态更改（回滚）
+      setTeams(teams);
+      setUnassignedPlayers([...unassignedPlayers, player]);
     }
   };
 
@@ -570,6 +578,10 @@ export default function Home() {
   const removePlayerFromTeam = async (playerId, teamId) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
+    
+    // 获取被移除的选手信息
+    const playerToRemove = team.players.find(p => p.id === playerId);
+    if (!playerToRemove) return;
     
     // 从队伍中移除选手
     const updatedTeams = teams.map(t => {
@@ -583,7 +595,11 @@ export default function Home() {
       return t;
     });
     
+    // 将选手添加到未分配选手列表
+    const updatedUnassignedPlayers = [...unassignedPlayers, playerToRemove];
+    
     setTeams(updatedTeams);
+    setUnassignedPlayers(updatedUnassignedPlayers);
     
     // 更新API
     try {
@@ -604,6 +620,10 @@ export default function Home() {
       }
     } catch (error) {
       console.error('从队伍API记录中移除选手失败:', error);
+      
+      // 如果API失败，撤销状态更改（回滚）
+      setTeams(teams);
+      setUnassignedPlayers(unassignedPlayers);
     }
   };
 
