@@ -1,5 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllTeams, getPlayersInTeam } from '../../lib/db';
+import { getAllTeams, getPlayersInTeam, addTeam } from '../../lib/db';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -59,13 +59,12 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
-        const team = req.body;
-        // 注意：这里需要确保team对象包含tournament_id
-        // const newTeam = await addTeam(team);
-        res.status(201).json({ success: true, message: '创建队伍功能待实现' });
+        const { id, name, tournament_id, created_at, updated_at } = req.body;
+        const newTeam = await addTeam({ id, name, created_at, updated_at }, tournament_id);
+        res.status(201).json({ success: true, team: newTeam });
       } catch (error) {
         console.error('创建队伍错误:', error);
-        res.status(500).json({ success: false, error: '创建队伍失败' });
+        res.status(500).json({ success: false, error: `创建队伍失败: ${error.message}` });
       }
       break;
 
