@@ -540,11 +540,7 @@ export default function Home() {
       return team;
     });
 
-    // 从未分配选手列表中移除该选手
-    const updatedUnassignedPlayers = unassignedPlayers.filter(p => p.id !== playerId);
-
     setTeams(updatedTeams);
-    setUnassignedPlayers(updatedUnassignedPlayers);
     
     // 更新API
     try {
@@ -567,10 +563,6 @@ export default function Home() {
       }
     } catch (error) {
       console.error('添加选手到队伍API记录失败:', error);
-      
-      // 如果API失败，撤销状态更改（回滚）
-      setTeams(teams);
-      setUnassignedPlayers([...unassignedPlayers, player]);
     }
   };
 
@@ -578,10 +570,6 @@ export default function Home() {
   const removePlayerFromTeam = async (playerId, teamId) => {
     const team = teams.find(t => t.id === teamId);
     if (!team) return;
-    
-    // 获取被移除的选手信息
-    const playerToRemove = team.players.find(p => p.id === playerId);
-    if (!playerToRemove) return;
     
     // 从队伍中移除选手
     const updatedTeams = teams.map(t => {
@@ -595,11 +583,7 @@ export default function Home() {
       return t;
     });
     
-    // 将选手添加到未分配选手列表
-    const updatedUnassignedPlayers = [...unassignedPlayers, playerToRemove];
-    
     setTeams(updatedTeams);
-    setUnassignedPlayers(updatedUnassignedPlayers);
     
     // 更新API
     try {
@@ -620,10 +604,6 @@ export default function Home() {
       }
     } catch (error) {
       console.error('从队伍API记录中移除选手失败:', error);
-      
-      // 如果API失败，撤销状态更改（回滚）
-      setTeams(teams);
-      setUnassignedPlayers(unassignedPlayers);
     }
   };
 
@@ -684,8 +664,10 @@ export default function Home() {
     setIsCreatingPlayer(false);
   };
 
-  // 更新选手信息
+  // 更新选手
   const updatePlayer = async (playerId, playerData) => {
+    console.log('开始更新选手:', { playerId, playerData }); // 调试信息
+    
     // 更新未分配选手中的选手信息
     const updatedUnassignedPlayers = unassignedPlayers.map(player => {
       if (player.id === playerId) {
@@ -732,16 +714,89 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ playerId, player: playerData }),
+        body: JSON.stringify({ 
+          playerId, 
+          player: playerData,
+          tournament_id: currentTournament?.id  // 传递当前选中的赛季ID
+        }),
       });
       
+      const responseData = await response.json();
+      console.log('API响应:', responseData); // 调试信息
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '更新选手失败');
+        throw new Error(responseData.error || '更新选手失败');
+      }
+      
+      if (responseData.success) {
+        // 使用API返回的最新数据更新状态，确保数据一致性
+        const updatedPlayer = responseData.player;
+        
+        // 重新更新未分配选手列表（使用API返回的最新数据）
+        const updatedUnassignedWithApiData = unassignedPlayers.map(player => {
+          if (player.id === playerId) {
+            return {
+              ...updatedPlayer,
+              id: updatedPlayer.id?.toString(),
+              game_id: updatedPlayer.game_id?.toString(),
+              score: updatedPlayer.score ? parseInt(updatedPlayer.score) : 0,
+              win_rate: updatedPlayer.win_rate ? parseInt(updatedPlayer.win_rate) : 0,
+              championships: updatedPlayer.championships ? parseInt(updatedPlayer.championships) : 0,
+              positions: updatedPlayer.positions ? updatedPlayer.positions.split(',').filter(p => p) : [],
+              heroes: updatedPlayer.heroes ? updatedPlayer.heroes.split(',').filter(h => h) : [],
+              synergy_players: updatedPlayer.synergy_players ? updatedPlayer.synergy_players.split(',').filter(sp => sp) : [],
+              created_at: updatedPlayer.created_at || "",
+              updated_at: updatedPlayer.updated_at || "",
+              position_priority: {},
+              synergyPlayers: []
+            };
+          }
+          return player;
+        });
+        
+        // 重新更新队伍中的选手信息（使用API返回的最新数据）
+        const updatedTeamsWithApiData = teams.map(team => {
+          const updatedPlayers = team.players.map(player => {
+            if (player.id === playerId) {
+              return {
+                ...updatedPlayer,
+                id: updatedPlayer.id?.toString(),
+                game_id: updatedPlayer.game_id?.toString(),
+                score: updatedPlayer.score ? parseInt(updatedPlayer.score) : 0,
+                win_rate: updatedPlayer.win_rate ? parseInt(updatedPlayer.win_rate) : 0,
+                championships: updatedPlayer.championships ? parseInt(updatedPlayer.championships) : 0,
+                positions: updatedPlayer.positions ? updatedPlayer.positions.split(',').filter(p => p) : [],
+                heroes: updatedPlayer.heroes ? updatedPlayer.heroes.split(',').filter(h => h) : [],
+                synergy_players: updatedPlayer.synergy_players ? updatedPlayer.synergy_players.split(',').filter(sp => sp) : [],
+                created_at: updatedPlayer.created_at || "",
+                updated_at: updatedPlayer.updated_at || "",
+                position_priority: {},
+                synergyPlayers: [],
+                team_name: team.name
+              };
+            }
+            return player;
+          });
+          
+          return {
+            ...team,
+            players: updatedPlayers,
+            updated_at: new Date().toISOString()
+          };
+        });
+        
+        setUnassignedPlayers(updatedUnassignedWithApiData);
+        setTeams(updatedTeamsWithApiData);
+        
+        console.log('选手信息更新成功并同步到前端状态'); // 调试信息
       }
     } catch (error) {
       console.error('更新选手API记录失败:', error);
       alert(`更新选手失败: ${error.message}`);
+      
+      // 如果API失败，撤销状态更改（回滚）
+      setUnassignedPlayers(unassignedPlayers);
+      setTeams(teams);
     }
   };
 

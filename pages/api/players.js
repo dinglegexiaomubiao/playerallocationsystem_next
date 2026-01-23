@@ -1,5 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, pool } from '../../lib/db';
+import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, getPlayerById, pool } from '../../lib/db';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -37,6 +37,7 @@ export default async function handler(req, res) {
       try {
         const { tournament_id, ...playerData } = req.body;
         const newPlayer = await addPlayer(playerData, tournament_id);
+        console.log('创建选手成功:', newPlayer.id);
         res.status(201).json({ success: true, player: newPlayer });
       } catch (error) {
         console.error('创建选手错误:', error);
@@ -46,8 +47,16 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
-        const { id, tournament_id, ...updates } = req.body;
-        const updatedPlayer = await updatePlayer(id, updates);
+        const { playerId, player: updates, tournament_id } = req.body;
+        console.log('接收到更新请求:', { playerId, updates, tournament_id }); // 调试信息
+
+        // 更新选手信息
+        await updatePlayer(playerId, updates);
+        console.log('选手信息更新成功:', playerId); // 调试信息
+
+        // 获取更新后的选手信息
+        const updatedPlayer = await getPlayerById(playerId);
+        console.log('获取更新后的选手信息:', updatedPlayer); // 调试信息
         
         // 如果提供了tournament_id，更新选手与赛季的关联
         if (tournament_id) {
@@ -56,7 +65,7 @@ export default async function handler(req, res) {
             // 检查是否已存在关联
             const existing = await client.query(
               'SELECT * FROM public.player_tournament_participations WHERE player_id = $1 AND tournament_id = $2',
-              [id, tournament_id]
+              [playerId, tournament_id]
             );
             
             if (existing.rows.length === 0) {
@@ -64,8 +73,11 @@ export default async function handler(req, res) {
               await client.query(
                 `INSERT INTO public.player_tournament_participations (player_id, tournament_id, created_at)
                  VALUES ($1, $2, $3)`,
-                [id, tournament_id, new Date().toISOString()]
+                [playerId, tournament_id, new Date().toISOString()]
               );
+              console.log('创建选手赛季参与记录:', { playerId, tournament_id }); // 调试信息
+            } else {
+              console.log('选手赛季参与记录已存在:', { playerId, tournament_id }); // 调试信息
             }
           } finally {
             client.release();
@@ -75,7 +87,7 @@ export default async function handler(req, res) {
         res.status(200).json({ success: true, player: updatedPlayer });
       } catch (error) {
         console.error('更新选手错误:', error);
-        res.status(500).json({ success: false, error: '更新选手失败' });
+        res.status(500).json({ success: false, error: `更新选手失败: ${error.message}` });
       }
       break;
 
@@ -83,6 +95,7 @@ export default async function handler(req, res) {
       try {
         const { id } = req.body;
         await deletePlayer(id);
+        console.log('删除选手成功:', id); // 调试信息
         res.status(200).json({ success: true, message: '选手删除成功' });
       } catch (error) {
         console.error('删除选手错误:', error);
