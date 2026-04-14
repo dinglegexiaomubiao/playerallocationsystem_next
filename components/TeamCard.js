@@ -49,9 +49,9 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
     return coolColors[randomIndex];
   };
 
-  const [cardBackgroundColor, setCardBackgroundColor] = useState(getRandomCoolColor());
+  const [cardBackgroundColor, setCardBackgroundColor] = useState('#1a2530');
 
-  // 组件挂载时设置背景色
+  // 组件挂载时设置背景色（避免 SSR hydration mismatch）
   useEffect(() => {
     setCardBackgroundColor(getRandomCoolColor());
   }, []);
@@ -59,7 +59,6 @@ export default function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTe
   return (
     <div 
       className="team-card" 
-      onDragOver={(e) => e.preventDefault()}
       style={{ background: cardBackgroundColor }}
     >
       <div className="team-header">

@@ -428,6 +428,11 @@ body {
     border-color: #16a34a;
 }
 
+.join-btn:hover {
+    background: #f59e0b;
+    border-color: #d97706;
+}
+
 /* 简化版选手卡片 */
 .player-card.simplified {
   display: flex;

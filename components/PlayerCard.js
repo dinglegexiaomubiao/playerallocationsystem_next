@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false, className = '' }) {
+export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false, className = '' }) {
   // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
@@ -36,16 +36,18 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
     return coolColors[0];
   };
 
-  const [cardBackgroundColor, setCardBackgroundColor] = useState(getRandomCoolColor());
+  const [cardBackgroundColor, setCardBackgroundColor] = useState('#1e293b');
   const [playerStats, setPlayerStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [errorStats, setErrorStats] = useState(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false); // 控制调试信息显示
 
-  // 组件挂载时设置背景色
+  // 组件挂载时设置背景色（避免 SSR hydration mismatch）
   useEffect(() => {
-    setCardBackgroundColor(getRandomCoolColor());
-  }, []);
+    if (!isSimplified && !isModalView) {
+      setCardBackgroundColor(getRandomCoolColor());
+    }
+  }, [isSimplified, isModalView]);
 
   // 获取玩家详细统计数据
   const fetchPlayerStats = async () => {
@@ -179,13 +181,7 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
   return (
     <div 
       className={`player-card ${className}`} 
-      draggable
       style={{ background: cardBackgroundColor }}
-      onDragStart={(e) => {
-        if (onDragStart) {
-          onDragStart(e, player.id);
-        }
-      }}
     >
       {onRemove && (
         <button className="remove-player" onClick={() => onRemove(player.id)}>×</button>
@@ -339,6 +335,11 @@ export default function PlayerCard({ player, onRemove, onDragStart, onEdit, onCo
       
       {/* 操作按钮区域 - 始终显示 */}
       <div className="player-actions">
+        {onJoinTeam && (
+          <button className="player-action-btn join-btn" onClick={() => onJoinTeam(player.id)} title="加入队伍">
+            ➕ 入队
+          </button>
+        )}
         <button className="player-action-btn edit-btn" onClick={() => onEdit && onEdit(player)} title="编辑选手">
           ✏️ 编辑
         </button>

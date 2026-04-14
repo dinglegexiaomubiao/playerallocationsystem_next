@@ -1,5 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllTeams, getPlayersInTeam, addTeam } from '../../lib/db';
+import { getAllTeams, getPlayersInTeam, addTeam, updateTeam, deleteTeam } from '../../lib/db';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -7,23 +7,18 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        // 获取所有队伍
         let teams;
         const { tournament_id } = req.query;
         
         if (tournament_id) {
-          // 如果指定了tournament_id，则只获取该赛季的队伍
           const result = await getAllTeams(tournament_id);
           teams = result;
         } else {
-          // 否则获取所有队伍
           teams = await getAllTeams();
         }
         
-        // 获取每个队伍中的选手
         const formattedTeams = await Promise.all(teams.map(async (team) => {
           const playersInTeam = await getPlayersInTeam(team.id, tournament_id);
-          // 格式化选手数据
           const formattedPlayers = playersInTeam.map(player => ({
             ...player,
             id: player.id?.toString(),
@@ -71,8 +66,11 @@ export default async function handler(req, res) {
     case 'PUT':
       try {
         const { id, ...updates } = req.body;
-        // const updatedTeam = await updateTeam(id, updates);
-        res.status(200).json({ success: true, message: '更新队伍功能待实现' });
+        if (!id) {
+          return res.status(400).json({ success: false, error: '缺少队伍ID' });
+        }
+        await updateTeam(id, { ...updates, updated_at: new Date().toISOString() });
+        res.status(200).json({ success: true, message: '更新队伍成功' });
       } catch (error) {
         console.error('更新队伍错误:', error);
         res.status(500).json({ success: false, error: '更新队伍失败' });
@@ -81,9 +79,13 @@ export default async function handler(req, res) {
 
     case 'DELETE':
       try {
-        const { id } = req.body;
-        // await deleteTeam(id);
-        res.status(200).json({ success: true, message: '删除队伍功能待实现' });
+        const { id, teamId } = req.body;
+        const targetId = id || teamId;
+        if (!targetId) {
+          return res.status(400).json({ success: false, error: '缺少队伍ID' });
+        }
+        await deleteTeam(targetId);
+        res.status(200).json({ success: true, message: '删除队伍成功' });
       } catch (error) {
         console.error('删除队伍错误:', error);
         res.status(500).json({ success: false, error: '删除队伍失败' });

@@ -4,6 +4,7 @@ import Head from 'next/head';
 
 export default function Login() {
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -25,18 +26,16 @@ export default function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username: username.trim() }),
+        body: JSON.stringify({ username: username.trim(), password: password.trim() }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // 保存用户信息到 localStorage
-        localStorage.setItem('user', JSON.stringify({ 
-          name: data.name, 
-          count: data.count 
+        localStorage.setItem('user', JSON.stringify({
+          name: data.name,
+          count: data.count
         }));
-        // 跳转到主页面
         router.push('/main');
       } else {
         setError(data.error || '登录失败');
@@ -61,9 +60,10 @@ export default function Login() {
         <div className="login-card">
           <div className="login-header">
             <h1>Dom的比赛记录</h1>
-            <p>请输入您的用户名</p>
+            <p>请输入您的用户名和密码</p>
+            <p className="login-hint">新用户将自动注册</p>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
               <label htmlFor="username">用户名</label>
@@ -77,15 +77,28 @@ export default function Login() {
                 disabled={loading}
               />
             </div>
-            
+
+            <div className="form-group">
+              <label htmlFor="password">密码</label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入或设置密码"
+                className="form-input"
+                disabled={loading}
+              />
+            </div>
+
             {error && (
               <div className="error-message">
                 {error}
               </div>
             )}
-            
-            <button 
-              type="submit" 
+
+            <button
+              type="submit"
               className="login-button"
               disabled={loading}
             >
@@ -104,7 +117,7 @@ export default function Login() {
           background: #111827;
           padding: 20px;
         }
-        
+
         .login-card {
           background: #1a1b23;
           border-radius: 12px;
@@ -114,42 +127,48 @@ export default function Login() {
           border: 1px solid #2a2d3a;
           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        
+
         .login-header {
           text-align: center;
           margin-bottom: 30px;
         }
-        
+
         .login-header h1 {
           color: #ffffff;
           font-size: 1.8rem;
           margin-bottom: 10px;
           font-weight: 700;
         }
-        
+
         .login-header p {
           color: #94a3b8;
           font-size: 1rem;
         }
-        
+
+        .login-hint {
+          color: #64748b;
+          font-size: 0.85rem;
+          margin-top: 6px;
+        }
+
         .login-form {
           display: flex;
           flex-direction: column;
           gap: 20px;
         }
-        
+
         .form-group {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
-        
+
         .form-group label {
           color: #cccccc;
           font-size: 0.9rem;
           font-weight: 500;
         }
-        
+
         .form-input {
           padding: 12px 15px;
           border-radius: 8px;
@@ -158,13 +177,13 @@ export default function Login() {
           color: #ffffff;
           font-size: 0.9rem;
         }
-        
+
         .form-input:focus {
           outline: none;
           border-color: #606060;
           background: #222222;
         }
-        
+
         .error-message {
           color: #ef4444;
           font-size: 0.875rem;
@@ -173,7 +192,7 @@ export default function Login() {
           border-radius: 6px;
           border: 1px solid rgba(239, 68, 68, 0.3);
         }
-        
+
         .login-button {
           padding: 12px;
           border: none;
@@ -185,18 +204,18 @@ export default function Login() {
           cursor: pointer;
           transition: all 0.2s ease;
         }
-        
+
         .login-button:hover:not(:disabled) {
           background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
-        
+
         .login-button:disabled {
           opacity: 0.6;
           cursor: not-allowed;
         }
-        
+
         @media (max-width: 768px) {
           .login-card {
             padding: 30px 20px;

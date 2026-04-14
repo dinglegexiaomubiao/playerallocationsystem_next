@@ -1,6 +1,55 @@
 import { pool } from '../../lib/db';
 
+// 简单的内存 Rate Limiting：IP -> { count, resetTime }
+const rateLimitMap = new Map();
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() 
+    || req.headers['x-real-ip'] 
+    || req.connection.remoteAddress 
+    || 'unknown';
+}
+
+function checkRateLimit(ip, method) {
+  const now = Date.now();
+  // 不同方法不同限制
+  const limits = {
+    GET: { max: 60, window: 60 * 1000 },    // 60次/分钟
+    POST: { max: 10, window: 60 * 1000 },   // 10次/分钟
+    PUT: { max: 20, window: 60 * 1000 }     // 20次/分钟
+  };
+  const limit = limits[method] || { max: 30, window: 60 * 1000 };
+  const key = `${ip}:${method}`;
+  const record = rateLimitMap.get(key);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + limit.window });
+    return { allowed: true };
+  }
+  
+  if (record.count >= limit.max) {
+    return { 
+      allowed: false, 
+      retryAfter: Math.ceil((record.resetTime - now) / 1000)
+    };
+  }
+  
+  record.count++;
+  rateLimitMap.set(key, record);
+  return { allowed: true };
+}
+
 export default async function handler(req, res) {
+  // 速率限制检查
+  const clientIp = getClientIp(req);
+  const rateCheck = checkRateLimit(clientIp, req.method);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({ 
+      error: '请求过于频繁，请稍后再试', 
+      retryAfter: rateCheck.retryAfter 
+    });
+  }
+
   // 确保正确解析请求体
   if (req.body && typeof req.body === 'string') {
     try {
@@ -15,24 +64,31 @@ export default async function handler(req, res) {
     client = await pool.connect();
     
     switch (req.method) {
-      case 'GET':
-        // 获取所有消息，按创建时间倒序排列
+      case 'GET': {
         const getMessagesResult = await client.query(
           'SELECT * FROM public.messages ORDER BY created_at DESC'
         );
         res.status(200).json(getMessagesResult.rows);
         break;
+      }
         
-      case 'POST':
-        // 添加新消息
-        const { username, content } = req.body;
+      case 'POST': {
+        let { username, content } = req.body;
         
         if (!username || !content) {
           res.status(400).json({ error: '用户名和内容不能为空' });
           return;
         }
         
-        // 获取当前中国时区时间
+        // 简单的输入清理：截断过长内容
+        username = String(username).trim().slice(0, 50);
+        content = String(content).trim().slice(0, 500);
+        
+        if (!username || !content) {
+          res.status(400).json({ error: '用户名和内容不能为空' });
+          return;
+        }
+        
         const chinaTime = new Date().toLocaleString("sv-SE", {timeZone: "Asia/Shanghai"});
         
         const postResult = await client.query(
@@ -41,9 +97,9 @@ export default async function handler(req, res) {
         );
         res.status(201).json(postResult.rows[0]);
         break;
+      }
         
-      case 'PUT':
-        // 为消息点赞/取消点赞 - 使用原子操作防止并发问题
+      case 'PUT': {
         const { id, action } = req.body;
         
         if (!id) {
@@ -51,35 +107,17 @@ export default async function handler(req, res) {
           return;
         }
         
-        let query, params;
+        let queryStr, params;
         if (action === 'unlike') {
-          // 先获取当前点赞数，然后减少点赞数，但不能小于0
-          const currentResult = await client.query(
-            'SELECT likes FROM public.messages WHERE id = $1',
-            [id]
-          );
-          
-          // 如果消息不存在
-          if (currentResult.rowCount === 0) {
-            res.status(404).json({ error: '消息不存在' });
-            return;
-          }
-          
-          // 计算新的点赞数（不低于0）
-          const newLikes = Math.max((currentResult.rows[0].likes || 0) - 1, 0);
-          
-          query = 'UPDATE public.messages SET likes = $1 WHERE id = $2 RETURNING *';
-          params = [newLikes, id];
+          queryStr = 'UPDATE public.messages SET likes = GREATEST(likes - 1, 0) WHERE id = $1 RETURNING *';
+          params = [id];
         } else {
-          // 增加点赞数
-          query = 'UPDATE public.messages SET likes = likes + 1 WHERE id = $1 RETURNING *';
+          queryStr = 'UPDATE public.messages SET likes = likes + 1 WHERE id = $1 RETURNING *';
           params = [id];
         }
         
-        // 执行更新操作
-        const putResult = await client.query(query, params);
+        const putResult = await client.query(queryStr, params);
         
-        // 如果没有更新任何行，说明消息不存在
         if (putResult.rowCount === 0) {
           res.status(404).json({ error: '消息不存在' });
           return;
@@ -87,6 +125,7 @@ export default async function handler(req, res) {
         
         res.status(200).json(putResult.rows[0]);
         break;
+      }
         
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);

@@ -1,26 +1,13 @@
 // Next.js API route for tournaments management
-import { Pool } from 'pg';
-import { initDatabase } from '../../lib/db'; // 导入数据库初始化函数
-
-// 创建数据库连接池
-const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_Nt7YOz4wIJcT@ep-withered-recipe-a1wny5so-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+import { pool } from '../../lib/db';
 
 export default async function handler(req, res) {
   const { method } = req;
   const client = await pool.connect();
 
   try {
-    // 确保数据库表已初始化
-    await initDatabase();
-    
     switch (method) {
-      case 'GET':
-        // 获取所有赛季信息
+      case 'GET': {
         const tournamentsResult = await client.query(`
           SELECT 
             id, 
@@ -44,9 +31,9 @@ export default async function handler(req, res) {
           tournaments: tournamentsResult.rows
         });
         break;
+      }
 
-      case 'POST':
-        // 创建新赛季
+      case 'POST': {
         const { name, start_date, end_date } = req.body;
         
         if (!name) {
@@ -69,9 +56,9 @@ export default async function handler(req, res) {
           tournament: insertResult.rows[0]
         });
         break;
+      }
 
-      case 'PUT':
-        // 更新赛季信息
+      case 'PUT': {
         const { id } = req.query;
         const updateData = req.body;
         
@@ -82,9 +69,22 @@ export default async function handler(req, res) {
           });
         }
         
-        // 构建动态更新语句
-        const fields = Object.keys(updateData);
-        const values = Object.values(updateData);
+        const allowedFields = [
+          'name', 'start_date', 'end_date', 'champion_team_id',
+          'runner_up_team_id', 'third_place_team_id', 'sponsor_info',
+          'champion_prize', 'runner_up_prize', 'status'
+        ];
+        
+        const fields = Object.keys(updateData).filter(key => allowedFields.includes(key));
+        
+        if (fields.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: '没有可更新的有效字段'
+          });
+        }
+        
+        const values = fields.map(field => updateData[field]);
         const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
         values.push(id);
         
@@ -108,6 +108,7 @@ export default async function handler(req, res) {
           tournament: updateResult.rows[0]
         });
         break;
+      }
 
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
