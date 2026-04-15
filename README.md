@@ -1,5 +1,5 @@
 # Dom的比赛/活动记录 (Next.js 版本)
-一个基于 Next.js 框架构建的直观且交互性强的Dom用于记录自己的参赛/活动记录，支持拖拽操作、实时统计和羁绊关系显示。
+一个基于 Next.js 框架构建的直观且交互性强的Dom用于记录自己的参赛/活动记录，支持点击入队、实时统计和羁绊关系显示。
 
 ## 功能特性
 
@@ -18,8 +18,8 @@
 - 队伍卡片响应式布局
 
 ### 👥 选手分配
-- **拖拽操作**：直接拖拽选手卡片到目标队伍
-- **点击添加**：通过对话框搜索和选择选手
+- **点击入队**：选手卡片上的「➕ 入队」按钮，点击后选择目标队伍加入
+- **队伍添加选手**：点击队伍底部的"+ 添加选手"按钮，从弹窗中选择选手
 - **移除功能**：一键移除队员回到未分配池
 - **实时更新**：队伍分数和羁绊状态动态刷新
 
@@ -48,27 +48,65 @@
 ## 技术架构
 
 ### 前端框架
-- **Next.js v16.0.3**：React 框架，支持服务端渲染
-- **React v19.2.0**：用于构建用户界面
+- **Next.js 14**：React 框架，支持服务端渲染
+- **React 18.2.0**：用于构建用户界面
 - **CSS3**：自定义样式和动画效果
 
 ### 项目结构
 ```
 next-team-assignment/
-├── pages/             # Next.js 页面路由
-│   ├── index.js       # 主页面
-│   ├── _app.js        # 全局应用组件
-│   └── api/           # API 路由
-├── components/        # React 组件
-│   ├── PlayerCard.js  # 选手卡片组件
-│   └── TeamCard.js    # 队伍卡片组件
-├── styles/            # 样式文件
-│   └── globals.css    # 全局样式
-├── data/              # 数据目录
-│   └── heroeslist.json # 英雄列表
-├── public/            # 静态资源
-├── package.json       # 项目依赖和脚本
-└── README.md          # 说明文档
+├── pages/                  # Next.js 页面路由
+│   ├── index.js            # 入口页面（重定向到 /main）
+│   ├── _app.js             # 全局应用组件
+│   ├── login/index.js      # 登录页面
+│   ├── main/index.js       # 主页面（核心交互页面）
+│   └── api/                # API 路由
+├── components/             # React 组件
+│   ├── PlayerCard.js       # 选手卡片组件
+│   ├── TeamCard.js         # 队伍卡片组件
+│   ├── TournamentSelector.js    # 赛季选择器
+│   └── EditTournamentResults.js # 编辑赛季结果
+├── hooks/                  # 自定义 React Hooks（核心逻辑拆分）
+│   ├── useMessages.js      # 留言板逻辑
+│   ├── useTournaments.js   # 赛季切换与数据加载
+│   ├── usePlayerManagement.js # 选手增删改查
+│   └── useTeamManagement.js   # 队伍与分配逻辑
+├── lib/                    # 工具库
+│   ├── db.js               # 数据库连接与操作
+│   ├── db-update.js        # 数据库结构更新脚本
+│   └── heroMapping.js      # 英雄ID映射表
+├── styles/                 # 样式文件
+│   ├── main/
+│   └── globals.css         # 全局样式
+├── .env.local              # 本地环境变量（数据库连接等）
+├── package.json
+└── README.md
+```
+
+## 代码逻辑结构（给初学者的说明）
+
+### 为什么要拆成 Hooks？
+之前 `main/index.js` 一个文件写了将近 1900 行代码，所有的状态、请求、事件处理都堆在一起，改一个小功能很容易影响到别的地方。后来我们把核心逻辑拆成了 4 个自定义 Hook：
+
+| Hook | 负责什么 | 初学者理解 |
+|------|---------|-----------|
+| `useTournaments` | 赛季数据 | 管理「第几届比赛」，切换赛季时加载对应的队伍和选手 |
+| `usePlayerManagement` | 选手数据 | 管理选手的增删改查、表单状态、英雄/默契选手选择 |
+| `useTeamManagement` | 队伍与分配 | 管理队伍的增删、选手入队/离队、导入导出 |
+| `useMessages` | 留言板 | 管理留言列表、发表留言、点赞、随机弹幕 |
+
+**关键设计**：`teams` 和 `unassignedPlayers` 这两个最重要的状态统一放在 `main/index.js` 里，Hooks 通过参数接收 `setTeams` 和 `setUnassignedPlayers`，这样就不会出现"A 改了数据，B 不知道"的情况。
+
+### API 路由说明
+```
+/api/players          → 选手的增删改查
+/api/teams            → 队伍的增删改查
+/api/team-players     → 选手与队伍的关联关系
+/api/tournaments      → 赛季管理
+/api/tournaments/[id] → 单个赛季的详情/修改/删除
+/api/messages         → 留言板
+/api/player-stats     → 从 OpenDota 获取玩家战绩（带缓存）
+/api/login            → 登录（带密码校验）
 ```
 
 ## 使用方法
@@ -78,23 +116,35 @@ next-team-assignment/
 npm install
 ```
 
-### 2. 开发模式运行
+### 2. 配置环境变量
+在项目根目录创建 `.env.local` 文件，填入你的数据库连接地址：
+```
+DATABASE_URL=postgresql://用户名:密码@主机地址/数据库名?sslmode=require
+```
+> 注意：不要把 `.env.local` 提交到 Git！它已经在 `.gitignore` 里被忽略了。
+
+### 3. 开发模式运行
 ```bash
 npm run dev
 ```
 在浏览器中打开 http://localhost:3000 查看应用
 
-### 3. 构建生产版本
+### 4. 构建生产版本
 ```bash
 npm run build
 ```
 
-### 4. 启动生产服务器
+### 5. 启动生产服务器
 ```bash
 npm start
 ```
 
 ## 功能操作说明
+
+### 登录
+- 输入用户名和密码
+- 新用户首次登录会自动注册并设置密码
+- 旧用户如果没有密码，提交一次密码后会自动绑定
 
 ### 新增选手
 - 点击"+ 新增选手"按钮打开录入表单
@@ -112,12 +162,13 @@ npm start
 - 每个队伍最多可容纳5名选手
 
 ### 分配选手
-**方法一：拖拽操作**
+**方法一：点击入队**
 - 在未分配选手池中找到目标选手
-- 点击并拖拽选手卡片
-- 拖到目标队伍容器内松开
+- 点击选手卡片上的「➕ 入队」按钮
+- 在弹出的队伍列表中选择目标队伍
+- 已满 5 人的队伍会显示红色并无法点击
 
-**方法二：点击添加**
+**方法二：从队伍添加**
 - 点击队伍底部的"+ 添加选手"按钮
 - 在弹出对话框中搜索或浏览选手
 - 点击选手卡片完成分配
@@ -207,9 +258,51 @@ npm start
 
 ### 交互反馈
 - 悬停效果和过渡动画
-- 拖拽时的视觉提示
 - 按钮点击反馈
 - 模态框背景模糊
+
+## 踩坑记录（初学者必看）
+
+### 1. 数据库密码不要硬编码！
+**问题**：最初数据库连接字符串直接写在代码文件里（`lib/db.js`、`tournaments.js` 等），一旦代码公开，数据库就会被攻击。
+**解决**：把连接串放到 `.env.local` 的 `DATABASE_URL` 中，代码里用 `process.env.DATABASE_URL` 读取。
+
+### 2. 大文件一定要拆分
+**问题**：`main/index.js` 一开始写了 1900 行，状态太多，改一个地方很容易崩。
+**解决**：把逻辑按功能拆成 `useMessages`、`useTournaments`、`usePlayerManagement`、`useTeamManagement` 四个 Hook。页面组件只负责"拼积木"。
+
+### 3. 状态不要各管各的
+**问题**：拆分 Hooks 后，每个 Hook 自己维护 `teams` 和 `unassignedPlayers`，然后用 `useEffect` 同步，结果导致刚加载的数据被空数组覆盖，页面一片空白。
+**解决**：把 `teams` 和 `unassignedPlayers` 提到页面组件里作为"唯一真相源"，Hooks 通过参数接收 setter 去修改它。
+
+### 4. 前端操作失败要回滚
+**问题**：以前点击「添加选手到队伍」后，即使 API 请求失败了，前端也已经显示了成功，刷新页面才发现没变。
+**解决**：采用 Optimistic UI 思想——先改前端给用户看，API 失败时把之前的状态恢复回去，并弹出提示。
+
+### 5. SQL 拼接字段名会导致注入
+**问题**：`tournaments` 的 PUT API 里动态拼接了 SQL 字段名，虽然值用了参数化查询，但字段名本身没有保护。
+**解决**：加了一个「字段白名单」，只允许更新预先定义好的字段，非法字段直接拒绝。
+
+### 6. 调用外网 API 要加缓存和超时
+**问题**：点击查看 OpenDota 详细数据时，每次都要请求美国服务器，很慢且容易被限流。
+**解决**：加了 30 分钟内存缓存 + 8 秒超时控制，重复点击直接从缓存返回。
+
+### 7. Git 远程仓库地址变了怎么办
+**问题**：推代码时提示 `Repository not found`，原来是 GitHub 用户名从 `dinglegexiaomobiao` 改成了 `dinglegexiaomubiao`。
+**解决**：用 `git remote set-url origin 新地址` 更新远程地址后再推送。
+
+## 安全与性能优化清单
+
+- [x] 数据库凭据迁移到环境变量
+- [x] SQL 注入漏洞修复（字段白名单）
+- [x] 登录增加密码校验（SHA256）
+- [x] 留言板增加 Rate Limiting（防刷）
+- [x] 留言板增加输入长度限制
+- [x] OpenDota API 增加 30 分钟缓存和 8 秒超时
+- [x] 删除赛季时级联清理关联数据
+- [x] 前端操作失败自动回滚状态
+- [x] 修复 React key 警告
+- [x] 修复 SSR Hydration Mismatch（随机背景色闪烁）
 
 ## 浏览器兼容性
 
@@ -219,6 +312,14 @@ npm start
 - Edge 80+
 
 ## 更新日志
+
+### v2.1.0 (2025-04-14)
+- **安全加固**：数据库密码迁移到环境变量，修复 SQL 注入，登录增加密码验证
+- **架构重构**：将 `main/index.js` 拆分为 4 个自定义 Hooks，代码可维护性大幅提升
+- **交互优化**：移除拖拽分配，改为选手卡片上的「➕ 入队」按钮 + 队伍选择弹窗
+- **性能优化**：OpenDota API 增加缓存和超时，留言板增加限流
+- **稳定性**：所有 API 操作增加失败回滚，修复删除赛季级联问题
+- **数据修复**：清理英雄映射表中的重复和空值
 
 ### v2.0.0 (2025-11-16)
 - 从纯 HTML/CSS/JS 重构为 Next.js 应用
