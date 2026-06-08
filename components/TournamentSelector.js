@@ -197,133 +197,139 @@ const TournamentSelector = ({
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
+          background-color: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(4px);
           display: flex;
           justify-content: center;
           align-items: center;
           z-index: 1000;
         }
-        
+
         .tournament-selector-modal {
           background: #ffffff;
-          border-radius: 8px;
+          border-radius: 16px;
           width: 90%;
           max-width: 600px;
           max-height: 80vh;
           overflow: hidden;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 16px 48px rgba(59, 130, 246, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
+          border: 1px solid #c8ddf0;
         }
-        
+
         .modal-header {
           padding: 16px;
-          border-bottom: 1px solid #eaeaea;
+          border-bottom: 1px solid #e8f0f8;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background-color: #f8f9fa;
+          background: linear-gradient(135deg, #f8fafc 0%, #f0f7fd 100%);
         }
-        
+
         .modal-header h3 {
           margin: 0;
-          color: #333;
+          color: #1a365d;
           font-size: 18px;
+          font-weight: 600;
         }
-        
+
         .close-button {
           background: none;
           border: none;
           font-size: 24px;
           cursor: pointer;
-          color: #666;
+          color: #94a3b8;
           width: 30px;
           height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
           border-radius: 50%;
-          transition: background-color 0.2s;
+          transition: all 0.2s ease;
         }
-        
+
         .close-button:hover {
-          background-color: #eaeaea;
+          background-color: #e2e8f0;
+          color: #1a2332;
         }
-        
+
         .modal-body {
           padding: 16px;
           overflow-y: auto;
           flex: 1;
         }
-        
+
         .loading-indicator {
           text-align: center;
           padding: 20px;
-          color: #666;
+          color: #5a7a9a;
         }
-        
+
         .tournaments-list {
           margin-bottom: 20px;
         }
-        
+
         .tournament-item {
           padding: 16px;
-          border: 1px solid #e1e1e1;
-          border-radius: 6px;
+          border: 1px solid #d0e4f5;
+          border-radius: 12px;
           margin-bottom: 12px;
           cursor: pointer;
-          transition: all 0.2s;
-          background-color: #fafafa;
+          transition: all 0.2s ease;
+          background: #f8fafc;
         }
-        
+
         .tournament-item:hover {
-          background-color: #f0f0f0;
-          border-color: #0070f3;
+          background: #f0f7fd;
+          border-color: #4da3e8;
         }
-        
+
         .tournament-item.active {
-          border-color: #0070f3;
-          background-color: #e6f0ff;
-          box-shadow: 0 2px 4px rgba(0, 112, 243, 0.1);
+          border-color: #3b8fd4;
+          background: #e8f4fd;
+          box-shadow: 0 0 0 3px rgba(59, 143, 212, 0.12);
         }
-        
+
         .tournament-info h4 {
           margin: 0 0 8px 0;
-          color: #333;
+          color: #1a365d;
           font-size: 16px;
         }
-        
+
         .tournament-dates {
-          color: #666;
+          color: #5a7a9a;
           font-size: 14px;
           margin-bottom: 10px;
         }
-        
+
         .tournament-results {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
         }
-        
+
         .champion, .runner-up {
-          background-color: #e6f0ff;
-          color: #0070f3;
-          padding: 4px 8px;
-          border-radius: 4px;
+          background: #e8f4fd;
+          color: #3b8fd4;
+          padding: 4px 10px;
+          border-radius: 6px;
           font-size: 12px;
           font-weight: 500;
+          border: 1px solid #c8ddf0;
         }
-        
+
         .runner-up {
-          background-color: #fff0e6;
-          color: #f37000;
+          background: #fef3c7;
+          color: #d97706;
+          border-color: #fde68a;
         }
-        
+
         .add-result-button {
           width: 24px;
           height: 24px;
           border-radius: 50%;
-          background-color: #0070f3;
+          background: linear-gradient(135deg, #4da3e8 0%, #3b8fd4 100%);
           color: white;
           border: none;
           cursor: pointer;
@@ -333,95 +339,107 @@ const TournamentSelector = ({
           font-size: 16px;
           line-height: 1;
         }
-        
+
         .add-tournament-button {
           width: 100%;
           padding: 12px;
-          background-color: #0070f3;
+          background: linear-gradient(135deg, #4da3e8 0%, #3b8fd4 100%);
           color: white;
           border: none;
-          border-radius: 6px;
+          border-radius: 10px;
           cursor: pointer;
           font-size: 16px;
           font-weight: 500;
-          transition: background-color 0.2s;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
         }
-        
+
         .add-tournament-button:hover {
-          background-color: #0051cc;
+          background: linear-gradient(135deg, #3b8fd4 0%, #2e7cc4 100%);
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
         }
-        
+
         .add-tournament-form {
           padding: 16px;
-          border: 1px solid #e1e1e1;
-          border-radius: 6px;
-          background-color: #f8f9fa;
+          border: 1px solid #c8ddf0;
+          border-radius: 12px;
+          background-color: #f8fafc;
         }
-        
+
         .add-tournament-form h4 {
           margin: 0 0 16px 0;
-          color: #333;
+          color: #1a365d;
         }
-        
+
         .add-tournament-form input {
           width: 100%;
-          padding: 10px;
+          padding: 10px 12px;
           margin-bottom: 12px;
-          border: 1px solid #e1e1e1;
-          border-radius: 4px;
+          border: 1px solid #c8ddf0;
+          border-radius: 8px;
           font-size: 14px;
           box-sizing: border-box;
+          background: #ffffff;
+          color: #1a2332;
+          transition: border-color 0.2s ease;
         }
-        
+
+        .add-tournament-form input:focus {
+          outline: none;
+          border-color: #4da3e8;
+        }
+
         .date-inputs {
           display: flex;
           align-items: center;
           gap: 10px;
           margin-bottom: 16px;
         }
-        
+
         .date-inputs input {
           flex: 1;
           margin-bottom: 0;
         }
-        
+
         .date-inputs span {
-          color: #666;
+          color: #5a7a9a;
           font-size: 14px;
         }
-        
+
         .form-buttons {
           display: flex;
           gap: 10px;
         }
-        
+
         .btn {
           flex: 1;
           padding: 10px;
           border: none;
-          border-radius: 4px;
+          border-radius: 8px;
           cursor: pointer;
           font-size: 14px;
           font-weight: 500;
-          transition: background-color 0.2s;
+          transition: all 0.2s ease;
         }
-        
+
         .btn-primary {
-          background-color: #0070f3;
+          background: linear-gradient(135deg, #4da3e8 0%, #3b8fd4 100%);
           color: white;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
         }
-        
+
         .btn-primary:hover {
-          background-color: #0051cc;
+          background: linear-gradient(135deg, #3b8fd4 0%, #2e7cc4 100%);
         }
-        
+
         .btn-secondary {
-          background-color: #f0f0f0;
-          color: #333;
+          background: #f0f4f8;
+          color: #4a5568;
+          border: 1px solid #c8ddf0;
         }
-        
+
         .btn-secondary:hover {
-          background-color: #e1e1e1;
+          background: #e2e8f0;
         }
       `}</style>
     </div>

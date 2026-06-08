@@ -20,7 +20,7 @@
 ### 👥 选手分配
 - **点击入队**：选手卡片上的「➕ 入队」按钮，点击后选择目标队伍加入
 - **队伍添加选手**：点击队伍底部的"+ 添加选手"按钮，从弹窗中选择选手
-- **移除功能**：一键移除队员回到未分配池
+- **移除功能**：鼠标悬停在队伍中的选手卡片上，点击"×"按钮一键移除回到未分配池
 - **实时更新**：队伍分数和羁绊状态动态刷新
 
 ### 🔍 搜索筛选
@@ -48,19 +48,29 @@
 ## 技术架构
 
 ### 前端框架
-- **Next.js 14**：React 框架，支持服务端渲染
+- **Next.js 16**：React 框架，支持服务端渲染
 - **React 18.2.0**：用于构建用户界面
 - **CSS3**：自定义样式和动画效果
 
 ### 项目结构
 ```
-next-team-assignment/
 ├── pages/                  # Next.js 页面路由
 │   ├── index.js            # 入口页面（重定向到 /main）
 │   ├── _app.js             # 全局应用组件
 │   ├── login/index.js      # 登录页面
 │   ├── main/index.js       # 主页面（核心交互页面）
 │   └── api/                # API 路由
+│       ├── players.js      # 选手的增删改查
+│       ├── teams.js        # 队伍的增删改查
+│       ├── team-players.js # 选手与队伍的关联关系
+│       ├── tournaments.js  # 赛季管理
+│       ├── tournaments/[id].js # 单个赛季的详情/修改/删除
+│       ├── player-stats.js # 从 OpenDota 获取玩家战绩（带缓存）
+│       ├── messages.js     # 留言板（带速率限制）
+│       ├── login.js        # 登录（带 SHA256 密码校验）
+│       ├── database-update.js # 数据库结构更新
+│       ├── database-check.js  # 数据库结构检查
+│       └── user.js         # 用户信息
 ├── components/             # React 组件
 │   ├── PlayerCard.js       # 选手卡片组件
 │   ├── TeamCard.js         # 队伍卡片组件
@@ -77,7 +87,11 @@ next-team-assignment/
 │   └── heroMapping.js      # 英雄ID映射表
 ├── styles/                 # 样式文件
 │   ├── main/
+│   │   └── index.css       # 主页面样式
 │   └── globals.css         # 全局样式
+├── check-db-structure.js   # 数据库结构检查工具
+├── migrate_teams_table.js  # 队伍表迁移脚本
+├── database_structure_check_standard.sql # 标准数据库结构 SQL
 ├── .env.local              # 本地环境变量（数据库连接等）
 ├── package.json
 └── README.md
@@ -102,11 +116,14 @@ next-team-assignment/
 /api/players          → 选手的增删改查
 /api/teams            → 队伍的增删改查
 /api/team-players     → 选手与队伍的关联关系
-/api/tournaments      → 赛季管理
+/api/tournaments      → 赛季管理（列表、创建）
 /api/tournaments/[id] → 单个赛季的详情/修改/删除
-/api/messages         → 留言板
 /api/player-stats     → 从 OpenDota 获取玩家战绩（带缓存）
-/api/login            → 登录（带密码校验）
+/api/messages         → 留言板（带速率限制）
+/api/login            → 登录（带 SHA256 密码校验）
+/api/database-update  → 数据库结构更新
+/api/database-check   → 数据库结构检查
+/api/user             → 用户信息
 ```
 
 ## 使用方法
@@ -227,7 +244,12 @@ npm start
   "heroes": ["英雄名称1", "英雄名称2"],
   "win_rate": 50,
   "championships": 3,
-  "synergy_players": ["默契选手1", "默契选手2"]
+  "synergy_players": ["默契选手1", "默契选手2"],
+  "recent_win_rate": 55,
+  "most_played_heroes": [{"name": "影魔", "matches": 100, "winRate": 55}],
+  "highest_win_rate_heroes": [{"name": "敌法师", "matches": 50, "winRate": 70}],
+  "created_at": "2025-01-01T00:00:00.000+08:00",
+  "updated_at": "2025-01-01T00:00:00.000+08:00"
 }
 ```
 
@@ -236,6 +258,7 @@ npm start
 {
   "id": 1,
   "name": "队伍1",
+  "tournament_id": 1,
   "players": [选手对象数组],
   "created_at": "2025-11-13T17:40:42.810172+08:00",
   "updated_at": "2025-11-13T17:40:42.810172+08:00"
@@ -312,6 +335,13 @@ npm start
 - Edge 80+
 
 ## 更新日志
+
+### v2.2.0 (2025-06-08)
+- **安全修复**：移除 `lib/db.js` 中硬编码的数据库连接字符串 fallback，彻底消除凭据泄漏风险
+- **功能修复**：位置筛选复选框现已可用，勾选后可筛选指定位置的选手
+- **功能完善**：新增/编辑选手表单中的天梯分数增加了实时等级颜色预览
+- **文档更新**：修正 UI 中过时的「拖拽」提示文字，改为按钮入队说明
+- **文档更新**：更新项目结构、数据格式、API 路由文档，补充遗漏的文件和字段
 
 ### v2.1.0 (2025-04-14)
 - **安全加固**：数据库密码迁移到环境变量，修复 SQL 注入，登录增加密码验证

@@ -81,8 +81,8 @@ export default async function handler(req, res) {
           winRate: hero.games > 0 ? Math.round((hero.win / hero.games) * 100) : 0
         }));
 
-        // 获取胜率最高的英雄（至少有20场比赛）
-        const heroesWithMinGames = heroesData.filter(hero => hero.games >= 20);
+        // 获取胜率最高的英雄（至少有50场比赛）
+        const heroesWithMinGames = heroesData.filter(hero => hero.games >= 50);
         const sortedHeroesByWinRate = [...heroesWithMinGames].sort((a, b) => {
           const winRateA = a.games > 0 ? (a.win / a.games) : 0;
           const winRateB = b.games > 0 ? (b.win / b.games) : 0;

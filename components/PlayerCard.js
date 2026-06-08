@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCopy, onDelete, isSimplified = false, isModalView = false, className = '' }) {
-  // 计算分数颜色类
   const getScoreClass = (score) => {
     if (score >= 20000) return 'score-master';
     if (score >= 15000) return 'score-diamond';
@@ -10,44 +9,17 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
     return 'score-silver';
   };
 
-  // 生成随机冷色调背景色
-  const getRandomCoolColor = () => {
-    // 定义一些低调的冷色调
-    const coolColors = [
-      '#1e293b', // 默认深蓝灰色
-      '#1e3a5f', // 深蓝色
-      '#2c3e50', // 深青色
-      '#2b3e50', // 深青蓝色
-      '#253a4b', // 深蓝绿色
-      '#2a3b4c', // 深蓝青色
-      '#2d3a4d', // 深紫蓝色
-      '#263238', // 深蓝灰色
-      '#37474f', // 蓝灰色
-      '#2c384a'  // 深蓝紫色
-    ];
-    
-    // 如果是未分配区域的卡片（非简化版且非模态框视图），随机选择一个颜色
-    if (!isSimplified && !isModalView) {
-      const randomIndex = Math.floor(Math.random() * (coolColors.length - 1)) + 1; // 避免选择第一个默认颜色
-      return coolColors[randomIndex];
-    }
-    
-    // 简化版或模态框视图使用默认颜色
-    return coolColors[0];
+  const getScoreAccentColor = (score) => {
+    if (score >= 20000) return '#e11d48';
+    if (score >= 15000) return '#7c3aed';
+    if (score >= 10000) return '#3b8fd4';
+    if (score >= 5000) return '#16a34a';
+    return '#94a3b8';
   };
 
-  const [cardBackgroundColor, setCardBackgroundColor] = useState('#1e293b');
   const [playerStats, setPlayerStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [errorStats, setErrorStats] = useState(null);
-  const [showDebugInfo, setShowDebugInfo] = useState(false); // 控制调试信息显示
-
-  // 组件挂载时设置背景色（避免 SSR hydration mismatch）
-  useEffect(() => {
-    if (!isSimplified && !isModalView) {
-      setCardBackgroundColor(getRandomCoolColor());
-    }
-  }, [isSimplified, isModalView]);
 
   // 获取玩家详细统计数据
   const fetchPlayerStats = async () => {
@@ -179,69 +151,42 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
   }
 
   return (
-    <div 
-      className={`player-card ${className}`} 
-      style={{ background: cardBackgroundColor }}
+    <div
+      className={`player-card ${className}`}
+      style={{ borderLeft: `3px solid ${getScoreAccentColor(player.score)}` }}
     >
       {onRemove && (
         <button className="remove-player" onClick={() => onRemove(player.id)}>×</button>
       )}
       <div className="player-header">
-        <div className="player-nickname">{player.nickname}</div>
+        <div className="player-name">{player.nickname}</div>
         <div className={`player-score ${getScoreClass(player.score)}`}>
-          天梯分数:{player.score}
+          {player.score}
         </div>
       </div>
-      
-      <div className="player-details">
-        <div className="detail-item">
-          <span className="detail-label">steamID:</span>
-          <span className="detail-value">{player.game_id}</span>
+
+      <div className="player-info">
+        <div className="player-info-item">
+          <span className="player-info-label">steamID</span>
+          <span className="player-info-value">{player.game_id}</span>
         </div>
         {player.group_nickname && (
-          <div className="detail-item">
-            <span className="detail-label">群昵称:</span>
-            <span className="detail-value">{player.group_nickname}</span>
+          <div className="player-info-item">
+            <span className="player-info-label">群昵称</span>
+            <span className="player-info-value">{player.group_nickname}</span>
           </div>
         )}
-        
-        <div className="player-positions">
-          {player.positions.map((position, index) => (
-            <span key={index} className="position-tag">{position}</span>
-          ))}
-        </div>
-        
-        {player.heroes && player.heroes.length > 0 && (
-          <div className="player-heroes">
-            {player.heroes.slice(0, 3).map((hero, index) => (
-              <span key={index} className="hero-tag">{hero}</span>
-            ))}
-            {player.heroes.length > 3 && (
-              <span className="hero-tag more">+{player.heroes.length - 3}</span>
-            )}
-          </div>
-        )}
-        
-        <div className="player-stats">
-          {player.win_rate > 0 && (
-            <div className="stat-item">
-              <span className="stat-label">胜率:</span>
-              <span className="stat-value">{player.win_rate}%</span>
-            </div>
-          )}
-          {player.championships > 0 && (
-            <div className="stat-item">
-              <span className="stat-label">冠军:</span>
-              <span className="stat-value">{player.championships}个</span>
-            </div>
-          )}
-        </div>
       </div>
-      
-      {/* 显示擅长英雄 */}
+
+      <div className="position-tags">
+        {player.positions.map((position, index) => (
+          <span key={index} className="position-tag">{position}</span>
+        ))}
+      </div>
+
       {player.heroes && player.heroes.length > 0 && (
         <div className="player-heroes-preview">
-          <div className="info-label">擅长英雄:</div>
+          <div className="info-label">擅长英雄</div>
           <div className="info-content">
             {player.heroes.slice(0, 3).map((hero, index) => (
               <span key={index} className="hero-tag small">{hero}</span>
@@ -252,11 +197,10 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
           </div>
         </div>
       )}
-      
-      {/* 显示默契选手 */}
+
       {player.synergy_players && player.synergy_players.length > 0 && (
         <div className="player-synergy-preview">
-          <div className="info-label">默契选手:</div>
+          <div className="info-label">默契选手</div>
           <div className="info-content">
             {player.synergy_players.slice(0, 3).map((partner, index) => (
               <span key={index} className="hero-tag small">{partner}</span>
@@ -267,26 +211,38 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
           </div>
         </div>
       )}
-      
-      {/* 显示详细统计数据 */}
+
+      <div className="player-stats">
+        {player.win_rate > 0 && (
+          <div className="stat-item">
+            <span className="stat-label">胜率</span>
+            <span className="stat-value">{player.win_rate}%</span>
+          </div>
+        )}
+        {player.championships > 0 && (
+          <div className="stat-item">
+            <span className="stat-label">冠军</span>
+            <span className="stat-value">{player.championships}个</span>
+          </div>
+        )}
+      </div>
+
       <div className="player-detailed-stats">
         <button className="stats-toggle-btn" onClick={fetchPlayerStats} disabled={loadingStats}>
           {loadingStats ? '加载中...' : '查看详细数据'}
         </button>
-        
+
         {errorStats && (
-          <div className="error-message">
-            错误:数据有误 
-          </div>
+          <div className="error-message">数据加载失败</div>
         )}
-        
+
         {playerStats && (
           <div className="detailed-stats-content">
             <div className="stat-section">
               <h4>最近胜率</h4>
               <div className="stat-value">{playerStats.recentWinRate}%</div>
             </div>
-            
+
             <div className="stat-section">
               <h4>常用英雄</h4>
               <div className="heroes-list">
@@ -298,7 +254,7 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
                 ))}
               </div>
             </div>
-            
+
             <div className="stat-section">
               <h4>最高胜率英雄</h4>
               <div className="heroes-list">
@@ -310,30 +266,10 @@ export default function PlayerCard({ player, onRemove, onJoinTeam, onEdit, onCop
                 ))}
               </div>
             </div>
-            
-            {/* 调试信息切换按钮 */}
-            {/* <div className="debug-toggle">
-              <button 
-                className="debug-toggle-btn" 
-                onClick={() => setShowDebugInfo(!showDebugInfo)}
-              >
-                {showDebugInfo ? '隐藏调试信息' : '显示调试信息'}
-              </button>
-              {showDebugInfo && playerStats.debug && (
-                <div className="debug-info">
-                  <h4>最近比赛数据:</h4>
-                  <pre>{JSON.stringify(playerStats.debug.recentMatches, null, 2)}</pre>
-                  
-                  <h4>英雄统计数据:</h4>
-                  <pre>{JSON.stringify(playerStats.debug.heroesData, null, 2)}</pre>
-                </div>
-              )}
-            </div> */}
           </div>
         )}
       </div>
-      
-      {/* 操作按钮区域 - 始终显示 */}
+
       <div className="player-actions">
         {onJoinTeam && (
           <button className="player-action-btn join-btn" onClick={() => onJoinTeam(player.id)} title="加入队伍">

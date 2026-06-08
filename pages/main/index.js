@@ -26,6 +26,7 @@ export default function Home() {
   const [selectedPlayerForJoin, setSelectedPlayerForJoin] = useState(null);
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [positionFilters, setPositionFilters] = useState([]);
   const [synergySearchTerm, setSynergySearchTerm] = useState('');
 
   // Data states (shared between hooks)
@@ -101,7 +102,10 @@ export default function Home() {
 
   // Wrapper functions to pass teams/setTeams where needed
   const deletePlayer = (playerId) => deletePlayerBase(playerId, teams, setTeams);
-  const createNewPlayerWrapped = (playerData) => createNewPlayer(playerData, teams, setTeams);
+  const createNewPlayerWrapped = async (playerData) => {
+    await createNewPlayer(playerData, teams, setTeams);
+    setShowNewPlayerModal(false);
+  };
 
   const deleteTeam = (teamId) => deleteTeamBase(teamId);
 
@@ -120,6 +124,11 @@ export default function Home() {
   };
 
   // Modal handlers
+  const handleEditPlayer = (player) => {
+    editPlayer(player);
+    setShowNewPlayerModal(true);
+  };
+
   const openAddPlayerModal = (teamId) => {
     setSelectedTeamId(teamId);
     setShowAddPlayerModal(true);
@@ -326,7 +335,7 @@ export default function Home() {
         <header className="header">
           <h1>Dom的比赛纪录</h1>
           <div className="instructions">
-            <p>拖拽选手卡片到队伍中进行分配 | 点击添加按钮选择选手 | 支持搜索和筛选功能</p>
+            <p>点击选手卡片上的「➕ 入队」按钮进行分配 | 点击队伍中的「+ 添加选手」选择选手 | 支持搜索和筛选功能</p>
           </div>
 
           <div className="stats-cards">
@@ -450,12 +459,24 @@ export default function Home() {
                   disabled={loadingState.players === 'loading'}
                 />
                 <div className="position-filters">
-                  <label><input type="checkbox" className="position-filter" value="优势路" disabled={loadingState.players === 'loading'} /> 优势路</label>
-                  <label><input type="checkbox" className="position-filter" value="中单" disabled={loadingState.players === 'loading'} /> 中单</label>
-                  <label><input type="checkbox" className="position-filter" value="劣势路" disabled={loadingState.players === 'loading'} /> 劣势路</label>
-                  <label><input type="checkbox" className="position-filter" value="半辅助" disabled={loadingState.players === 'loading'} /> 半辅助</label>
-                  <label><input type="checkbox" className="position-filter" value="纯辅助" disabled={loadingState.players === 'loading'} /> 纯辅助</label>
-                  <label><input type="checkbox" className="position-filter" value="全才" disabled={loadingState.players === 'loading'} /> 全才</label>
+                  {['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'].map(pos => (
+                    <label key={pos}>
+                      <input
+                        type="checkbox"
+                        className="position-filter"
+                        value={pos}
+                        checked={positionFilters.includes(pos)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setPositionFilters([...positionFilters, pos]);
+                          } else {
+                            setPositionFilters(positionFilters.filter(p => p !== pos));
+                          }
+                        }}
+                        disabled={loadingState.players === 'loading'}
+                      /> {pos}
+                    </label>
+                  ))}
                 </div>
               </div>
             </div>
@@ -474,18 +495,24 @@ export default function Home() {
                     ...assignedPlayers,
                     ...unassignedPlayers
                   ].filter(player => {
-                    if (!searchTerm) return true;
-                    const term = searchTerm.toLowerCase();
-                    return (
-                      (player.nickname && player.nickname.toLowerCase().includes(term)) ||
-                      (player.game_id && player.game_id.toLowerCase().includes(term)) ||
-                      (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
-                      (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
-                      (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
-                      (player.synergy_players && player.synergy_players.some(partner =>
-                        typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
-                      ))
-                    );
+                    if (searchTerm) {
+                      const term = searchTerm.toLowerCase();
+                      const matchesSearch = (
+                        (player.nickname && player.nickname.toLowerCase().includes(term)) ||
+                        (player.game_id && player.game_id.toLowerCase().includes(term)) ||
+                        (player.group_nickname && player.group_nickname.toLowerCase().includes(term)) ||
+                        (player.positions && player.positions.some(pos => pos.toLowerCase().includes(term))) ||
+                        (player.heroes && player.heroes.some(hero => hero.toLowerCase().includes(term))) ||
+                        (player.synergy_players && player.synergy_players.some(partner =>
+                          typeof partner === 'string' ? partner.toLowerCase().includes(term) : false
+                        ))
+                      );
+                      if (!matchesSearch) return false;
+                    }
+                    if (positionFilters.length > 0) {
+                      if (!player.positions || !player.positions.some(pos => positionFilters.includes(pos))) return false;
+                    }
+                    return true;
                   });
 
                   return (
@@ -505,7 +532,7 @@ export default function Home() {
                             key={player.id}
                             player={player}
                             onJoinTeam={!isAssignedPlayer ? openJoinTeamModal : null}
-                            onEdit={editPlayer}
+                            onEdit={handleEditPlayer}
                             onDelete={deletePlayer}
                             onCopy={copyPlayerGameId}
                             className={isAssignedPlayer ? 'assigned-player' : ''}
@@ -708,6 +735,8 @@ export default function Home() {
                   group_nickname: playerFormData.group_nickname,
                   score: parseInt(playerFormData.score) || 0,
                   positions: playerFormData.positions,
+                  heroes: selectedHeroes,
+                  synergy_players: selectedSynergyPlayers,
                   win_rate: parseInt(playerFormData.win_rate) || 0,
                   championships: parseInt(playerFormData.championships) || 0
                 };
@@ -731,7 +760,17 @@ export default function Home() {
                   <div className="form-group">
                     <label htmlFor="newPlayerScore">天梯分数 *</label>
                     <input type="number" id="newPlayerScore" min="0" max="30000" required value={playerFormData.score} onChange={(e) => setPlayerFormData({ ...playerFormData, score: e.target.value })} />
-                    <div className="score-preview" id="scorePreview"></div>
+                    <div className="score-preview" id="scorePreview">
+                      {(() => {
+                        const s = parseInt(playerFormData.score) || 0;
+                        if (s >= 20000) return <span className="score-master">冠绝一世 ({s})</span>;
+                        if (s >= 15000) return <span className="score-diamond">超凡入圣 ({s})</span>;
+                        if (s >= 10000) return <span className="score-platinum">万古流芳 ({s})</span>;
+                        if (s >= 5000) return <span className="score-gold">传奇 ({s})</span>;
+                        if (s > 0) return <span className="score-silver">卫士 ({s})</span>;
+                        return <span style={{color: '#94a3b8'}}>输入天梯分数后实时显示等级</span>;
+                      })()}
+                    </div>
                   </div>
                 </div>
                 <div className="form-group">
@@ -954,16 +993,16 @@ export default function Home() {
                       style={{
                         padding: '16px',
                         borderRadius: '8px',
-                        background: isFull ? '#2a1a1a' : '#1a2530',
-                        border: `1px solid ${isFull ? '#ff4444' : '#2a3f4f'}`,
+                        background: isFull ? '#fef2f2' : '#f8fafc',
+                        border: `1px solid ${isFull ? '#f87171' : '#c8ddf0'}`,
                         cursor: isFull ? 'not-allowed' : 'pointer',
                         opacity: isFull ? 0.6 : 1,
                         transition: 'all 0.2s ease',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#e0e0e0' }}>{team.name}</div>
-                        <div style={{ fontWeight: 'bold', color: '#cccccc' }}>天梯总分: {teamScore}</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1a365d' }}>{team.name}</div>
+                        <div style={{ fontWeight: 'bold', color: '#3b8fd4' }}>天梯总分: {teamScore}</div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ fontSize: '0.9rem', color: '#94a3b8' }}>
