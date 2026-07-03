@@ -21,6 +21,7 @@ class TeamAssignmentSystem {
         this.tempSelectedSynergy = [];
         this.editingPlayerId = null;
         this.isEditing = false;
+        this.heroesSearchTimeout = null;
         
         this.init();
     }
@@ -328,7 +329,19 @@ class TeamAssignmentSystem {
         document.getElementById('closeHeroesModal').addEventListener('click', () => this.closeHeroesModal());
         document.getElementById('cancelHeroesSelect').addEventListener('click', () => this.closeHeroesModal());
         document.getElementById('confirmHeroesSelect').addEventListener('click', () => this.confirmHeroesSelect());
-        document.getElementById('heroesSearchInput').addEventListener('input', (e) => this.filterHeroes(e.target.value));
+        document.getElementById('heroesSearchInput').addEventListener('input', (e) => {
+            clearTimeout(this.heroesSearchTimeout);
+            this.heroesSearchTimeout = setTimeout(() => {
+                this.filterHeroes(e.target.value);
+            }, 150);
+        });
+        // 事件委托：英雄网格点击
+        document.getElementById('heroesList').addEventListener('click', (e) => {
+            const heroItem = e.target.closest('.hero-item');
+            if (heroItem) {
+                this.handleHeroItemClick(heroItem);
+            }
+        });
         
         // 默契选手选择相关
         document.getElementById('selectSynergyBtn').addEventListener('click', () => this.showSynergyModal());
@@ -892,6 +905,8 @@ class TeamAssignmentSystem {
     // 英雄选择相关方法
     showHeroesModal() {
         const modal = document.getElementById('heroesSelectModal');
+        const searchInput = document.getElementById('heroesSearchInput');
+        searchInput.value = '';
         modal.classList.add('active');
         this.renderHeroesList();
     }
@@ -901,21 +916,12 @@ class TeamAssignmentSystem {
         modal.classList.remove('active');
     }
 
-    renderHeroesList(searchTerm = '') {
+    renderHeroesList() {
         const container = document.getElementById('heroesList');
-        let heroes = [...this.heroesList];
-        
-        if (searchTerm) {
-            heroes = heroes.filter(hero => 
-                hero.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                hero.nickname.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-        
-        container.innerHTML = heroes.map(hero => {
+        container.innerHTML = this.heroesList.map(hero => {
             const isSelected = this.selectedHeroes.includes(hero.name);
             return `
-                <div class="hero-item ${isSelected ? 'selected' : ''}" onclick="teamSystem.toggleHeroSelection('${hero.name}')">
+                <div class="hero-item ${isSelected ? 'selected' : ''}" data-hero-name="${this.escapeAttr(hero.name)}">
                     <div class="hero-name">${hero.name}</div>
                     <div class="hero-nickname">${hero.nickname}</div>
                 </div>
@@ -923,8 +929,41 @@ class TeamAssignmentSystem {
         }).join('');
     }
 
+    escapeAttr(str) {
+        return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     filterHeroes(searchTerm) {
-        this.renderHeroesList(searchTerm);
+        const items = document.querySelectorAll('#heroesList .hero-item');
+        const term = searchTerm.toLowerCase().trim();
+
+        items.forEach(item => {
+            const name = item.querySelector('.hero-name').textContent.toLowerCase();
+            const nickname = item.querySelector('.hero-nickname').textContent.toLowerCase();
+            if (!term || name.includes(term) || nickname.includes(term)) {
+                item.classList.remove('hero-hidden');
+            } else {
+                item.classList.add('hero-hidden');
+            }
+        });
+    }
+
+    handleHeroItemClick(heroItem) {
+        const heroName = heroItem.querySelector('.hero-name').textContent;
+        const index = this.selectedHeroes.indexOf(heroName);
+        if (index > -1) {
+            this.selectedHeroes.splice(index, 1);
+            heroItem.classList.remove('selected');
+        } else {
+            if (this.selectedHeroes.length < 10) {
+                this.selectedHeroes.push(heroName);
+                heroItem.classList.add('selected');
+            } else {
+                alert('最多只能选择10个英雄！');
+                return;
+            }
+        }
+        this.updateSelectedHeroesDisplay();
     }
 
     toggleHeroSelection(heroName) {
@@ -932,14 +971,18 @@ class TeamAssignmentSystem {
         if (index > -1) {
             this.selectedHeroes.splice(index, 1);
         } else {
-            if (this.selectedHeroes.length < 10) { // 限制最多选择10个英雄
+            if (this.selectedHeroes.length < 10) {
                 this.selectedHeroes.push(heroName);
             } else {
                 alert('最多只能选择10个英雄！');
                 return;
             }
         }
-        this.renderHeroesList(document.getElementById('heroesSearchInput').value);
+        // 更新对应 DOM 元素的样式
+        const heroItem = document.querySelector(`#heroesList .hero-item[data-hero-name="${this.escapeAttr(heroName)}"]`);
+        if (heroItem) {
+            heroItem.classList.toggle('selected', this.selectedHeroes.includes(heroName));
+        }
         this.updateSelectedHeroesDisplay();
     }
 
@@ -948,7 +991,7 @@ class TeamAssignmentSystem {
         container.innerHTML = this.selectedHeroes.map(hero => `
             <div class="selected-hero-tag">
                 ${hero}
-                <span class="remove-tag" onclick="teamSystem.removeSelectedHero('${hero}')">&times;</span>
+                <span class="remove-tag" onclick="teamSystem.removeSelectedHero('${this.escapeAttr(hero)}')">&times;</span>
             </div>
         `).join('');
     }
@@ -958,7 +1001,10 @@ class TeamAssignmentSystem {
         if (index > -1) {
             this.selectedHeroes.splice(index, 1);
         }
-        this.renderHeroesList(document.getElementById('heroesSearchInput').value);
+        const heroItem = document.querySelector(`#heroesList .hero-item[data-hero-name="${this.escapeAttr(heroName)}"]`);
+        if (heroItem) {
+            heroItem.classList.remove('selected');
+        }
         this.updateSelectedHeroesDisplay();
     }
 

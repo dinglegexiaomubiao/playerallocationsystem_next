@@ -1504,6 +1504,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 10px;
+  contain: layout style;
 }
 
 .hero-item {
@@ -1541,6 +1542,10 @@ body {
 .hero-item .hero-nickname {
   font-size: 0.75rem;
   color: #7a9ab8;
+}
+
+.hero-item.hero-hidden {
+  display: none;
 }
 
 /* ===== Player Stats Detail ===== */

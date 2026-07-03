@@ -30,6 +30,8 @@ export default function Home() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [positionFilters, setPositionFilters] = useState([]);
   const [synergySearchTerm, setSynergySearchTerm] = useState('');
+  const [heroesSearchTerm, setHeroesSearchTerm] = useState('');
+  const [debouncedHeroesSearchTerm, setDebouncedHeroesSearchTerm] = useState('');
 
   // Data states
   const [teams, setTeams] = useState([]);
@@ -44,6 +46,16 @@ export default function Home() {
     }, 200);
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
   }, [searchTerm]);
+
+  // Debounce heroes search
+  const heroesSearchTimerRef = useRef(null);
+  useEffect(() => {
+    if (heroesSearchTimerRef.current) clearTimeout(heroesSearchTimerRef.current);
+    heroesSearchTimerRef.current = setTimeout(() => {
+      setDebouncedHeroesSearchTerm(heroesSearchTerm);
+    }, 150);
+    return () => { if (heroesSearchTimerRef.current) clearTimeout(heroesSearchTimerRef.current); };
+  }, [heroesSearchTerm]);
 
   // Hooks
   const tournamentMgmt = useTournaments(setTeams, setUnassignedPlayers);
@@ -158,6 +170,8 @@ export default function Home() {
 
   const openHeroesModal = useCallback((e) => {
     e.preventDefault();
+    setHeroesSearchTerm('');
+    setDebouncedHeroesSearchTerm('');
     setShowHeroesModal(true);
   }, []);
 
@@ -239,6 +253,16 @@ export default function Home() {
   const synergyFilteredPlayers = useMemo(() => {
     return allPlayersForSynergy.filter(player => filterPlayer(player, synergySearchTerm));
   }, [allPlayersForSynergy, synergySearchTerm, filterPlayer]);
+
+  // Memoized filtered heroes list
+  const filteredHeroes = useMemo(() => {
+    if (!debouncedHeroesSearchTerm) return heroesList;
+    const term = debouncedHeroesSearchTerm.toLowerCase();
+    return heroesList.filter(hero =>
+      hero.name.toLowerCase().includes(term) ||
+      (hero.nickname && hero.nickname.toLowerCase().includes(term))
+    );
+  }, [heroesList, debouncedHeroesSearchTerm]);
 
   // Memoized stat values
   const totalPlayerCount = useMemo(
@@ -797,10 +821,16 @@ export default function Home() {
               <button className="modal-close" onClick={() => setShowHeroesModal(false)}>&times;</button>
             </div>
             <div className="modal-body">
-              <input type="text" placeholder="搜索英雄名称或别称..." className="modal-search-input" />
+              <input
+                type="text"
+                placeholder="搜索英雄名称或别称..."
+                className="modal-search-input"
+                value={heroesSearchTerm}
+                onChange={(e) => setHeroesSearchTerm(e.target.value)}
+              />
               <div className="heroes-list-container">
                 <div className="heroes-grid">
-                  {heroesList.map((hero, index) => (
+                  {filteredHeroes.map((hero, index) => (
                     <div
                       key={index}
                       className={`hero-item ${selectedHeroes.includes(hero.name) ? 'selected' : ''}`}
@@ -810,6 +840,11 @@ export default function Home() {
                       <div className="hero-nickname">{hero.nickname}</div>
                     </div>
                   ))}
+                  {filteredHeroes.length === 0 && (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '20px', color: '#94a3b8' }}>
+                      没有匹配的英雄
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-actions">
