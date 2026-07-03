@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
-const EditTournamentResults = ({ 
-  tournament, 
-  teams = [], 
-  onSave, 
-  onClose 
+const EditTournamentResults = ({
+  tournament,
+  teams = [],
+  onSave,
+  onClose
 }) => {
   const [formData, setFormData] = useState({
     name: tournament?.name || '',
@@ -15,6 +15,7 @@ const EditTournamentResults = ({
     start_date: tournament?.start_date || '',
     end_date: tournament?.end_date || ''
   });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setFormData({
@@ -37,7 +38,8 @@ const EditTournamentResults = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setSaving(true);
+
     try {
       const response = await fetch(`/api/tournaments/${encodeURIComponent(tournament.id)}`, {
         method: 'PUT',
@@ -46,26 +48,21 @@ const EditTournamentResults = ({
         },
         body: JSON.stringify(formData)
       });
-      
-      // 检查响应状态
+
       if (!response.ok) {
-        const errorMessage = `HTTP error! status: ${response.status}`;
-        console.error('API请求失败:', errorMessage);
-        console.error('请求URL:', `/api/tournaments/${encodeURIComponent(tournament.id)}`);
-        console.error('请求体:', formData);
-        throw new Error(errorMessage);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.error('非JSON响应:', text);
         throw new Error('服务器返回了非JSON响应');
       }
-      
+
       const result = await response.json();
       if (result.success) {
-        onSave(result.tournament); // 传递更新后的tournament对象
+        onSave(result.tournament);
         onClose();
       } else {
         alert('保存失败: ' + result.message);
@@ -73,6 +70,8 @@ const EditTournamentResults = ({
     } catch (error) {
       console.error('保存失败:', error);
       alert('保存失败: ' + error.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -82,15 +81,15 @@ const EditTournamentResults = ({
         const response = await fetch(`/api/tournaments/${encodeURIComponent(tournament.id)}`, {
           method: 'DELETE'
         });
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
         if (result.success) {
           alert('赛季删除成功');
-          onSave(null); // 传递null表示赛季已被删除
+          onSave(null);
           onClose();
         } else {
           alert('删除失败: ' + result.message);
@@ -107,9 +106,9 @@ const EditTournamentResults = ({
       <div className="edit-tournament-modal">
         <div className="modal-header">
           <h3>编辑赛季信息 - {tournament?.name}</h3>
-          <button className="close-button" onClick={onClose}>×</button>
+          <button className="close-button" onClick={onClose}>&times;</button>
         </div>
-        
+
         <div className="modal-body">
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -118,11 +117,10 @@ const EditTournamentResults = ({
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                className="form-input"
                 required
               />
             </div>
-            
+
             <div className="form-row">
               <div className="form-group">
                 <label>开始日期:</label>
@@ -130,34 +128,31 @@ const EditTournamentResults = ({
                   type="date"
                   value={formData.start_date}
                   onChange={(e) => handleChange('start_date', e.target.value)}
-                  className="form-input"
                 />
               </div>
-              
+
               <div className="form-group">
                 <label>结束日期:</label>
                 <input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => handleChange('end_date', e.target.value)}
-                  className="form-input"
                 />
               </div>
             </div>
-            
+
             <div className="form-group">
               <label>赞助商信息:</label>
               <input
                 type="text"
                 value={formData.sponsor_info}
                 onChange={(e) => handleChange('sponsor_info', e.target.value)}
-                className="form-input"
               />
             </div>
-            
+
             <div className="form-group">
               <label>冠军队伍:</label>
-              <select 
+              <select
                 value={formData.champion_team_id}
                 onChange={(e) => handleChange('champion_team_id', e.target.value)}
               >
@@ -169,10 +164,10 @@ const EditTournamentResults = ({
                 ))}
               </select>
             </div>
-            
+
             <div className="form-group">
               <label>亚军队伍:</label>
-              <select 
+              <select
                 value={formData.runner_up_team_id}
                 onChange={(e) => handleChange('runner_up_team_id', e.target.value)}
               >
@@ -184,10 +179,10 @@ const EditTournamentResults = ({
                 ))}
               </select>
             </div>
-            
+
             <div className="form-group">
               <label>季军队伍:</label>
-              <select 
+              <select
                 value={formData.third_place_team_id}
                 onChange={(e) => handleChange('third_place_team_id', e.target.value)}
               >
@@ -199,7 +194,7 @@ const EditTournamentResults = ({
                 ))}
               </select>
             </div>
-            
+
             <div className="form-actions">
               <button type="button" className="btn btn-danger" onClick={handleDelete}>
                 删除赛季
@@ -208,195 +203,14 @@ const EditTournamentResults = ({
                 <button type="button" className="btn btn-secondary" onClick={onClose}>
                   取消
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  保存
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? '保存中...' : '保存'}
                 </button>
               </div>
             </div>
           </form>
         </div>
       </div>
-      
-      <style jsx>{`
-        .edit-tournament-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(15, 23, 42, 0.4);
-          backdrop-filter: blur(4px);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .edit-tournament-modal {
-          background: #ffffff;
-          border-radius: 16px;
-          width: 90%;
-          max-width: 500px;
-          max-height: 80vh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          box-shadow: 0 16px 48px rgba(59, 130, 246, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
-          color: #2d3748;
-          border: 1px solid #c8ddf0;
-        }
-
-        .modal-header {
-          padding: 16px;
-          border-bottom: 1px solid #e8f0f8;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: linear-gradient(135deg, #f8fafc 0%, #f0f7fd 100%);
-        }
-
-        .modal-header h3 {
-          margin: 0;
-          color: #1a365d;
-          font-size: 18px;
-          font-weight: 600;
-        }
-
-        .close-button {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #94a3b8;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: all 0.2s ease;
-        }
-
-        .close-button:hover {
-          background-color: #e2e8f0;
-          color: #1a2332;
-        }
-
-        .modal-body {
-          padding: 16px;
-          overflow-y: auto;
-          flex: 1;
-        }
-
-        .form-row {
-          display: flex;
-          gap: 15px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-weight: 500;
-          color: #1a365d;
-          font-size: 0.9rem;
-        }
-
-        .form-group input,
-        .form-group select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #c8ddf0;
-          border-radius: 10px;
-          font-size: 14px;
-          box-sizing: border-box;
-          background-color: #f8fafc;
-          color: #1a2332;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-          outline: none;
-          border-color: #4da3e8;
-          box-shadow: 0 0 0 3px rgba(77, 163, 232, 0.12);
-        }
-
-        .form-actions {
-          display: flex;
-          justify-content: space-between;
-          gap: 10px;
-          margin-top: 20px;
-          padding-top: 20px;
-          border-top: 1px solid #e8f0f8;
-        }
-
-        .form-actions-right {
-          display: flex;
-          gap: 10px;
-        }
-
-        .btn {
-          padding: 10px 20px;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s ease;
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #4da3e8 0%, #3b8fd4 100%);
-          color: white;
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
-        }
-
-        .btn-primary:hover {
-          background: linear-gradient(135deg, #3b8fd4 0%, #2e7cc4 100%);
-          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-secondary {
-          background: #f0f4f8;
-          color: #4a5568;
-          border: 1px solid #c8ddf0;
-        }
-
-        .btn-secondary:hover {
-          background: #e2e8f0;
-        }
-
-        .btn-danger {
-          background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-          color: white;
-          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-danger:hover {
-          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-          box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
-        }
-
-        @media (max-width: 768px) {
-          .form-row {
-            flex-direction: column;
-            gap: 0;
-          }
-
-          .form-actions {
-            flex-direction: column;
-          }
-
-          .form-actions-right {
-            width: 100%;
-            justify-content: space-between;
-          }
-        }
-      `}</style>
     </div>
   );
 };
