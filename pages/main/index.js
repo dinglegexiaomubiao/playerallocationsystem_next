@@ -685,7 +685,7 @@ export default function Home() {
                         if (s >= 5420) return <span className="score-master">冠绝一世 ({s})</span>;
                         if (s >= 4620) return <span className="score-diamond">超凡入圣 ({s})</span>;
                         if (s >= 3850) return <span className="score-platinum">万古流芳 ({s})</span>;
-                        if (s >= 2310) return <span className="score-gold">传奇 ({s})</span>;
+                        if (s >= 3080) return <span className="score-gold">传奇 ({s})</span>;
                         if (s >= 2310) return <span className="score-gold">统帅 ({s})</span>;
                         if (s > 1540) return <span className="score-silver">中军 ({s})</span>;
                         if (s > 770) return <span className="score-silver">卫士 ({s})</span>;

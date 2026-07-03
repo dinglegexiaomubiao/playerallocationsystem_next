@@ -10,7 +10,7 @@ function getCacheKey(type, data) {
 
 function buildPlayerPrompt(player, stats) {
   const score = player.score || 0;
-  const tier = score >= 20000 ? '冠绝一世' : score >= 15000 ? '超凡入圣' : score >= 10000 ? '万古流芳' : score >= 5000 ? '传奇' : '卫士';
+  const tier = score >= 5420 ? '冠绝一世' : score >= 15000 ? '超凡入圣' : score >= 10000 ? '万古流芳' : score >= 5000 ? '传奇' : '卫士';
   const positions = (player.positions || []).join('、') || '未填写';
   const selfHeroes = (player.heroes || []).join('、') || '未填写';
   const synergyNames = (player.synergy_names || []).join('、') || '未填写';
@@ -65,7 +65,14 @@ ${statsText}
 function buildTeamPrompt(team, playersData) {
   const playersText = playersData.map(({ player, stats }, i) => {
     const score = player.score || 0;
-    const tier = score >= 20000 ? '冠绝' : score >= 15000 ? '超凡' : score >= 10000 ? '万古' : score >= 5000 ? '传奇' : '卫士';
+    const tier = score >= 5420 ? '冠绝一世' 
+    : score >= 4620 ? '超凡入圣' 
+    : score >= 3850 ? '万古流芳'
+    : score >= 3080 ? '传奇'
+    : score >= 2310 ? '统帅' 
+    : score >= 1540 ? '中军'
+    : score >= 770 ? '卫士'  
+    : '先锋';
     const positions = (player.positions || []).join('/') || '?';
     const heroes = (player.heroes || []).slice(0, 5).join('、') || '无';
     let apiHeroes = '';
