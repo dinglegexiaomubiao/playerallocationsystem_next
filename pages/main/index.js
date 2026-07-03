@@ -72,12 +72,10 @@ export default function Home() {
   } = playerMgmt;
 
   const {
-    teamIdCounter, setTeamIdCounter,
     isAddingTeam,
     addTeam, deleteTeam: deleteTeamBase,
     addPlayerToTeam, removePlayerFromTeam,
     resetAssignments, saveConfig, importConfig,
-    getNextTeamId,
   } = teamMgmt;
 
   // Loading state management
@@ -102,15 +100,6 @@ export default function Home() {
       router.push('/login');
     }
   }, [router]);
-
-  // Team ID counter sync
-  useEffect(() => {
-    if (teams.length > 0) {
-      setTeamIdCounter(getNextTeamId(teams));
-    } else {
-      setTeamIdCounter(1);
-    }
-  }, [teams, getNextTeamId]);
 
   // Pre-compute assigned players (stable reference)
   const assignedPlayers = useMemo(

@@ -1,19 +1,7 @@
 import { useState, useCallback } from 'react';
 
 export function useTeamManagement(currentTournament, teams, setTeams, unassignedPlayers, setUnassignedPlayers) {
-  const [teamIdCounter, setTeamIdCounter] = useState(1);
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-
-  // 计算下一个可用的队伍ID
-  const getNextTeamId = useCallback((existingTeams) => {
-    const usedIds = existingTeams.map(t => t.id).sort((a, b) => a - b);
-    let nextId = 1;
-    for (const id of usedIds) {
-      if (id === nextId) nextId++;
-      else if (id > nextId) break;
-    }
-    return nextId;
-  }, []);
 
   const addTeam = useCallback(async () => {
     setIsAddingTeam(true);
@@ -23,10 +11,10 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
       return;
     }
 
-    const newId = getNextTeamId(teams);
+    const tempId = `temp_${Date.now()}`;
     const newTeam = {
-      id: newId,
-      name: `队伍${newId}`,
+      id: tempId,
+      name: `新队伍`,
       players: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -42,7 +30,9 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
         body: JSON.stringify({ ...newTeam, tournament_id: currentTournament?.id }),
       });
       if (response.ok) {
-        setTeamIdCounter(getNextTeamId([...teams, newTeam]));
+        const data = await response.json();
+        const realTeam = data.team;
+        setTeams(prev => prev.map(t => t.id === tempId ? { ...realTeam, players: [] } : t));
         alert('队伍添加成功');
       } else {
         const errorData = await response.json();
@@ -55,7 +45,7 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
     } finally {
       setIsAddingTeam(false);
     }
-  }, [currentTournament, teams, getNextTeamId]);
+  }, [currentTournament, teams]);
 
   const deleteTeam = useCallback(async (teamId) => {
     const prevTeams = [...teams];
@@ -208,30 +198,46 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
           }
         }
 
+        // 导入队伍并记录 old_id → new_id 的映射
+        const idMap = {};
         for (const team of (data.teams || [])) {
           try {
-            await fetch('/api/teams', {
+            const response = await fetch('/api/teams', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(team),
             });
+            if (response.ok) {
+              const result = await response.json();
+              idMap[team.id] = result.team.id;
+            }
           } catch (error) {
             console.error('导入队伍到数据库失败:', error);
           }
         }
 
+        // 使用新的数据库ID来建立队伍-选手关系
         for (const team of (data.teams || [])) {
           try {
+            const newTeamId = idMap[team.id];
+            if (!newTeamId) continue;
             const playerIds = team.players.map(p => p.id);
             await fetch('/api/team-players', {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ teamId: team.id, playerIds }),
+              body: JSON.stringify({ teamId: newTeamId, playerIds }),
             });
           } catch (error) {
             console.error('更新队伍选手关系失败:', error);
           }
         }
+
+        // 更新前端状态中的队伍ID为数据库生成的ID
+        const updatedTeams = (data.teams || []).map(team => ({
+          ...team,
+          id: idMap[team.id] || team.id,
+        }));
+        setTeams(updatedTeams);
 
         alert('数据导入成功！');
       } catch (error) {
@@ -243,7 +249,6 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
   }, []);
 
   return {
-    teamIdCounter, setTeamIdCounter,
     isAddingTeam,
     addTeam,
     deleteTeam,
@@ -252,6 +257,5 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
     resetAssignments,
     saveConfig,
     importConfig,
-    getNextTeamId,
   };
 }

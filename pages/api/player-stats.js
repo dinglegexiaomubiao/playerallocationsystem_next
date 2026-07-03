@@ -1,4 +1,4 @@
-const heroIdToName = require('../../lib/heroMapping');
+import heroIdToName from '../../lib/heroMapping';
 
 const cache = new Map();
 const CACHE_TTL = 30 * 60 * 1000;

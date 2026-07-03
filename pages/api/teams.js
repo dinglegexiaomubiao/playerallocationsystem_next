@@ -54,8 +54,8 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
-        const { id, name, tournament_id, created_at, updated_at } = req.body;
-        const newTeam = await addTeam({ id, name, created_at, updated_at }, tournament_id);
+        const { name, tournament_id, created_at, updated_at } = req.body;
+        const newTeam = await addTeam({ name, created_at, updated_at }, tournament_id);
         res.status(201).json({ success: true, team: newTeam });
       } catch (error) {
         console.error('创建队伍错误:', error);
