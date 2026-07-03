@@ -106,7 +106,7 @@ const TeamCard = memo(function TeamCard({ team, onAddPlayer, onRemovePlayer, onD
                 <span className="ai-badge">🤖 AI 队伍分析</span>
                 <button className="ai-refresh-btn" onClick={() => { clearAnalysis(); handleAIAnalysis(); }}>🔄 重新分析</button>
               </div>
-              <div className="ai-analysis-text">{analysis}</div>
+              <div className="ai-analysis-text">{analysis || '（AI 返回了空内容，请重试）'}</div>
             </div>
           )}
         </div>

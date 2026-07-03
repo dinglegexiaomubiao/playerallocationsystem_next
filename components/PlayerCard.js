@@ -300,7 +300,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
             )}
 
             <div className="stat-section">
-              <h4>场次最多英雄</h4>
+              <h4>场次最多英雄 (近100场)</h4>
               <div className="heroes-list">
                 {playerStats.mostPlayedHeroes.map((hero, index) => (
                   <div key={index} className="hero-stat-item">
@@ -312,7 +312,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
             </div>
 
             <div className="stat-section">
-              <h4>胜率最高英雄</h4>
+              <h4>胜率最高英雄 (近100场)</h4>
               <div className="heroes-list">
                 {playerStats.highestWinRateHeroes.map((hero, index) => (
                   <div key={index} className="hero-stat-item">
@@ -361,7 +361,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
                 handleAIAnalysis();
               }}>🔄 重新分析</button>
             </div>
-            <div className="ai-analysis-text">{analysis}</div>
+            <div className="ai-analysis-text">{analysis || '（AI 返回了空内容，请重试）'}</div>
           </div>
         )}
       </div>

@@ -57,7 +57,20 @@ export default async function handler(req, res) {
     }
     const heroesData = await heroesResponse.json();
 
-    // 3. Fetch player totals (for overall win/loss, GPM, KDA averages)
+    // 3. Fetch recent matches for hero stats (last 100 ladder/normal)
+    const matchesResponse = await fetchWithTimeout(
+      `https://api.opendota.com/api/players/${playerId}/matches?limit=200&significant=1`,
+      10000
+    );
+    let recentMatchesForHeroStats = [];
+    if (matchesResponse.ok) {
+      const allMatches = await matchesResponse.json();
+      recentMatchesForHeroStats = allMatches
+        .filter(m => m.lobby_type === 0 || m.lobby_type === 7)
+        .slice(0, 100);
+    }
+
+    // 4. Fetch player totals (for overall win/loss, GPM, KDA averages)
     const totalsResponse = await fetchWithTimeout(
       `https://api.opendota.com/api/players/${playerId}/totals`,
       10000
@@ -122,22 +135,45 @@ export default async function handler(req, res) {
       : (totalKills + totalAssists).toFixed(1);
     const avgHeroDamage = recentTotal > 0 ? Math.round(totalHeroDamage / recentTotal) : 0;
 
-    // --- Most played heroes (all time) ---
-    const sortedHeroesByGames = [...heroesData].sort((a, b) => (b.games || 0) - (a.games || 0));
-    const mostPlayedHeroes = sortedHeroesByGames.slice(0, 5).map(hero => ({
-      name: heroIdToName[hero.hero_id] || `英雄${hero.hero_id}`,
-      matches: hero.games,
-      winRate: hero.games > 0 ? Math.round((hero.win / hero.games) * 100) : 0,
-    }));
+    // --- Hero stats from recent 100 games (ladder/normal) ---
+    const heroStatsMap = new Map();
+    for (const m of recentMatchesForHeroStats) {
+      const heroId = m.hero_id;
+      if (!heroStatsMap.has(heroId)) {
+        heroStatsMap.set(heroId, { games: 0, wins: 0 });
+      }
+      const h = heroStatsMap.get(heroId);
+      h.games++;
+      const isRadiant = m.player_slot < 128;
+      const isWin = m.radiant_win === isRadiant;
+      if (isWin) h.wins++;
+    }
 
-    // --- Highest win rate heroes (min 10 games) ---
-    const heroesWithMinGames = heroesData.filter(hero => hero.games >= 10);
-    const sortedHeroesByWinRate = [...heroesWithMinGames].sort((a, b) => {
-      const wrA = a.games > 0 ? (a.win / a.games) : 0;
-      const wrB = b.games > 0 ? (b.win / b.games) : 0;
-      return wrB - wrA;
-    });
-    const highestWinRateHeroes = sortedHeroesByWinRate.slice(0, 5).map(hero => ({
+    const mostPlayedHeroes = Array.from(heroStatsMap.entries())
+      .sort((a, b) => b[1].games - a[1].games)
+      .slice(0, 5)
+      .map(([heroId, h]) => ({
+        name: heroIdToName[heroId] || `英雄${heroId}`,
+        matches: h.games,
+        winRate: h.games > 0 ? Math.round((h.wins / h.games) * 100) : 0,
+      }));
+
+    const highestWinRateHeroes = Array.from(heroStatsMap.entries())
+      .filter(([, h]) => h.games >= 3)
+      .sort((a, b) => {
+        const wrA = a[1].wins / a[1].games;
+        const wrB = b[1].wins / b[1].games;
+        return wrB - wrA;
+      })
+      .slice(0, 5)
+      .map(([heroId, h]) => ({
+        name: heroIdToName[heroId] || `英雄${heroId}`,
+        matches: h.games,
+        winRate: h.games > 0 ? Math.round((h.wins / h.games) * 100) : 0,
+      }));
+
+    // --- Lifetime hero data for AI 绝活 detection ---
+    const heroesLifetime = (heroesData || []).map(hero => ({
       name: heroIdToName[hero.hero_id] || `英雄${hero.hero_id}`,
       matches: hero.games,
       winRate: hero.games > 0 ? Math.round((hero.win / hero.games) * 100) : 0,
@@ -156,6 +192,7 @@ export default async function handler(req, res) {
       recentMatches: recentMatchesDetail,
       mostPlayedHeroes,
       highestWinRateHeroes,
+      heroesLifetime,
     };
 
     cache.set(playerId, { stats, timestamp: Date.now() });

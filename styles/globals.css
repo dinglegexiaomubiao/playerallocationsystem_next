@@ -2494,7 +2494,8 @@ body {
   background: linear-gradient(135deg, #fafcfe 0%, #f5f9fd 100%);
   border: 1px solid var(--color-primary-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow: auto;
+  max-height: 500px;
 }
 
 .ai-analysis-header {
