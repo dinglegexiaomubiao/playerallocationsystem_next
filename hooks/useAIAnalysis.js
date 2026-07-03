@@ -27,11 +27,11 @@ export default function useAIAnalysis() {
   const [error, setError] = useState(null);
   const cacheRef = useRef(loadCache());
 
-  const runAnalysis = useCallback(async (type, data, id) => {
+  const runAnalysis = useCallback(async (type, data, id, { skipCache } = {}) => {
     const cacheKey = makeCacheKey(type, id);
 
     // Check localStorage cache first
-    if (cacheRef.current[cacheKey]) {
+    if (!skipCache && cacheRef.current[cacheKey]) {
       setAnalysis(cacheRef.current[cacheKey]);
       return;
     }

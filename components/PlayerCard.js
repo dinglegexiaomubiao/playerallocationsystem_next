@@ -52,7 +52,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
     }
   };
 
-  const handleAIAnalysis = async () => {
+  const handleAIAnalysis = async (options = {}) => {
     setFetchingForAI(true);
     let stats = playerStats;
     if (!stats) {
@@ -64,7 +64,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
     runAnalysis('player', {
       player: { ...player, synergy_names: synergyNames },
       stats,
-    }, player.id);
+    }, player.id, options);
   };
 
   const handleCopyGameID = () => {
@@ -358,7 +358,7 @@ const PlayerCard = memo(function PlayerCard({ player, onRemove, onJoinTeam, onEd
               <span className="ai-badge">🤖 AI 分析</span>
               <button className="ai-refresh-btn" onClick={() => {
                 clearAnalysis();
-                handleAIAnalysis();
+                handleAIAnalysis({ skipCache: true });
               }}>🔄 重新分析</button>
             </div>
             <div className="ai-analysis-text">{analysis || '（AI 返回了空内容，请重试）'}</div>
