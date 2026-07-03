@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 export function usePlayerManagement(currentTournament, unassignedPlayers, setUnassignedPlayers) {
-  const [isLoaded, setIsLoaded] = useState(false);
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
   const [selectedHeroes, setSelectedHeroes] = useState([]);
@@ -9,25 +8,6 @@ export function usePlayerManagement(currentTournament, unassignedPlayers, setUna
   const [playerFormData, setPlayerFormData] = useState({
     nickname: '', game_id: '', group_nickname: '', score: '', win_rate: 0, championships: 0, positions: []
   });
-
-  // 初始加载选手数据
-  useEffect(() => {
-    if (isLoaded) return;
-    const loadPlayers = async () => {
-      try {
-        const res = await fetch('/api/players');
-        const data = await res.json();
-        if (data.success) {
-          setUnassignedPlayers(data.players);
-          setIsLoaded(true);
-        }
-      } catch (error) {
-        console.error('加载选手失败:', error);
-        setIsLoaded(true);
-      }
-    };
-    loadPlayers();
-  }, [isLoaded]);
 
   const resetPlayerForm = useCallback(() => {
     setEditingPlayer(null);
@@ -164,7 +144,7 @@ export function usePlayerManagement(currentTournament, unassignedPlayers, setUna
         const response = await fetch('/api/players', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ playerId }),
+          body: JSON.stringify({ id: playerId }),
         });
         if (!response.ok) throw new Error('删除选手失败');
       } catch (error) {
@@ -181,7 +161,6 @@ export function usePlayerManagement(currentTournament, unassignedPlayers, setUna
   }, []);
 
   return {
-    isLoaded,
     isCreatingPlayer,
     editingPlayer, setEditingPlayer,
     selectedHeroes, setSelectedHeroes,

@@ -682,11 +682,14 @@ export default function Home() {
                     <div className="score-preview">
                       {(() => {
                         const s = parseInt(playerFormData.score) || 0;
-                        if (s >= 20000) return <span className="score-master">冠绝一世 ({s})</span>;
-                        if (s >= 15000) return <span className="score-diamond">超凡入圣 ({s})</span>;
-                        if (s >= 10000) return <span className="score-platinum">万古流芳 ({s})</span>;
-                        if (s >= 5000) return <span className="score-gold">传奇 ({s})</span>;
-                        if (s > 0) return <span className="score-silver">卫士 ({s})</span>;
+                        if (s >= 5420) return <span className="score-master">冠绝一世 ({s})</span>;
+                        if (s >= 4620) return <span className="score-diamond">超凡入圣 ({s})</span>;
+                        if (s >= 3850) return <span className="score-platinum">万古流芳 ({s})</span>;
+                        if (s >= 2310) return <span className="score-gold">传奇 ({s})</span>;
+                        if (s >= 2310) return <span className="score-gold">统帅 ({s})</span>;
+                        if (s > 1540) return <span className="score-silver">中军 ({s})</span>;
+                        if (s > 770) return <span className="score-silver">卫士 ({s})</span>;
+                        if (s > 0) return <span className="score-silver">先锋 ({s})</span>;
                         return <span style={{color: '#94a3b8'}}>输入天梯分数后实时显示等级</span>;
                       })()}
                     </div>
