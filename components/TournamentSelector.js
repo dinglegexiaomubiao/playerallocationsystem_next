@@ -89,7 +89,7 @@ const TournamentSelector = ({
                     <div className="tournament-info">
                       <h4>{tournament.name}</h4>
                       <div className="tournament-dates">
-                        {tournament.start_date} 至 {tournament.end_date}
+                        {tournament.start_date ? tournament.start_date.replace('T', ' ') : ''} 至 {tournament.end_date ? tournament.end_date.replace('T', ' ') : ''}
                       </div>
                     </div>
 
@@ -141,15 +141,15 @@ const TournamentSelector = ({
                     />
                     <div className="date-inputs">
                       <input
-                        type="date"
-                        placeholder="开始日期"
+                        type="datetime-local"
+                        placeholder="开始时间"
                         value={newTournament.start_date}
                         onChange={(e) => setNewTournament({...newTournament, start_date: e.target.value})}
                       />
                       <span>至</span>
                       <input
-                        type="date"
-                        placeholder="结束日期"
+                        type="datetime-local"
+                        placeholder="结束时间"
                         value={newTournament.end_date}
                         onChange={(e) => setNewTournament({...newTournament, end_date: e.target.value})}
                       />

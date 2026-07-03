@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
+// 将数据库中的日期值转为 datetime-local input 所需的 YYYY-MM-DDTHH:mm 格式
+const toDatetimeLocal = (value) => {
+  if (!value) return '';
+  if (value.includes('T')) {
+    return value.substring(0, 16);
+  }
+  return `${value}T00:00`;
+};
+
 const EditTournamentResults = ({
   tournament,
   teams = [],
@@ -12,8 +21,8 @@ const EditTournamentResults = ({
     runner_up_team_id: tournament?.runner_up_team_id || '',
     third_place_team_id: tournament?.third_place_team_id || '',
     sponsor_info: tournament?.sponsor_info || '',
-    start_date: tournament?.start_date || '',
-    end_date: tournament?.end_date || ''
+    start_date: toDatetimeLocal(tournament?.start_date),
+    end_date: toDatetimeLocal(tournament?.end_date)
   });
   const [saving, setSaving] = useState(false);
 
@@ -24,8 +33,8 @@ const EditTournamentResults = ({
       runner_up_team_id: tournament?.runner_up_team_id || '',
       third_place_team_id: tournament?.third_place_team_id || '',
       sponsor_info: tournament?.sponsor_info || '',
-      start_date: tournament?.start_date || '',
-      end_date: tournament?.end_date || ''
+      start_date: toDatetimeLocal(tournament?.start_date),
+      end_date: toDatetimeLocal(tournament?.end_date)
     });
   }, [tournament]);
 
@@ -41,12 +50,22 @@ const EditTournamentResults = ({
     setSaving(true);
 
     try {
+      // 补全 datetime-local 格式为完整 ISO 时间戳（追加秒数），并将空字符串的整数字段转为 null
+      const dataToSend = {
+        ...formData,
+        start_date: formData.start_date ? formData.start_date + ':00' : null,
+        end_date: formData.end_date ? formData.end_date + ':00' : null,
+        champion_team_id: formData.champion_team_id || null,
+        runner_up_team_id: formData.runner_up_team_id || null,
+        third_place_team_id: formData.third_place_team_id || null,
+      };
+
       const response = await fetch(`/api/tournaments/${encodeURIComponent(tournament.id)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (!response.ok) {
@@ -123,18 +142,18 @@ const EditTournamentResults = ({
 
             <div className="form-row">
               <div className="form-group">
-                <label>开始日期:</label>
+                <label>开始时间（国区 GMT+8）:</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={formData.start_date}
                   onChange={(e) => handleChange('start_date', e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label>结束日期:</label>
+                <label>结束时间（国区 GMT+8）:</label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={formData.end_date}
                   onChange={(e) => handleChange('end_date', e.target.value)}
                 />

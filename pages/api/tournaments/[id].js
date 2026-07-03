@@ -45,53 +45,65 @@ export default async function handler(req, res) {
 
       case 'PUT': {
         const updateData = req.body;
-        
+        console.log('PUT tournaments/[id] - updateData:', JSON.stringify(updateData), 'id:', id);
+
         if (!id) {
           return res.status(400).json({
             success: false,
             message: '缺少赛季ID'
           });
         }
-        
+
         // 允许的更新字段白名单，防止 SQL 注入
         const allowedFields = [
           'name', 'start_date', 'end_date', 'champion_team_id',
           'runner_up_team_id', 'third_place_team_id', 'sponsor_info',
           'champion_prize', 'runner_up_prize', 'status'
         ];
-        
+
         const fields = Object.keys(updateData).filter(key => allowedFields.includes(key));
-        
+
         if (fields.length === 0) {
           return res.status(400).json({
             success: false,
             message: '没有可更新的有效字段'
           });
         }
-        
+
         const values = fields.map(field => updateData[field]);
         const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
         values.push(id);
-        
-        const updateResult = await client.query(
-          `UPDATE public.tournaments 
-           SET ${setClause} 
-           WHERE id = $${values.length} 
-           RETURNING *`,
-          values
-        );
-        
-        if (updateResult.rowCount === 0) {
-          return res.status(404).json({
+
+        console.log('PUT SQL setClause:', setClause, 'values:', values);
+
+        try {
+          const updateResult = await client.query(
+            `UPDATE public.tournaments
+             SET ${setClause}
+             WHERE id = $${values.length}
+             RETURNING *`,
+            values
+          );
+
+          if (updateResult.rowCount === 0) {
+            return res.status(404).json({
+              success: false,
+              message: '赛季未找到'
+            });
+          }
+
+          res.status(200).json({
+            success: true,
+            tournament: updateResult.rows[0]
+          });
+        } catch (queryError) {
+          console.error('PUT tournament query error:', queryError.message);
+          console.error('PUT tournament query detail:', queryError.detail);
+          return res.status(500).json({
             success: false,
-            message: '赛季未找到'
+            message: '数据库更新失败: ' + queryError.message
           });
         }
-        
-        res.status(200).json({
-          success: true,
-          tournament: updateResult.rows[0]
-        });
         break;
       }
 
