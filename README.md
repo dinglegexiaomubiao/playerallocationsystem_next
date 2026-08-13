@@ -45,6 +45,11 @@
 - 导入已有配置
 - 自动保存时间戳
 
+### 🤖 AI 分析
+- **选手分析**：基于 OpenDota 战绩，从英雄池、BP 配合、针对策略、数据特征四个维度分析
+- **队伍分析**：从阵容完整度、英雄池体系、BP 建议、对手针对四个维度分析
+- **双重缓存**：服务端内存缓存 + 前端 localStorage 缓存，避免重复请求
+
 ## 技术架构
 
 ### 前端框架
@@ -66,8 +71,9 @@
 │       ├── tournaments.js  # 赛季管理
 │       ├── tournaments/[id].js # 单个赛季的详情/修改/删除
 │       ├── player-stats.js # 从 OpenDota 获取玩家战绩（带缓存）
+│       ├── ai-analysis.js  # AI 选手/队伍分析（Claude，带缓存）
 │       ├── messages.js     # 留言板（带速率限制）
-│       ├── login.js        # 登录（带 SHA256 密码校验）
+│       ├── login.js        # 登录（带加盐 SHA256 密码校验）
 │       ├── database-update.js # 数据库结构更新
 │       ├── database-check.js  # 数据库结构检查
 │       └── user.js         # 用户信息
@@ -80,11 +86,13 @@
 │   ├── useMessages.js      # 留言板逻辑
 │   ├── useTournaments.js   # 赛季切换与数据加载
 │   ├── usePlayerManagement.js # 选手增删改查
-│   └── useTeamManagement.js   # 队伍与分配逻辑
+│   ├── useTeamManagement.js   # 队伍与分配逻辑
+│   └── useAIAnalysis.js    # AI 分析逻辑（带 localStorage 缓存）
 ├── lib/                    # 工具库
 │   ├── db.js               # 数据库连接与操作
 │   ├── db-update.js        # 数据库结构更新脚本
-│   └── heroMapping.js      # 英雄ID映射表
+│   ├── heroMapping.js      # 英雄ID映射表
+│   └── heroesData.js       # 英雄名称/别称数据（供搜索）
 ├── styles/                 # 样式文件
 │   ├── main/
 │   │   └── index.css       # 主页面样式
@@ -108,6 +116,7 @@
 | `usePlayerManagement` | 选手数据 | 管理选手的增删改查、表单状态、英雄/默契选手选择 |
 | `useTeamManagement` | 队伍与分配 | 管理队伍的增删、选手入队/离队、导入导出 |
 | `useMessages` | 留言板 | 管理留言列表、发表留言、点赞、随机弹幕 |
+| `useAIAnalysis` | AI 分析 | 调用 AI 分析选手/队伍，带 localStorage 缓存 |
 
 **关键设计**：`teams` 和 `unassignedPlayers` 这两个最重要的状态统一放在 `main/index.js` 里，Hooks 通过参数接收 `setTeams` 和 `setUnassignedPlayers`，这样就不会出现"A 改了数据，B 不知道"的情况。
 
@@ -119,8 +128,9 @@
 /api/tournaments      → 赛季管理（列表、创建）
 /api/tournaments/[id] → 单个赛季的详情/修改/删除
 /api/player-stats     → 从 OpenDota 获取玩家战绩（带缓存）
+/api/ai-analysis      → AI 选手/队伍分析（带缓存）
 /api/messages         → 留言板（带速率限制）
-/api/login            → 登录（带 SHA256 密码校验）
+/api/login            → 登录（带加盐 SHA256 密码校验）
 /api/database-update  → 数据库结构更新
 /api/database-check   → 数据库结构检查
 /api/user             → 用户信息
@@ -318,7 +328,7 @@ npm start
 
 - [x] 数据库凭据迁移到环境变量
 - [x] SQL 注入漏洞修复（字段白名单）
-- [x] 登录增加密码校验（SHA256）
+- [x] 登录增加密码校验（加盐 SHA256）
 - [x] 留言板增加 Rate Limiting（防刷）
 - [x] 留言板增加输入长度限制
 - [x] OpenDota API 增加 30 分钟缓存和 8 秒超时
@@ -335,6 +345,12 @@ npm start
 - Edge 80+
 
 ## 更新日志
+
+### v2.3.0 (2026-08-14)
+- **AI 分析**：新增选手/队伍 AI 分析功能，基于 OpenDota 战绩从英雄池、BP、针对等维度生成分析
+- **安全加固**：登录密码改为加盐 SHA256 存储（旧密码登录后自动升级）
+- **健壮性**：addTeam 改用数据库序列自增，消除并发撞 ID 隐患
+- **清理**：删除 v1 纯 HTML 时代的 index.html、script.js 残留文件
 
 ### v2.2.0 (2025-06-08)
 - **安全修复**：移除 `lib/db.js` 中硬编码的数据库连接字符串 fallback，彻底消除凭据泄漏风险

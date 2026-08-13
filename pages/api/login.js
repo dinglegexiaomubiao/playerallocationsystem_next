@@ -3,8 +3,23 @@ import crypto from 'crypto';
 
 let dbInitialized = false;
 
-function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+function hashPassword(password, salt = '') {
+  return crypto.createHash('sha256').update(salt + password).digest('hex');
+}
+
+function hashPasswordWithSalt(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return `${salt}:${hashPassword(password, salt)}`;
+}
+
+function verifyPassword(password, stored) {
+  if (!stored) return false;
+  const [salt, hash] = stored.split(':');
+  if (hash === undefined) {
+    // 旧格式：无盐 SHA256，兼容存量用户
+    return hashPassword(password) === stored;
+  }
+  return hashPassword(password, salt) === hash;
 }
 
 export default async function handler(req, res) {
@@ -42,15 +57,22 @@ export default async function handler(req, res) {
           if (!trimmedPassword) {
             return res.status(400).json({ error: '请输入密码' });
           }
-          if (hashPassword(trimmedPassword) !== existingPassword) {
+          if (!verifyPassword(trimmedPassword, existingPassword)) {
             return res.status(401).json({ error: '密码错误' });
+          }
+          // 旧格式（无盐）密码校验通过后，自动升级为加盐格式
+          if (!existingPassword.includes(':')) {
+            await query(
+              'UPDATE public.play_score SET password = $1 WHERE name = $2',
+              [hashPasswordWithSalt(trimmedPassword), trimmedUsername]
+            );
           }
         } else {
           // 旧用户没有密码：如果有提交密码，则帮他设置上
           if (trimmedPassword) {
             await query(
               'UPDATE public.play_score SET password = $1 WHERE name = $2',
-              [hashPassword(trimmedPassword), trimmedUsername]
+              [hashPasswordWithSalt(trimmedPassword), trimmedUsername]
             );
           }
         }
@@ -73,7 +95,7 @@ export default async function handler(req, res) {
 
         const inserted = await query(
           'INSERT INTO public.play_score (name, count, password) VALUES ($1, $2, $3) RETURNING count',
-          [trimmedUsername, 1, hashPassword(trimmedPassword)]
+          [trimmedUsername, 1, hashPasswordWithSalt(trimmedPassword)]
         );
         return res.status(200).json({
           name: trimmedUsername,
