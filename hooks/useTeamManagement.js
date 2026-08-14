@@ -65,6 +65,33 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
     }
   }, [teams]);
 
+  const renameTeam = useCallback(async (teamId, newName) => {
+    const trimmed = (newName || '').trim();
+    if (!trimmed) {
+      alert('队伍名称不能为空！');
+      return;
+    }
+    const prevTeams = [...teams];
+    const updatedTeams = teams.map(team =>
+      team.id === teamId
+        ? { ...team, name: trimmed, updated_at: new Date().toISOString() }
+        : team
+    );
+    setTeams(updatedTeams);
+    try {
+      const response = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: teamId, name: trimmed }),
+      });
+      if (!response.ok) throw new Error('修改队伍名称失败');
+    } catch (error) {
+      console.error('从API修改队伍名称失败:', error);
+      alert('修改队伍名称失败，已恢复原始状态');
+      setTeams(prevTeams);
+    }
+  }, [teams]);
+
   const addPlayerToTeam = useCallback(async (playerId, teamId) => {
     const team = teams.find(t => t.id === teamId);
     if (team && team.players.length >= 5) {
@@ -252,6 +279,7 @@ export function useTeamManagement(currentTournament, teams, setTeams, unassigned
     isAddingTeam,
     addTeam,
     deleteTeam,
+    renameTeam,
     addPlayerToTeam,
     removePlayerFromTeam,
     resetAssignments,

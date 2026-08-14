@@ -473,6 +473,31 @@ body {
   margin-bottom: 4px;
 }
 
+.team-rename-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.team-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  border: 1px solid #d1d9e6;
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--color-text);
+  transition: border-color var(--transition-fast);
+}
+
+.team-rename-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
 .team-footer {
   display: flex;
   gap: 8px;

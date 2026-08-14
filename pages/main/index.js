@@ -85,7 +85,7 @@ export default function Home() {
 
   const {
     isAddingTeam,
-    addTeam, deleteTeam: deleteTeamBase,
+    addTeam, deleteTeam: deleteTeamBase, renameTeam,
     addPlayerToTeam, removePlayerFromTeam,
     resetAssignments, saveConfig, importConfig,
   } = teamMgmt;
@@ -415,6 +415,7 @@ export default function Home() {
                   onAddPlayer={() => openAddPlayerModal(team.id)}
                   onRemovePlayer={(playerId) => removePlayerFromTeam(playerId, team.id)}
                   onDeleteTeam={() => deleteTeam(team.id)}
+                  onRenameTeam={(newName) => renameTeam(team.id, newName)}
                   playerNameMap={playerNameMap}
                 />
               ))

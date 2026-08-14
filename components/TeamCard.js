@@ -2,12 +2,17 @@ import { memo, useState, useCallback } from 'react';
 import PlayerCard from './PlayerCard';
 import useAIAnalysis from '../hooks/useAIAnalysis';
 
-const TeamCard = memo(function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTeam, playerNameMap }) {
+const TeamCard = memo(function TeamCard({ team, onAddPlayer, onRemovePlayer, onDeleteTeam, onRenameTeam, playerNameMap }) {
   const playerCount = team.players.length;
   const isFull = playerCount >= 5;
   const teamScore = team.players.reduce((total, player) => total + (player.score || 0), 0);
   const [fetchingStats, setFetchingStats] = useState(false);
+  const [renameValue, setRenameValue] = useState(team.name || '');
   const { analyzing, analysis, error: aiError, runAnalysis, clearAnalysis } = useAIAnalysis();
+
+  const handleRename = useCallback(() => {
+    if (onRenameTeam) onRenameTeam(renameValue);
+  }, [onRenameTeam, renameValue]);
 
   const handleAIAnalysis = useCallback(async () => {
     setFetchingStats(true);
@@ -111,6 +116,23 @@ const TeamCard = memo(function TeamCard({ team, onAddPlayer, onRemovePlayer, onD
           )}
         </div>
       )}
+
+      <div className="team-rename-row">
+        <input
+          type="text"
+          className="team-rename-input"
+          placeholder="输入新的队伍名称"
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); }}
+        />
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={handleRename}
+        >
+          修改队伍名称
+        </button>
+      </div>
 
       <div className="team-footer">
         <button
