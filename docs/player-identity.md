@@ -278,11 +278,73 @@ P0 必须先做且独立验证，P1–P3 可以并行。**P0 完成前不要在�
 
 ---
 
-## 七、待确认
+## 七、已确认的决策（2026-10-21）
 
-1. **常用号镜像方案**：保留 `players.game_id` 作为镜像（不动 36 处调用），
-   还是彻底去掉单值字段（改动面会扩到全部 36 处 + 数据迁移）？
-2. **是否需要「展示名」**：列表和赛事页显示哪个昵称——按类型各一个展示名，
-   还是一律显示主昵称？
-3. **账号冲突处理**：P4 只做到「报错提示占用者」够不够，还是要「申请合并两个选手」？
-4. **天梯分口径**：多账号下继续手填，还是允许「取所有账号里的最高分」并注明来源？
+四个问题已有结论，以下是定稿口径，实施时不再摇摆：
+
+**1. 常用号镜像：保留 `players.game_id`。**
+它始终等于 `player_accounts` 里 `is_primary = true` 那一行，由触发器同步。
+36 处既有调用（头像代理、头像同步、开黑、选手列表、后台）一行都不改。
+
+**2. 显示名：不做「按类型设展示名」，一律只显示主昵称。**
+`player_aliases.is_display` 那一套砍掉——多一个选择只会让同一个人在不同页面
+显示不同名字，反而伤辨识度。规则固定：
+
+- 主昵称 = `players.nickname`（历史数据里就是大家认的那个名字）
+- `group_nickname` 只在详情页作补充信息，不参与列表/赛事页标题与排序
+- `player_aliases` 只用于**搜索命中**和**导入时认人**，不参与展示
+
+**3. 账号被占用：只提示，不做合并申请。**
+后端在绑定/保存时校验 `player_accounts.account_id` 唯一性，冲突时返回：
+
+> 该 Steam 账号已被「XXX」绑定。如需修改，请尽快联系 dom 处理。
+
+前端原样展示这句，不提供「申请合并」入口。
+
+**4. 天梯分：继续手填，拆成两个字段。**
+
+- `players.score` —— **当前**天梯分，本人可改（掉分就跟着改）
+- `players.peak_score` —— **历史最高**分，本人填写，不随掉分变化
+
+两个字段都允许本人编辑。**不自动取多账号最高分**——OpenDota 拿不到 MMR，
+按账号取最高只会造出一个没人维护的数字。
+
+展示口径：详情页主数字是当前分，最高分作次级信息；报名表/队伍表当前分为主，
+最高分只在与当前分不同时以「最高 xxxx」小字或 title 出现。
+
+> 注：`peak_score` 字段在第十一届名单导入时已建好（47/161 有值），但页面一直没接。
+> 本次补的是读写链路：`/api/profile`、`updatePlayer`、个人信息页、群友详情页、报名表。
+
+---
+
+## 八、名次模型修正：一届可以有多个冠军
+
+**这条影响所有涉及名次的代码，不要再用单值思维。**
+
+现实里一届赛事可能出现：分组决赛各出一个冠军、并列名次、两队同分同胜场。
+原来的 `tournaments.champion_team_id / runner_up_team_id / third_place_team_id`
+是单值，表达不了。
+
+**定稿：** 新增 `tournament_placements`，一行一个名次。
+
+```sql
+CREATE TABLE public.tournament_placements (
+  id            serial PRIMARY KEY,
+  tournament_id bigint   NOT NULL REFERENCES public.tournaments(id) ON DELETE CASCADE,
+  team_id       bigint   NOT NULL REFERENCES public.teams(id)       ON DELETE CASCADE,
+  place         smallint NOT NULL,          -- 1 冠军 / 2 亚军 / 3 季军
+  note          varchar(60),                -- 「B 组决赛冠军」这类说明
+  created_at    timestamptz DEFAULT now(),
+  UNIQUE (tournament_id, team_id, place)
+);
+```
+
+- 同一个 `(tournament_id, place)` 允许出现多行 —— 这就是并列。
+- 单值字段**保留不删**，作为只读兼容层；`placements` 为空时前端回退到它。
+- 后台只改单值时（旧 UI），接口会把单值同步进 `placements`，避免两套数据打架。
+- `placements` 传了就整份替换该赛事的名次（空数组 = 清空）。
+- 展示：Hero 荣誉区按档位竖排，同档多队用 ` / ` 连接；
+  队伍表同一队取最好名次出徽标；赛事列表用聚合后的 `champions_text`。
+
+---
+

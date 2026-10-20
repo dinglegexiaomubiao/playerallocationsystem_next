@@ -175,7 +175,14 @@ export default function PlayerTable({ signups = [], teams = [] }) {
               {s.nickname || s.group_nickname || '群友'}
               {s.is_captain && <span className="t-chip gold" style={{ marginLeft: 6 }}>队长</span>}
             </Link>
-            <span className="t-tr-num">{s.score || 0}</span>
+            <span className="t-tr-num">
+              {s.score > 0 ? s.score : '—'}
+              {s.peak_score > (s.score || 0) && (
+                <span className="t-tr-peak" title="历史最高分">
+                  最高 {s.peak_score}
+                </span>
+              )}
+            </span>
             <span className="t-tr-pos">
               {s.posList.length > 0 ? s.posList.join(' / ') : '未填'}
             </span>

@@ -58,6 +58,7 @@ export default function Profile() {
               group_nickname: d.profile.group_nickname || '',
               region: d.profile.region || '',
               score: d.profile.score ?? '',
+              peak_score: d.profile.peak_score ?? '',
               positions: d.profile.positions || [],
               heroes: d.profile.heroes || [],
               self_intro: d.profile.self_intro || '',
@@ -107,6 +108,7 @@ export default function Profile() {
       group_nickname: form.group_nickname || null,
       region: form.region || null,
       score: form.score === '' || form.score === null ? null : Number(form.score),
+      peak_score: form.peak_score === '' || form.peak_score === null ? null : Number(form.peak_score),
       positions: form.positions || [],
       heroes: form.heroes || [],
       self_intro: form.self_intro || null,
@@ -207,9 +209,22 @@ export default function Profile() {
               </div>
               <div className="form-row" style={{ marginBottom: 14 }}>
                 <div className="form-field">
-                  <label>天梯分数</label>
-                  <input type="number" value={form.score ?? ''} onChange={(e) => setForm({ ...form, score: e.target.value })} />
+                  <label>当前天梯分</label>
+                  <input type="number" min="0" max="20000" value={form.score ?? ''} onChange={(e) => setForm({ ...form, score: e.target.value })} />
+                  <span className="field-note">填现在的分数，掉了就跟着改</span>
                 </div>
+                <div className="form-field">
+                  <label>历史最高分</label>
+                  <input type="number" min="0" max="20000" value={form.peak_score ?? ''} onChange={(e) => setForm({ ...form, peak_score: e.target.value })} />
+                  <span className="field-note">填打上过的最好成绩，不随掉分变化</span>
+                  {Number(form.peak_score) > 0 &&
+                    Number(form.score) > 0 &&
+                    Number(form.peak_score) < Number(form.score) && (
+                      <span className="field-note warn">最高分不应低于当前分，确认一下</span>
+                    )}
+                </div>
+              </div>
+              <div className="form-row" style={{ marginBottom: 14 }}>
                 <div className="form-field">
                   <label>自报胜率（%）</label>
                   <input type="number" value={form.win_rate ?? ''} onChange={(e) => setForm({ ...form, win_rate: e.target.value })} />
@@ -271,7 +286,8 @@ export default function Profile() {
               <div className="side-card">
                 <h4>基本信息</h4>
                 <div className="kv"><span className="k">所处地区</span><span className="v">{profile.region || '未填写'}</span></div>
-                <div className="kv"><span className="k">天梯分</span><span className="v">{profile.score || '未填写'}</span></div>
+                <div className="kv"><span className="k">当前天梯分</span><span className="v">{profile.score || '未填写'}</span></div>
+                <div className="kv"><span className="k">历史最高分</span><span className="v">{profile.peak_score || '未填写'}</span></div>
                 <div className="kv"><span className="k">擅长位置</span><span className="v">{(profile.positions || []).join(' / ') || '未填写'}</span></div>
                 <div className="kv"><span className="k">自报胜率</span><span className="v">{profile.win_rate || 0}%</span></div>
                 {profile.self_intro && (

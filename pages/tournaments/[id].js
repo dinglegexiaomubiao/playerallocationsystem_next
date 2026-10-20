@@ -82,47 +82,89 @@ export default function TournamentDetail() {
       playerCount: ids.size,
       signupCount: signups.length,
       matchCount: matches.length,
-      championName:
-        (t && (t.champion_team_name || t.champion_team?.name)) ||
-        (teams.find((x) => Number(x.rank) === 1) || {}).name ||
-        '',
     };
-  }, [teams, matches, t, signups]);
+  }, [teams, matches, signups]);
 
-  /* 名次口径：teams.rank 优先，为空时回退到赛事的 champion/runner_up/third_place。
-     第十一届就是这种情况——teams.rank 全空，冠军只记在 tournaments.champion_team_id。 */
-  const rankMap = useMemo(() => {
+  /* 名次可以有多个。数据来源按可信度排：
+     1) tournament_placements —— 一行一个名次，天然支持并列多个冠军
+     2) teams.rank —— 人工录入的单值
+     3) tournaments.champion/runner_up/third —— 最早的单值字段，仅兜底
+     页面内部统一用 placesMap：team_id → 名次数组（同一队一般只有一个，用数组防止重复记名） */
+  const placesMap = useMemo(() => {
     const m = new Map();
-    teams.forEach((tm) => {
-      const r = Number(tm.rank) || 0;
-      if (r > 0) m.set(String(tm.id), r);
-    });
+    const add = (id, place) => {
+      const k = String(id);
+      const p = Number(place) || 0;
+      if (!k || p <= 0) return;
+      if (!m.has(k)) m.set(k, []);
+      if (!m.get(k).includes(p)) m.get(k).push(p);
+    };
+
+    (t?.placements || []).forEach((x) => add(x.team_id, x.place));
+    teams.forEach((tm) => add(tm.id, tm.rank));
     if (t) {
-      if (t.champion_team_id) m.set(String(t.champion_team_id), 1);
-      if (t.runner_up_team_id) m.set(String(t.runner_up_team_id), 2);
-      if (t.third_place_team_id) m.set(String(t.third_place_team_id), 3);
+      // 只有在名次表完全为空时才回退旧字段，避免两套数据打架
+      if (m.size === 0) {
+        add(t.champion_team_id, 1);
+        add(t.runner_up_team_id, 2);
+        add(t.third_place_team_id, 3);
+      }
     }
+    m.forEach((arr) => arr.sort((a, b) => a - b));
     return m;
   }, [teams, t]);
 
+  /* 排序用「最好的那个名次」 */
+  const bestPlace = (id) => {
+    const arr = placesMap.get(String(id));
+    return arr && arr.length ? arr[0] : 999;
+  };
+
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => {
-      const ra = rankMap.get(String(a.id)) || 999;
-      const rb = rankMap.get(String(b.id)) || 999;
+      const ra = bestPlace(a.id);
+      const rb = bestPlace(b.id);
       if (ra !== rb) return ra - rb;
       return String(a.name || '').localeCompare(String(b.name || ''), 'zh');
     });
-  }, [teams, rankMap]);
+  }, [teams, placesMap]);
 
-  const results = useMemo(() => {
-    if (!t) return [];
-    const pick = (name, rank) =>
-      name || (teams.find((x) => Number(x.rank) === rank) || {}).name || '';
-    return [
-      { key: 'gold', label: '冠军', name: pick(t.champion_team_name, 1) },
-      { key: 'silver', label: '亚军', name: pick(t.runner_up_team_name, 2) },
-      { key: 'bronze', label: '季军', name: pick(t.third_place_team_name, 3) },
-    ].filter((x) => x.name);
+  /* 荣誉带：每一档把所有队伍都列出来（可能是多个） */
+  const honors = useMemo(() => {
+    const NAME = { 1: '冠军', 2: '亚军', 3: '季军' };
+    const fromTable = (t?.placements || []).reduce((acc, x) => {
+      const p = Number(x.place);
+      if (!NAME[p] || !x.team_name) return acc;
+      if (!acc[p]) acc[p] = [];
+      if (!acc[p].includes(x.team_name)) acc[p].push(x.team_name);
+      return acc;
+    }, {});
+
+    // 名次表为空 → 用单值字段
+    if (Object.keys(fromTable).length === 0) {
+      const legacy = [
+        [1, t?.champion_team_name],
+        [2, t?.runner_up_team_name],
+        [3, t?.third_place_team_name],
+      ];
+      legacy.forEach(([p, n]) => {
+        if (n) fromTable[p] = [n];
+      });
+      // 再看 teams.rank
+      if (Object.keys(fromTable).length === 0) {
+        teams.forEach((tm) => {
+          const r = Number(tm.rank);
+          if (NAME[r]) {
+            if (!fromTable[r]) fromTable[r] = [];
+            fromTable[r].push(tm.name);
+          }
+        });
+      }
+    }
+
+    return [1, 2, 3]
+      .filter((p) => fromTable[p] && fromTable[p].length > 0)
+      .map((p) => ({ label: NAME[p], names: fromTable[p] }));
   }, [t, teams]);
 
   /* 按轮次分组（没有轮次时归到「对阵」） */
@@ -174,7 +216,7 @@ export default function TournamentDetail() {
         <title>{t.name} · 深圳LaRoja Dota2社区</title>
       </Head>
 
-      <TournamentHero tournament={t} coverImage={COVER} stats={stats} />
+      <TournamentHero tournament={t} coverImage={COVER} stats={stats} honors={honors} />
 
       <div className="t-tabs">
         <div className="t-wrap t-tabs-inner">
@@ -233,12 +275,11 @@ export default function TournamentDetail() {
                 ) : (
                   <div className="t-team-list">
                     {sortedTeams.map((tm) => {
-                      const rk = rankMap.get(String(tm.id)) || 0;
+                      const rk = bestPlace(tm.id);
+                      const rkl = rk === 1 ? '冠' : rk === 2 ? '亚' : rk === 3 ? '季' : '';
                       return (
                         <span className="t-team-item" key={tm.id}>
-                          {rk > 0 && (
-                            <span className="rk">{rk === 1 ? '冠' : rk === 2 ? '亚' : '季'}</span>
-                          )}
+                          {rkl && <span className="rk">{rkl}</span>}
                           {tm.name}
                         </span>
                       );
@@ -253,13 +294,13 @@ export default function TournamentDetail() {
                 <div className="t-block-head">
                   <h2 className="t-block-title">最终名次</h2>
                 </div>
-                {results.length > 0 ? (
+                {honors.length > 0 ? (
                   <div className="t-deflist">
-                    {results.map((r) => (
-                      <div className="t-def" key={r.key}>
-                        <span className="t-def-k">{r.label}</span>
-                        <span className={`t-def-v ${r.key === 'gold' ? 'bronze' : ''}`}>
-                          {r.name}
+                    {honors.map((h) => (
+                      <div className="t-def" key={h.label}>
+                        <span className="t-def-k">{h.label}</span>
+                        <span className={`t-def-v ${h.label === '冠军' ? 'bronze' : ''}`}>
+                          {h.names.join(' / ')}
                         </span>
                       </div>
                     ))}

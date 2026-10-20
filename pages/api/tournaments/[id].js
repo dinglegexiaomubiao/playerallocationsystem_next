@@ -47,6 +47,21 @@ export default async function handler(req, res) {
         
         const tournament = tournamentResult.rows[0];
 
+        // 名次可以有多个：一届赛事可能并列多个冠军/亚军/季军
+        // （比如分组决赛、两队同分、或两台冠军）。单值字段表达不了，
+        // 所以用 tournament_placements 一行一个名次。
+        // 上面的 champion/runner_up/third 字段保留做兼容，下面返回的
+        // placements 为空时前端回退到旧字段。
+        const placements = await client.query(
+          `SELECT tp.place, tp.team_id, tp.note, tm.name AS team_name
+             FROM public.tournament_placements tp
+             JOIN public.teams tm ON tm.id = tp.team_id AND tm.tournament_id = tp.tournament_id
+            WHERE tp.tournament_id = $1
+            ORDER BY tp.place ASC, tm.name ASC`,
+          [id]
+        );
+        tournament.placements = placements.rows;
+
         // 聚合报名名单（赛事选手快照，含队长标记）
         // 天梯分 / 常用位置以 players 实时值为准，快照仅作兜底：
         // 批量导入的报名快照里这两列是空的（导入时还没填），直接用会显示 0 分、未填位置。
@@ -56,6 +71,7 @@ export default async function handler(req, res) {
                   tp.signup_status, tp.is_captain, tp.signed_at,
                   p.nickname, p.group_nickname, p.game_id,
                   COALESCE(NULLIF(p.score, 0), tp.score, 0) AS score,
+                  NULLIF(p.peak_score, 0) AS peak_score,
                   COALESCE(NULLIF(p.positions, ''), tp.positions) AS positions
            FROM public.tournament_players tp
            JOIN public.players p ON p.id = tp.player_id

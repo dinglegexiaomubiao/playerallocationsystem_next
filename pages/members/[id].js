@@ -184,6 +184,10 @@ export default function MemberDetail() {
             <div className="detail-score">
               <div className="n">{score}</div>
               <div className="l">{tier(score)}</div>
+              {/* 历史最高分由本人自填，可能没有；有就单独一行标出来 */}
+              {player.peak_score ? (
+                <div className="best">最高 {player.peak_score}</div>
+              ) : null}
             </div>
           </div>
         </div>

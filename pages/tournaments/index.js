@@ -147,7 +147,7 @@ export default function TournamentsPage() {
               {list.map((t) => {
                 const s = STATUS[t.status] || STATUS.planned;
                 const live = t.status === 'active';
-                const champ = t.champion_team_name || '';
+                const champ = t.champions_text || t.champion_team_name || '';
                 return (
                   <Link href={'/tournaments/' + t.id} className="lr-trow" key={t.id}>
                     <span className="lr-cell-main">

@@ -1331,3 +1331,33 @@
   border-radius: var(--t-r-1);
   padding: 0 5px;
 }
+
+/* 荣誉组：一届可能并列多个冠军/亚军/季军，所以竖排多行，
+   冠军保持古铜金实底，亚/季降一档只留左侧细线，避免整块都在发光。 */
+.t-honor-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.t-honor {
+  padding: 3px 12px 3px 10px;
+}
+.t-honor .t-honor-v {
+  font-size: 15px;
+}
+.t-honor.minor {
+  background: none;
+  border-left-color: var(--t-line-strong, #4a3f36);
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.t-honor.minor .t-honor-k {
+  color: var(--t-text-3);
+}
+.t-honor.minor .t-honor-v {
+  font-family: var(--t-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t-text-2);
+}

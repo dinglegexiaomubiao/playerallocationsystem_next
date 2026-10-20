@@ -83,25 +83,35 @@ function buildRecords(matches) {
  *   matches    —— /api/tournaments/[id]/matches，用于反推交战记录
  *   tournament —— /api/tournaments/[id] 的 tournament，冠亚季存在这里
  *
- * 名次口径：teams.rank 优先；为空时回退到赛事的 champion/runner_up/third_place。
- * 两者都没有就不显示徽标——不用数组序号冒充名次。
+ * 名次口径：tournament_placements（一行一个名次，支持多个冠军/亚军/季军）
+ * 优先；为空时回退 teams.rank，再为空回退赛事的 champion/runner_up/third_place。
+ * 三者都没有就不显示徽标——不用数组序号冒充名次。
  */
 export default function TeamTable({ teams, matches, tournament }) {
   const router = useRouter();
   const from = String(router.asPath || '').split('?')[0];
   const records = useMemo(() => buildRecords(matches), [matches]);
 
-  /* team_id → 名次（1 冠军 / 2 亚军 / 3 季军） */
+  /* team_id → 名次（1 冠军 / 2 亚军 / 3 季军）。
+     同一队理论上只有一个名次，取最好的那个用于徽标。 */
   const rankMap = useMemo(() => {
     const m = new Map();
-    (teams || []).forEach((tm) => {
-      const r = Number(tm.rank) || 0;
-      if (r > 0) m.set(String(tm.id), r);
-    });
+    const add = (id, place) => {
+      const k = String(id);
+      const p = Number(place) || 0;
+      if (!k || p <= 0) return;
+      const cur = m.get(k);
+      if (!cur || p < cur) m.set(k, p);
+    };
+
     const t = tournament || {};
-    if (t.champion_team_id) m.set(String(t.champion_team_id), 1);
-    if (t.runner_up_team_id) m.set(String(t.runner_up_team_id), 2);
-    if (t.third_place_team_id) m.set(String(t.third_place_team_id), 3);
+    (t.placements || []).forEach((x) => add(x.team_id, x.place));
+    (teams || []).forEach((tm) => add(tm.id, tm.rank));
+    if (m.size === 0) {
+      add(t.champion_team_id, 1);
+      add(t.runner_up_team_id, 2);
+      add(t.third_place_team_id, 3);
+    }
     return m;
   }, [teams, tournament]);
 
@@ -178,6 +188,10 @@ export default function TeamTable({ teams, matches, tournament }) {
                     className="t-rp"
                     title={`${p.group_nickname || p.nickname}${isCap ? '（队长）' : ''}${
                       pos ? ' · ' + pos : ''
+                    }${
+                      Number(p.peak_score) > score
+                        ? ` · 历史最高 ${p.peak_score}`
+                        : ''
                     }`}
                   >
                     <PlayerAvatar playerId={p.id} name={p.group_nickname || p.nickname} />

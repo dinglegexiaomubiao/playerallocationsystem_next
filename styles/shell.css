@@ -662,3 +662,28 @@ button.back-link:hover {
     grid-column: 1 / -1;
   }
 }
+
+/* 历史最高分：详情页分数卡与报名表里的次级信息。
+   和「当前分」区分层级 —— 主数字是现在，最高分只作参考，不抢视线。 */
+.detail-score .best {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.t-tr-peak {
+  display: block;
+  margin-top: 1px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--t-text-3);
+  white-space: nowrap;
+}
+
+/* 表单即时提示：填反了只说一句，不拦保存 */
+.field-note.warn {
+  color: var(--brand);
+}

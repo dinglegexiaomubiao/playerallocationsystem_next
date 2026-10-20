@@ -33,16 +33,26 @@ const editionOf = (name) => {
  *
  * @param {object} tournament  赛事对象（name/status/start_date/end_date…）
  * @param {string} coverImage  hero 背景图路径
- * @param {object} stats       { teamCount, playerCount, signupCount, matchCount, championName }
+ * @param {object} stats       { teamCount, playerCount, signupCount, matchCount }
+ * @param {Array}  honors      [{ label: '冠军', names: ['vk'] }, …]
+ *                             一届可以有多个冠军/亚军/季军，所以 names 是数组。
+ *                             stats.championName 仅作旧调用方的兜底。
  */
-export default function TournamentHero({ tournament, coverImage, stats = {} }) {
+export default function TournamentHero({ tournament, coverImage, stats = {}, honors }) {
   const t = tournament || {};
   const st = STATUS_MAP[t.status] || { cls: 'done', label: '赛程' };
   const edition = editionOf(t.name);
   const start = fmtDate(t.start_date);
   const end = fmtDate(t.end_date);
   const dateText = start || end ? `${start || '待定'} — ${end || '待定'}` : null;
-  const champion = stats.championName || '';
+
+  /* honors 优先；没传就用旧的单冠军字段兜底 */
+  const honorList = (honors && honors.length > 0
+    ? honors
+    : stats.championName
+      ? [{ label: '冠军', names: [stats.championName] }]
+      : []
+  ).filter((h) => (h.names || []).length > 0);
 
   /* 只放真实存在的数字，没有数据的那一项直接不出现 */
   const facts = [
@@ -83,11 +93,15 @@ export default function TournamentHero({ tournament, coverImage, stats = {} }) {
             ))}
           </div>
 
-          {champion && (
-            <span className="t-honor">
-              <span className="t-honor-k">冠军</span>
-              <span className="t-honor-v">{champion}</span>
-            </span>
+          {honorList.length > 0 && (
+            <div className="t-honor-group">
+              {honorList.map((h) => (
+                <span className={`t-honor ${h.label === '冠军' ? '' : 'minor'}`} key={h.label}>
+                  <span className="t-honor-k">{h.label}</span>
+                  <span className="t-honor-v">{h.names.join(' / ')}</span>
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>

@@ -69,11 +69,28 @@ export default async function handler(req, res) {
       }
 
       // 只允许更新资料字段，game_id / nickname 等标识由注册时确定
+      // 天梯分量级校验：Dota 顶分约 1.2 万，超过 2 万必然是误填
+      // （历史导入里就有一条 peak_score=99999 的占位）。允许留空。
+      const scoreFields = { score: '当前天梯分', peak_score: '历史最高分' };
+      for (const [key, label] of Object.entries(scoreFields)) {
+        if (body[key] === undefined || body[key] === null || body[key] === '') continue;
+        const n = Number(body[key]);
+        if (!Number.isFinite(n) || n < 0 || n > 20000) {
+          return res.status(400).json({
+            success: false,
+            error: `${label}请填 0 ~ 20000 之间的数字`,
+          });
+        }
+      }
+
       const updated = await updatePlayer(playerId, {
         nickname: cur.nickname,
         game_id: cur.game_id,
         group_nickname: body.group_nickname !== undefined ? body.group_nickname : cur.group_nickname,
         score: body.score !== undefined ? body.score : cur.score,
+        // 历史最高分：由本人自填。分数会回落，所以它和 score 是两件事，
+        // 不能互相推导 —— 当前 4000 的人历史最高可能是 6200。
+        peak_score: body.peak_score !== undefined ? body.peak_score : cur.peak_score,
         positions: body.positions !== undefined ? body.positions : cur.positions,
         heroes: body.heroes !== undefined ? body.heroes : cur.heroes,
         win_rate: body.win_rate !== undefined ? body.win_rate : cur.win_rate,
