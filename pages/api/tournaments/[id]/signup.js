@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       if (!playerId) {
         return res.status(400).json({
           success: false,
-          error: '你的账号还未绑定选手资料，请先完成注册',
+          error: '你的账号还未绑定选手资料，请先在个人信息页补填',
         });
       }
 

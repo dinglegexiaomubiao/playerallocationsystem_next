@@ -4,6 +4,24 @@
 import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions } from '../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 
+// 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
+// 直接返回原始行会让前端把它们当数组用（.join / [0] 全都会出错），这里统一成数组。
+const toList = (v) =>
+  Array.isArray(v)
+    ? v
+    : String(v || '')
+        .split(/[，,、\/;；|]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+const shapePlayer = (row) => ({
+  ...row,
+  positions: toList(row.positions),
+  heroes: toList(row.heroes),
+  synergy_players: toList(row.synergy_players).map(String),
+  enemies: toList(row.enemies).map(String),
+});
+
 export default async function handler(req, res) {
   if (denyIfNotLoggedIn(req, res)) return;
 
@@ -31,7 +49,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         bound: true,
-        profile: ply.rows[0],
+        profile: shapePlayer(ply.rows[0]),
         tournaments,
         regions,
       });
@@ -39,7 +57,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       if (!playerId) {
-        return res.status(400).json({ success: false, error: '账号未绑定选手资料，请先完成注册' });
+        return res.status(400).json({ success: false, error: '账号未绑定选手资料，请先在个人信息页补填' });
       }
       const body = req.body || {};
       const ply = await client.query('SELECT * FROM public.players WHERE id = $1', [playerId]);

@@ -4,18 +4,9 @@ import Link from 'next/link';
 import ExcelIO from '../../components/ExcelIO';
 import useSession from '../../hooks/useSession';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
+import { TIERS, tierOf } from '../../lib/tier.mjs';
 
 const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
-
-// 段位（与 tierOf 阈值保持一致，避免两处口径不同）
-const TIERS = [
-  { key: 'immortal', label: '冠绝一世', min: 5420, max: null },
-  { key: 'divine', label: '超凡入圣', min: 4620, max: 5420 },
-  { key: 'ancient', label: '万古流芳', min: 3850, max: 4620 },
-  { key: 'legend', label: '传奇', min: 3080, max: 3850 },
-  { key: 'archon', label: '统帅', min: 2310, max: 3080 },
-  { key: 'others', label: '中军以下', min: null, max: 2310 },
-];
 
 // 天梯分区间。min/max 为 null 表示该侧不设限；none 表示「未填写分数」
 const SCORE_RANGES = [
@@ -38,16 +29,6 @@ const EMPTY_FILTERS = {
   hero: '全部',
   sort: 'score',
 };
-
-// 卡片上的段位信息（含样式类名）
-function tierOf(score) {
-  if (score >= 5420) return { cls: 'score-immortal', label: '冠绝一世' };
-  if (score >= 4620) return { cls: 'score-divine', label: '超凡入圣' };
-  if (score >= 3850) return { cls: 'score-ancient', label: '万古流芳' };
-  if (score >= 3080) return { cls: 'score-legend', label: '传奇' };
-  if (score >= 2310) return { cls: 'score-archon', label: '统帅' };
-  return { cls: 'score-others', label: '中军以下' };
-}
 
 // 把一名选手所有可检索信息拼成小写文本，供搜索使用（全字段）
 function buildHaystack(p) {

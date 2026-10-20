@@ -939,3 +939,66 @@ a { text-decoration: none; color: inherit; }
   .filter-field { flex-basis: 100%; }
   .detail-score { margin-left: 0; text-align: left; }
 }
+
+/* ===== 补填选手资料（/profile 未绑定态） ===== */
+.bind-card { max-width: 760px; }
+.bind-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; margin-bottom: 6px; }
+.bind-lead { color: var(--text-2); font-size: .92rem; line-height: 1.75; margin-bottom: 18px; }
+.bind-search { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.bind-search input {
+  flex: 1 1 240px; min-width: 0;
+  padding: 11px 14px; border: 1px solid var(--border-strong); border-radius: 11px;
+  font-size: .95rem; font-family: inherit; color: var(--text); background: #fff;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.bind-search input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+
+.bind-hits { margin-top: 20px; }
+.bind-hits-head { font-size: .85rem; color: var(--text-2); margin-bottom: 10px; }
+.bind-hit {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; background: var(--bg-card);
+}
+.bind-hit + .bind-hit { margin-top: 12px; }
+.bind-hit-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bind-hit-id { min-width: 0; flex: 1 1 180px; }
+.bind-hit-name { font-weight: 800; font-size: 1.05rem; overflow-wrap: anywhere; }
+.bind-hit-meta { font-size: .8rem; color: var(--text-3); margin-top: 2px; overflow-wrap: anywhere; }
+.bind-hit-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.bind-hit-intro { margin-top: 10px; font-size: .86rem; color: var(--text-2); line-height: 1.7; overflow-wrap: anywhere; }
+.bind-hit-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--bg-subtle);
+}
+.bind-hit-stats { font-size: .82rem; color: var(--text-2); }
+.bind-taken { color: var(--accent); font-weight: 600; }
+.bind-foot-note { margin-top: 12px; font-size: .82rem; color: var(--text-3); }
+
+.bind-empty {
+  margin-top: 20px; padding: 14px 16px; border-radius: var(--radius-sm);
+  background: var(--bg-subtle); color: var(--text-2); font-size: .9rem;
+}
+.bind-empty b { color: var(--text); }
+.bind-suggest-wrap { margin-top: 14px; }
+.bind-suggest-label { font-size: .82rem; color: var(--text-3); margin-bottom: 8px; }
+.bind-suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+.bind-suggest button {
+  border: 1px solid var(--border-strong); background: #fff; border-radius: 999px;
+  padding: 6px 13px; font-size: .82rem; font-family: inherit; cursor: pointer;
+  color: var(--text-2); white-space: nowrap; transition: all .15s ease;
+}
+.bind-suggest button:hover { border-color: var(--brand); color: var(--brand); }
+
+.bind-create { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.bind-create-head { font-size: .95rem; font-weight: 700; margin-bottom: 12px; }
+.bind-create-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 14px;
+}
+.bind-create-hint { font-size: .82rem; color: var(--text-3); line-height: 1.6; flex: 1 1 260px; }
+.bind-create-hint b { color: var(--text-2); }
+
+@media (max-width: 560px) {
+  .bind-search input { flex-basis: 100%; }
+  .bind-hit-foot { align-items: flex-start; }
+}

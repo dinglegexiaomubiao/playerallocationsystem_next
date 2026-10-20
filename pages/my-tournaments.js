@@ -62,7 +62,7 @@ export default function MyTournaments() {
           {!bound && (
             <div className="empty" style={{ padding: '20px 0' }}>
               你的账号还未绑定选手资料，请先
-              <Link href="/register" style={{ color: 'var(--brand)', fontWeight: 600 }}>完成注册</Link>
+              <Link href="/profile" style={{ color: 'var(--brand)', fontWeight: 600 }}>补填选手资料</Link>
               。
             </div>
           )}

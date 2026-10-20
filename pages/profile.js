@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import useSession from '../hooks/useSession';
 import PlayerPicker from '../components/PlayerPicker';
+import PlayerBind from '../components/PlayerBind';
 
 const POSITION_OPTIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
 
@@ -147,17 +148,22 @@ export default function Profile() {
   if (!bound || !profile) {
     return (
       <>
-        <Head><title>个人信息 · 深圳LaRoja Dota2社区</title></Head>
+        <Head><title>补填选手资料 · 深圳LaRoja Dota2社区</title></Head>
         <section className="page-hero">
-          <div className="wrap"><h1>个人<span className="hl">信息</span></h1></div>
+          <div className="wrap">
+            <h1>补填<span className="hl">选手资料</span></h1>
+            <p>老账号可以用 SteamID 继承库里已有的历史战绩，无需重新录入</p>
+          </div>
         </section>
         <section className="section" style={{ paddingTop: 0 }}>
           <div className="wrap">
-            <div className="empty" style={{ padding: '40px 0' }}>
-              你的账号还没有关联选手资料。
-              <br />
-              <Link href="/register" style={{ color: 'var(--brand)', fontWeight: 600 }}>去注册 / 补填</Link>
-            </div>
+            <PlayerBind
+              onBound={(d) => {
+                // 绑定成功后重新拉一次资料，页面直接切到正常态
+                setMsg(d && d.inherited ? '已继承历史资料' : '资料已创建，继续完善吧');
+                load();
+              }}
+            />
           </div>
         </section>
       </>
