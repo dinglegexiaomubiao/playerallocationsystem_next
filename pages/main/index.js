@@ -2,7 +2,6 @@ import Head from 'next/head';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import PlayerCard from '../../components/PlayerCard';
 import TeamCard from '../../components/TeamCard';
-import { useRouter } from 'next/router';
 import TournamentSelector from '../../components/TournamentSelector';
 import EditTournamentResults from '../../components/EditTournamentResults';
 import { useMessages } from '../../hooks/useMessages';
@@ -13,7 +12,6 @@ import heroesList from '../../lib/heroesData';
 import { getSession, isAdmin } from '../../lib/auth';
 
 function MainTool() {
-  const router = useRouter();
   const importFileRef = useRef(null);
   const [user, setUser] = useState(null);
   const [loadingState, setLoadingState] = useState({ teams: 'loading', players: 'loading', error: null });
@@ -105,14 +103,19 @@ function MainTool() {
   }, [teams]);
 
   // User auth check
+  // 登录态已经由 getServerSideProps 用 dd_session 校验过了（未登录直接 307 到 /login），
+  // 这里只把老的 localStorage.user 读出来做显示兜底。
+  // ⚠ 不要在这里 router.push('/login')：新版登录只写 httpOnly cookie、不写 localStorage，
+  // 按 localStorage 判断会把刚登录进来的管理员直接踢回登录页。
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    if (!storedUser) return;
+    try {
       setUser(JSON.parse(storedUser));
-    } else {
-      router.push('/login');
+    } catch (e) {
+      // localStorage 里是脏数据就忽略，不影响使用
     }
-  }, [router]);
+  }, []);
 
   // Pre-compute assigned players (stable reference)
   const assignedPlayers = useMemo(
