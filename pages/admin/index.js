@@ -331,6 +331,9 @@ export default function Admin({ denied }) {
                 importHint={importHint}
                 canManage={isAdmin}
               />
+              <Link className="btn btn-ghost" href="/admin/support">
+                售后工单
+              </Link>
               <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
                 ＋ 新建赛季
               </button>
