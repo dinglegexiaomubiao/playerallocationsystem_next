@@ -17,6 +17,10 @@ const TABS = [
 
 const COVER = '/images/tournament/hero-red.jpg';
 
+/* 轮次的语义顺序：数据库里 order_no 是分批写入的（手建 + 脚本自动建），
+   单靠 order_no 排会出现「决赛排在淘汰赛前面」。按名字兜底。 */
+const ROUND_ORDER = { 小组赛: 1, 淘汰赛: 2, 半决赛: 3, 决赛: 4 };
+
 const fmtDate = (v) => {
   if (!v) return '待定';
   const d = new Date(v);
@@ -124,12 +128,21 @@ export default function TournamentDetail() {
   /* 按轮次分组（没有轮次时归到「对阵」） */
   const groupedMatches = useMemo(() => {
     const list = rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }];
-    return list
+    const ordered = [...list].sort((a, b) => {
+      const ra = ROUND_ORDER[a.name] ?? 50;
+      const rb = ROUND_ORDER[b.name] ?? 50;
+      if (ra !== rb) return ra - rb;
+      const oa = Number(a.order_no) || 0;
+      const ob = Number(b.order_no) || 0;
+      if (oa !== ob) return oa - ob;
+      return Number(a.id || 0) - Number(b.id || 0);
+    });
+    return ordered
       .map((rd) => ({
         round: rd,
-        items: matches.filter((m) =>
-          rd.id ? String(m.round_id) === String(rd.id) : !m.round_id
-        ),
+        items: matches
+          .filter((m) => (rd.id ? String(m.round_id) === String(rd.id) : !m.round_id))
+          .sort((x, y) => (Number(x.order_no) || 0) - (Number(y.order_no) || 0) || Number(x.id) - Number(y.id)),
       }))
       .filter((g) => g.items.length > 0);
   }, [rounds, matches]);
@@ -189,14 +202,22 @@ export default function TournamentDetail() {
               {groupedMatches.length > 0 && (
                 <section className="t-block">
                   <div className="t-block-head">
-                    <h2 className="t-block-title">赛果</h2>
-                    <span className="t-block-sub">{matches.length} 场</span>
+                    {/* 这里只渲染最后一轮，标题就写清楚是哪一轮，
+                        原来固定写「赛果」+ 总场次，会让人以为下面列了全部 15 场 */}
+                    <h2 className="t-block-title">
+                      赛果 · {groupedMatches[groupedMatches.length - 1].round.name}
+                    </h2>
+                    <span className="t-block-sub">
+                      {groupedMatches[groupedMatches.length - 1].items.length} 局
+                    </span>
                   </div>
-                  {groupedMatches.slice(-1).map((g) =>
-                    g.items.map((m) => (
-                      <MatchCard key={m.id} match={m} roundName={g.round.name} />
-                    ))
-                  )}
+                  {groupedMatches[groupedMatches.length - 1].items.map((m) => (
+                    <MatchCard
+                      key={m.id}
+                      match={m}
+                      roundName={groupedMatches[groupedMatches.length - 1].round.name}
+                    />
+                  ))}
                 </section>
               )}
 

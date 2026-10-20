@@ -551,6 +551,7 @@ async function run() {
       }
 
       let inserted = 0;
+      let updated = 0;
       let skipped = 0;
       await c.query('BEGIN');
       for (const cand of cands) {
@@ -563,10 +564,10 @@ async function run() {
           'SELECT id FROM public.matches WHERE tournament_id = $1 AND dota_match_id = $2',
           [tid, cand.id]
         );
-        if (exists.rowCount > 0) {
-          skipped++;
-          continue;
-        }
+        // 已存在时不重复插赛程行，但下面仍会 upsert 明细 ——
+        // 这样以后给明细表加字段（比如装备、魔晶标记），重跑一次就能补齐历史数据。
+        const isNew = exists.rowCount === 0;
+        if (!isNew) updated++;
         const p = plan.get(cand.id) || {};
         const roundId = roundIdByName.get(p.roundName) || null;
         const startIso = new Date(cand.start * 1000).toISOString();
@@ -616,14 +617,22 @@ async function run() {
           await c.query(
             `INSERT INTO public.dota_match_players
                (match_id, account_id, player_id, hero_id, is_radiant,
-                kills, deaths, assists, net_worth, gpm, xpm, last_hits, hero_damage, is_standin)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+                kills, deaths, assists, net_worth, gpm, xpm, last_hits, hero_damage, is_standin,
+                level, item_0, item_1, item_2, item_3, item_4, item_5, item_neutral,
+                aghanims_scepter, aghanims_shard)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+                     $15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
              ON CONFLICT (match_id, account_id) DO UPDATE SET
                player_id=EXCLUDED.player_id, hero_id=EXCLUDED.hero_id,
                kills=EXCLUDED.kills, deaths=EXCLUDED.deaths, assists=EXCLUDED.assists,
                net_worth=EXCLUDED.net_worth, gpm=EXCLUDED.gpm, xpm=EXCLUDED.xpm,
                last_hits=EXCLUDED.last_hits, hero_damage=EXCLUDED.hero_damage,
-               is_standin=EXCLUDED.is_standin`,
+               is_standin=EXCLUDED.is_standin, level=EXCLUDED.level,
+               item_0=EXCLUDED.item_0, item_1=EXCLUDED.item_1, item_2=EXCLUDED.item_2,
+               item_3=EXCLUDED.item_3, item_4=EXCLUDED.item_4, item_5=EXCLUDED.item_5,
+               item_neutral=EXCLUDED.item_neutral,
+               aghanims_scepter=EXCLUDED.aghanims_scepter,
+               aghanims_shard=EXCLUDED.aghanims_shard`,
             [
               cand.id,
               pl.account_id,
@@ -640,31 +649,44 @@ async function run() {
               parsed ? pl.last_hits ?? null : null,
               parsed ? pl.hero_damage ?? null : null,
               !inTeam,
+              parsed ? pl.level ?? null : null,
+              parsed ? pl.item_0 ?? null : null,
+              parsed ? pl.item_1 ?? null : null,
+              parsed ? pl.item_2 ?? null : null,
+              parsed ? pl.item_3 ?? null : null,
+              parsed ? pl.item_4 ?? null : null,
+              parsed ? pl.item_5 ?? null : null,
+              parsed ? pl.item_neutral ?? null : null,
+              parsed ? !!pl.aghanims_scepter : false,
+              parsed ? !!pl.aghanims_shard : false,
             ]
           );
         }
 
-        // 赛程表一行 = 一局
-        await c.query(
-          `INSERT INTO public.matches
-             (tournament_id, round_id, team_a_id, team_b_id, team_a_score, team_b_score,
-              winner_team_id, status, order_no, note, dota_match_id, created_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,'finished',$8,$9,$10,$11)`,
-          [
-            tid,
-            roundId,
-            d.teamAId,
-            d.teamBId,
-            ra,
-            rb,
-            winner,
-            p.orderNo || 1,
-            `${p.roundName || '对阵'}第${p.orderNo || 1}局 · ${aLabel} vs ${bLabel} · match ${cand.id}`,
-            cand.id,
-            new Date().toISOString(),
-          ]
-        );
-        inserted++;
+        // 赛程表一行 = 一局。已存在的局不再插（matches 表没有唯一约束，
+        // 重跑会插出重复赛程），但上面的明细已经 upsert 过了。
+        if (isNew) {
+          await c.query(
+            `INSERT INTO public.matches
+               (tournament_id, round_id, team_a_id, team_b_id, team_a_score, team_b_score,
+                winner_team_id, status, order_no, note, dota_match_id, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,'finished',$8,$9,$10,$11)`,
+            [
+              tid,
+              roundId,
+              d.teamAId,
+              d.teamBId,
+              ra,
+              rb,
+              winner,
+              p.orderNo || 1,
+              `${p.roundName || '对阵'}第${p.orderNo || 1}局 · ${aLabel} vs ${bLabel} · match ${cand.id}`,
+              cand.id,
+              new Date().toISOString(),
+            ]
+          );
+          inserted++;
+        }
       }
 
       // 顺手补赛事起止日期（历史赛季原本是空的）。
@@ -681,7 +703,9 @@ async function run() {
         );
       }
       await c.query('COMMIT');
-      console.log(`\n  ✓ 写入 ${inserted} 局，跳过 ${skipped} 局（已存在或认不出队）`);
+      console.log(
+        `\n  ✓ 新增 ${inserted} 局，刷新明细 ${updated} 局，跳过 ${skipped} 局（认不出队）`
+      );
       console.log(`  ✓ 赛事日期：${days[0] || '—'} ~ ${days[days.length - 1] || '—'}`);
     }
   } catch (e) {

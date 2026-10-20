@@ -5,6 +5,13 @@ import { pool } from '../../../../lib/db';
 import { denyIfNotAdmin } from '../../../../lib/auth';
 import heroIdToName from '../../../../lib/heroMapping';
 import heroSlugByName from '../../../../lib/heroSlugs';
+import itemSlugs from '../../../../lib/itemMapping';
+
+/* 把一行明细里的物品 id 转成 CDN slug，前端直接拼 /api/item-icon/{slug} */
+function itemsOf(r) {
+  const ids = [r.item_0, r.item_1, r.item_2, r.item_3, r.item_4, r.item_5, r.item_neutral];
+  return ids.filter((x) => x && itemSlugs[x]).map((id) => ({ id, slug: itemSlugs[id] }));
+}
 
 // 判断两队之间是否存在仇人关系（任意方向命中即「恩怨局」）
 // 仇人标注由选手在个人资料里维护，存于全局 players.enemies，
@@ -75,6 +82,9 @@ export default async function handler(req, res) {
           `SELECT mp.match_id, mp.account_id, mp.player_id, mp.hero_id, mp.is_radiant,
                   mp.kills, mp.deaths, mp.assists, mp.net_worth, mp.gpm, mp.xpm,
                   mp.last_hits, mp.hero_damage, mp.is_standin,
+                  mp.level,
+                  mp.item_0, mp.item_1, mp.item_2, mp.item_3, mp.item_4, mp.item_5,
+                  mp.item_neutral, mp.aghanims_scepter, mp.aghanims_shard,
                   p.nickname, p.group_nickname, p.score
              FROM public.dota_match_players mp
              LEFT JOIN public.players p ON p.id = mp.player_id
@@ -89,6 +99,7 @@ export default async function handler(req, res) {
             ...r,
             hero_name: heroIdToName[r.hero_id] || null,
             hero_slug: heroIdToName[r.hero_id] ? heroSlugByName[heroIdToName[r.hero_id]] || null : null,
+            items: itemsOf(r),
           });
         });
       }

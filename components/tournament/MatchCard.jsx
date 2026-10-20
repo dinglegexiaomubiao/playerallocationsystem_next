@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 /* 选手头像：走本站代理，失败回退到昵称首字 */
-function PlayerAvatar({ playerId, name, size = 26 }) {
+function PlayerAvatar({ playerId, name, size = 22 }) {
   const [failed, setFailed] = useState(false);
   const initial = String(name || '?').trim().charAt(0).toUpperCase();
 
@@ -26,15 +26,15 @@ function PlayerAvatar({ playerId, name, size = 26 }) {
   );
 }
 
-/* 英雄头像：hero_slug 由接口给出，没有则显示占位块 */
-function HeroIcon({ slug, name }) {
+/* 英雄头像 */
+function HeroIcon({ slug, name, size = 34 }) {
   const [failed, setFailed] = useState(false);
   if (!slug || failed) {
     return (
       <span
         className="t-hero-icon"
         title={name || '未知英雄'}
-        style={{ display: 'inline-block' }}
+        style={{ display: 'inline-block', width: size, height: size }}
       />
     );
   }
@@ -44,6 +44,22 @@ function HeroIcon({ slug, name }) {
       src={`/api/hero-icon/${slug}`}
       alt={name || ''}
       title={name || ''}
+      loading="lazy"
+      style={{ width: size, height: size }}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
+/* 物品图标 */
+function ItemIcon({ slug }) {
+  const [failed, setFailed] = useState(false);
+  if (!slug || failed) return <span className="t-item" />;
+  return (
+    <img
+      className="t-item"
+      src={`/api/item-icon/${slug}`}
+      alt=""
       loading="lazy"
       onError={() => setFailed(true)}
     />
@@ -55,10 +71,17 @@ const fmtDur = (s) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
 
-/* 净经济：12.3k 这种紧凑写法，避免四位数把行撑宽 */
+/* 净经济 12.3k */
 const fmtNw = (n) => {
   const v = Number(n);
   if (!v) return '';
+  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
+};
+
+/* 队伍汇总用整数千分位，1.2M 这种太夸张了，直接 103.8k */
+const fmtSum = (n) => {
+  const v = Number(n) || 0;
+  if (!v) return '0';
   return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v);
 };
 
@@ -73,15 +96,16 @@ const fmtTime = (v) => {
 /**
  * 单局比赛 · 信息行
  *
- * 设计约束：赛程优先用信息行和分隔线，不用卡片。
- * 所以这里没有背景、没有边框、没有圆角，段落之间只靠一条发丝线划开。
+ * 阵容区参照完美世界电竞的赛后数据页：两队上下堆叠，每队一条汇总带
+ * （队名 + 杀敌 + 总经济）加一行列头，下面每人一行显示
+ * 英雄头像 / Steam 头像 / 昵称 / 装备 / 经济 / 伤害 / KDA / 神杖·魔晶。
+ *
+ * 为什么两队改成上下堆叠：8 列数据并排，左右各一半只有 500px 出头，
+ * 装备和伤害会挤成一团；堆叠后每行有 1100px，列宽才立得住。
  *
  * 数据字段（来自 /api/tournaments/[id]/matches）：
  *   round_name / order_no / team_a_name / team_b_name / team_a_score / team_b_score
  *   winner_name / dota_match_id / dota_duration / dota_start_time / dota_players[]
- *
- * @param {object} match
- * @param {string} roundName  所属轮次名（外部传入，用于显示）
  */
 export default function MatchCard({ match, roundName }) {
   const [open, setOpen] = useState(true);
@@ -96,25 +120,103 @@ export default function MatchCard({ match, roundName }) {
   const dur = fmtDur(m.dota_duration);
   const time = fmtTime(m.dota_start_time);
 
-  const row = (p) => (
-    <div className="t-prow" key={p.account_id || p.player_id}>
+  const row = (p) => {
+    const kdaMissing = p.kills === null || p.kills === undefined;
+    return (
+      <div className="t-prow" key={p.account_id || p.player_id}>
+        <HeroIcon slug={p.hero_slug} name={p.hero_name} />
+        <PlayerAvatar playerId={p.player_id} name={p.nickname || p.group_nickname} />
+        <span className={`t-prow-name ${p.is_standin ? 'standin' : ''}`}>
+          {p.group_nickname || p.nickname || p.account_id || '未知'}
+          {p.is_standin && <span className="t-chip gold" style={{ marginLeft: 5 }}>替补</span>}
+        </span>
+        <span className="t-prow-items">
+          {(p.items || []).length === 0 && <span className="t-prow-empty">—</span>}
+          {(p.items || []).map((it) => (
+            <ItemIcon key={it.id} slug={it.slug} />
+          ))}
+        </span>
+        <span className="t-prow-num">{fmtNw(p.net_worth) || '—'}</span>
+        <span className="t-prow-num">{fmtNw(p.hero_damage) || '—'}</span>
+        <span className="t-prow-kda">
+          {kdaMissing ? '—' : `${p.kills}/${p.deaths}/${p.assists}`}
+        </span>
+        <span className="t-prow-aghs">
+          {p.aghanims_scepter && (
+            <span className="t-aghs scepter" title="已出阿哈利姆神杖">
+              杖
+            </span>
+          )}
+          {p.aghanims_shard && (
+            <span className="t-aghs shard" title="已出阿哈利姆魔晶">
+              晶
+            </span>
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  /* 未解析的局只有「谁打了什么英雄」，没有装备和数值。
+     这时不摆一张全是「—」的八列表，改成紧凑三列，别用空表占满屏。 */
+  const simpleRow = (p) => (
+    <div className="t-prow-simple" key={p.account_id || p.player_id}>
+      <HeroIcon slug={p.hero_slug} name={p.hero_name} size={28} />
       <PlayerAvatar playerId={p.player_id} name={p.nickname || p.group_nickname} />
-      <HeroIcon slug={p.hero_slug} name={p.hero_name} />
       <span className={`t-prow-name ${p.is_standin ? 'standin' : ''}`}>
         {p.group_nickname || p.nickname || p.account_id || '未知'}
         {p.is_standin && <span className="t-chip gold" style={{ marginLeft: 5 }}>替补</span>}
       </span>
-      <span className="t-prow-nw" title="净经济">
-        {fmtNw(p.net_worth)}
-      </span>
-      <span className="t-prow-kda" title="击杀 / 阵亡 / 助攻">
-        {/* 未解析的局逐人数据是 NULL，显示破折号而不是假的 0/0/0 */}
-        {p.kills === null || p.kills === undefined
-          ? '—'
-          : `${p.kills}/${p.deaths}/${p.assists}`}
-      </span>
     </div>
   );
+
+  const sideBlock = (list, teamName, tag, tagCls, lose, officialKills) => {
+    const sumKills = list.reduce((s, p) => s + (Number(p.kills) || 0), 0);
+    // 优先用官方比分：十个选手的 kills 之和有时比 radiant_score 少 1
+    // （有击杀记在非英雄来源上），两处数字不一致会显得像算错了。
+    const kills = officialKills ?? sumKills;
+    const nw = list.reduce((s, p) => s + (Number(p.net_worth) || 0), 0);
+    const won = hasScore && teamName && m.winner_name === teamName;
+    // 有人有经济数据才算「解析过」
+    const parsed = list.some(
+      (p) => (Number(p.net_worth) || 0) > 0 || (p.kills !== null && p.kills !== undefined)
+    );
+
+    return (
+      <div className="t-team-block">
+        <div className={`t-team-bar ${tagCls} ${lose ? 'lose' : ''}`}>
+          <span className={`t-team-tag ${tagCls}`}>{tag}</span>
+          <span className="t-team-bar-name">{teamName || '待定'}</span>
+          {won && <span className="t-team-bar-win">胜利</span>}
+          <span className="t-team-bar-stats">
+            {parsed ? (
+              <>
+                杀敌 <b>{kills}</b>
+                <span className="sep">·</span>
+                经济 <b>{fmtSum(nw)}</b>
+              </>
+            ) : (
+              <span style={{ color: 'var(--t-text-3)' }}>回放已过期，无逐人数据</span>
+            )}
+          </span>
+        </div>
+
+        {list.length > 0 && parsed && (
+          <div className="t-prow t-prow-head">
+            <span>英雄</span>
+            <span>选手</span>
+            <span>昵称</span>
+            <span>装备</span>
+            <span className="r">经济</span>
+            <span className="r">伤害</span>
+            <span className="r">KDA</span>
+            <span>神杖/魔晶</span>
+          </div>
+        )}
+        {list.map(parsed ? row : simpleRow)}
+      </div>
+    );
+  };
 
   return (
     <div className="t-fixture">
@@ -162,22 +264,24 @@ export default function MatchCard({ match, roundName }) {
         </div>
       </div>
 
-      {m.winner_name && <div className="t-winner">{m.winner_name} 获胜</div>}
-
       {open && players.length > 0 && (
         <div className="t-rosters">
-          <div className="t-roster-col">
-            <div className="t-roster-head">
-              天辉 <b>{m.team_a_name || ''}</b>
-            </div>
-            {radiant.map(row)}
-          </div>
-          <div className="t-roster-col">
-            <div className="t-roster-head">
-              夜魇 <b>{m.team_b_name || ''}</b>
-            </div>
-            {dire.map(row)}
-          </div>
+          {sideBlock(
+            radiant,
+            m.team_a_name,
+            '天辉',
+            'radiant',
+            aLose,
+            hasScore ? m.team_a_score : null
+          )}
+          {sideBlock(
+            dire,
+            m.team_b_name,
+            '夜魇',
+            'dire',
+            bLose,
+            hasScore ? m.team_b_score : null
+          )}
         </div>
       )}
     </div>

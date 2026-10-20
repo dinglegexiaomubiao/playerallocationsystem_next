@@ -593,39 +593,112 @@
   color: var(--t-bronze-ink);
 }
 
-/* 双方阵容：横向两栏，控制整体宽度避免行被拉得过散 */
+/* ==================== 单局阵容（赛后数据表） ====================
+   两队上下堆叠而不是左右并排：一行要放 8 列（英雄/选手/昵称/装备/
+   经济/伤害/KDA/神杖魔晶），左右各一半只有 500px，装备和伤害会挤成一团。 */
 .t-rosters {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 32px;
+  display: block;
+  margin-top: 4px;
+}
+.t-team-block {
+  padding-top: 10px;
+}
+.t-team-block + .t-team-block {
   margin-top: 14px;
-  max-width: 1060px;
+  border-top: 1px solid var(--t-line);
+  padding-top: 14px;
 }
-.t-roster-col {
-  min-width: 0;
-}
-.t-roster-head {
+
+/* 队伍汇总带：队名 + 胜负 + 杀敌/总经济 */
+.t-team-bar {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--t-line);
-  font-size: 10.5px;
+  gap: 10px;
+  padding: 0 0 8px;
+}
+.t-team-tag {
+  flex-shrink: 0;
+  font-family: var(--t-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 1px 5px;
+  border-radius: var(--t-r-1);
+}
+.t-team-tag.radiant {
+  color: #8fa87a;
+  background: rgba(143, 168, 122, 0.14);
+  border: 1px solid rgba(143, 168, 122, 0.3);
+}
+.t-team-tag.dire {
+  color: var(--t-red-ink);
+  background: var(--t-red-dim);
+  border: 1px solid rgba(142, 58, 53, 0.38);
+}
+.t-team-bar-name {
+  font-family: var(--t-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--t-text);
+}
+.t-team-bar.lose .t-team-bar-name {
+  color: var(--t-text-3);
+  font-weight: 400;
+}
+.t-team-bar-win {
+  font-family: var(--t-mono);
+  font-size: 9.5px;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
+  color: var(--t-bronze-ink);
+  border: 1px solid rgba(176, 141, 87, 0.45);
+  background: var(--t-bronze-dim);
+  border-radius: var(--t-r-1);
+  padding: 0 5px;
+}
+.t-team-bar-stats {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.04em;
   color: var(--t-text-3);
 }
-.t-roster-head b {
+.t-team-bar-stats b {
+  font-family: var(--t-mono);
   font-weight: 600;
   color: var(--t-text-2);
-  letter-spacing: 0.04em;
+  margin-left: 3px;
 }
+.t-team-bar-stats .sep {
+  margin: 0 7px;
+  color: var(--t-line-strong);
+}
+
+/* 列头 */
+.t-prow-head {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--t-text-3);
+  border-bottom: 1px solid var(--t-line);
+  padding-bottom: 6px;
+}
+.t-prow-head > span {
+  white-space: nowrap;
+}
+.t-prow-head .r {
+  text-align: right;
+}
+
+/* 数据行：8 列。
+   第二列给 38px 而不是头像的 22px —— 表头「选手」两个字在 22px 里会折行。
+   装备列必须给固定宽度：若写 auto，表头那行只有「装备」两个字会算成 28px，
+   和数据行的实际宽度不一致，后面几列就会错位。7 格 × 25 + 6 间隙 × 2 ≈ 188。 */
 .t-prow {
   display: grid;
-  grid-template-columns: 26px 26px minmax(0, 1fr) 50px 60px;
+  grid-template-columns: 34px 38px minmax(0, 1fr) 188px 58px 58px 62px 76px;
   align-items: center;
-  gap: 9px;
-  padding: 5px 0;
+  gap: 10px;
+  padding: 6px 0;
   border-bottom: 1px solid var(--t-line-soft);
   font-size: 12.5px;
 }
@@ -640,21 +713,90 @@
 .t-prow-name.standin {
   color: var(--t-bronze-ink);
 }
-.t-prow-nw {
-  text-align: right;
-  font-size: 10.5px;
+
+/* 装备：6 格物品栏 + 中立物品。
+   图标原图是 88×64，方形会裁掉两侧，所以按比例给 25×18。 */
+.t-prow-items {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.t-item {
+  width: 25px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-block;
+  border-radius: 2px;
+  background: var(--t-bg-2);
+  border: 1px solid var(--t-line);
+  object-fit: cover;
+}
+.t-prow-empty {
+  font-size: 11px;
   color: var(--t-text-3);
+}
+
+/* 未解析局的紧凑行：只有英雄 / 头像 / 昵称 */
+.t-prow-simple {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--t-line-soft);
+  font-size: 12.5px;
+}
+.t-prow-simple:last-child {
+  border-bottom: 0;
+}
+
+.t-prow-num {
+  text-align: right;
+  font-family: var(--t-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text-2);
 }
 .t-prow-kda {
   text-align: right;
+  font-family: var(--t-mono);
   font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
   color: var(--t-text-2);
+}
+
+/* 神杖 / 魔晶：有两个小方块，有就点亮 */
+.t-prow-aghs {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-start;
+}
+.t-aghs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.t-aghs.scepter {
+  color: #e0b46a;
+  background: rgba(224, 180, 106, 0.14);
+  border: 1px solid rgba(224, 180, 106, 0.42);
+}
+.t-aghs.shard {
+  color: #8fb6d8;
+  background: rgba(143, 182, 216, 0.14);
+  border: 1px solid rgba(143, 182, 216, 0.4);
 }
 
 /* 头像 / 英雄图：唯一允许的圆形与圆角，因为它们是图像 */
 .t-ava {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   object-fit: cover;
   border-radius: 50%;
@@ -665,19 +807,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--t-red-dim);
   border: 1px solid rgba(142, 58, 53, 0.35);
   color: var(--t-red-ink);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 }
 .t-hero-icon {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   object-fit: cover;
   border-radius: var(--t-r-1);
@@ -1081,8 +1223,24 @@
     font-size: 1.6rem;
   }
   .t-rosters {
-    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
+  }
+  /* 窄屏先舍掉「伤害」和「神杖/魔晶」两列，保住装备和 KDA 的可读性 */
+  .t-prow {
+    grid-template-columns: 30px 34px minmax(0, 1fr) 152px 54px 58px;
+    gap: 8px;
+  }
+  .t-prow > :nth-child(6),
+  .t-prow > :nth-child(8) {
+    display: none;
+  }
+  .t-item {
+    width: 19px;
+    height: 19px;
+  }
+  .t-hero-icon {
+    width: 30px;
+    height: 30px;
   }
   .t-fixture-body {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1128,11 +1286,16 @@
   .t-tabs-inner {
     gap: 20px;
   }
-  /* 窄屏先把净经济这一列收起来，保住昵称和 KDA 的可读性 */
+  /* 极窄屏再收一档：只留英雄/昵称/装备/KDA */
   .t-prow {
-    grid-template-columns: 24px 24px minmax(0, 1fr) 58px;
+    grid-template-columns: 26px minmax(0, 1fr) 138px 54px;
   }
-  .t-prow-nw {
+  .t-prow > :nth-child(2),
+  .t-prow > :nth-child(5) {
+    display: none;
+  }
+  .t-prow-head > :nth-child(2),
+  .t-prow-head > :nth-child(5) {
     display: none;
   }
 }
