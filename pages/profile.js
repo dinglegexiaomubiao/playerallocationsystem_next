@@ -6,10 +6,10 @@ import useSession from '../hooks/useSession';
 import PlayerPicker from '../components/PlayerPicker';
 import PlayerBind from '../components/PlayerBind';
 import MyTournamentTable from '../components/MyTournamentTable';
+import OrderedChips from '../components/OrderedChips';
+import PositionPicker from '../components/PositionPicker';
+import HeroPicker from '../components/HeroPicker';
 import { mergeMyTournaments } from '../lib/tournament-format.mjs';
-import { POSITIONS } from '../lib/options.mjs';
-
-const POSITION_OPTIONS = POSITIONS;
 
 export default function Profile() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [heroOpen, setHeroOpen] = useState(false);
 
   // 编辑表单
   const [form, setForm] = useState({});
@@ -58,7 +59,7 @@ export default function Profile() {
               region: d.profile.region || '',
               score: d.profile.score ?? '',
               positions: d.profile.positions || [],
-              heroes: (d.profile.heroes || []).join('，'),
+              heroes: d.profile.heroes || [],
               self_intro: d.profile.self_intro || '',
               win_rate: d.profile.win_rate ?? '',
             });
@@ -107,7 +108,7 @@ export default function Profile() {
       region: form.region || null,
       score: form.score === '' || form.score === null ? null : Number(form.score),
       positions: form.positions || [],
-      heroes: String(form.heroes || '').split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+      heroes: form.heroes || [],
       self_intro: form.self_intro || null,
       win_rate: form.win_rate === '' || form.win_rate === null ? null : Number(form.win_rate),
       synergy_players: synergy.map((x) => x.id),
@@ -214,18 +215,33 @@ export default function Profile() {
                   <input type="number" value={form.win_rate ?? ''} onChange={(e) => setForm({ ...form, win_rate: e.target.value })} />
                 </div>
               </div>
-              <div className="form-row" style={{ marginBottom: 14 }}>
-                <div className="form-field">
-                  <label>擅长位置</label>
-                  <select value={form.positions?.[0] || '中单'} onChange={(e) => setForm({ ...form, positions: [e.target.value] })}>
-                    {POSITION_OPTIONS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
+              <div className="form-field" style={{ marginBottom: 16 }}>
+                <label>擅长位置</label>
+                <PositionPicker
+                  value={form.positions || []}
+                  onChange={(next) => setForm({ ...form, positions: next })}
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 16 }}>
+                <label>擅长英雄</label>
+                <div className="hero-pick-row">
+                  <OrderedChips
+                    items={form.heroes || []}
+                    onChange={(next) => setForm({ ...form, heroes: next })}
+                    empty="还没选英雄，点右侧「选择英雄」从英雄列表里挑"
+                    label="擅长英雄（按顺序）"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost hero-pick-btn"
+                    onClick={() => setHeroOpen(true)}
+                  >
+                    选择英雄
+                  </button>
                 </div>
-                <div className="form-field">
-                  <label>擅长英雄（逗号分隔）</label>
-                  <input value={form.heroes || ''} onChange={(e) => setForm({ ...form, heroes: e.target.value })} />
+                <div className="pos-hint">
+                  点「选择英雄」打开英雄列表，可搜索名字/别称，也能按力量、敏捷、智力、全才筛选。
+                  群友卡片只展示前 4 个，用 ‹ › 调整顺序。
                 </div>
               </div>
               <div className="form-field" style={{ marginBottom: 14 }}>
@@ -239,6 +255,16 @@ export default function Profile() {
                 <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? '保存中…' : '保存'}</button>
                 <button className="btn btn-ghost" onClick={cancelEdit} disabled={saving}>取消</button>
               </div>
+
+              <HeroPicker
+                open={heroOpen}
+                value={form.heroes || []}
+                onClose={() => setHeroOpen(false)}
+                onConfirm={(next) => {
+                  setForm((prev) => ({ ...prev, heroes: next }));
+                  setHeroOpen(false);
+                }}
+              />
             </div>
           ) : (
             <div className="profile-cards">

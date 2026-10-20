@@ -1206,3 +1206,120 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 @media (max-width: 720px) {
   .adm-row-6 { min-width: 680px; }
 }
+
+/* ============================================================
+   有序标签（擅长位置 / 擅长英雄的排序编辑）
+   ------------------------------------------------------------
+   群里选手卡片上位置全列、英雄只列前 4 个，顺序是会被看到的，
+   所以这两个字段都做成「带序号 + 可前后移」的标签组。
+   ============================================================ */
+.ord-empty { font-size: .82rem; color: var(--text-3); }
+.ord-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ord-chip {
+  display: inline-flex; align-items: center; gap: 6px; min-width: 0;
+  padding: 4px 6px 4px 4px; border-radius: 999px;
+  background: var(--brand-soft); border: 1px solid #cfe0fb; color: var(--brand-dark);
+  font-size: .82rem; font-weight: 600; white-space: nowrap;
+}
+.ord-no {
+  flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-size: .68rem; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ord-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ord-btns { display: inline-flex; align-items: center; gap: 1px; flex: 0 0 auto; }
+.ord-btn {
+  flex: 0 0 auto; width: 20px; height: 20px; padding: 0; cursor: pointer;
+  border: 1px solid transparent; border-radius: 6px; background: rgba(255,255,255,.7);
+  color: var(--brand-dark); font-size: .82rem; line-height: 1; font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.ord-btn:hover:not(:disabled) { background: #fff; border-color: #cfe0fb; }
+.ord-btn:disabled { opacity: .32; cursor: default; }
+.ord-del { color: var(--accent); }
+.ord-del:hover:not(:disabled) { background: #fff; border-color: #f3c7bf; }
+
+/* 位置选择器 */
+.pos-picker { display: flex; flex-direction: column; gap: 10px; }
+.pos-add { display: flex; flex-wrap: wrap; gap: 8px; }
+.pos-add-btn { white-space: nowrap; }
+.pos-hint { font-size: .76rem; color: var(--text-3); line-height: 1.6; overflow-wrap: anywhere; }
+
+/* 英雄选择行：标签组 + 触发按钮 */
+.hero-pick-row { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.hero-pick-row .ord-chips { flex: 1 1 320px; min-width: 0; }
+.hero-pick-btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* ===== 英雄选择弹窗 ===== */
+.hero-modal { width: min(980px, 100%); }
+.hero-modal-count { font-size: .78rem; font-weight: 600; color: var(--text-3); margin-left: 10px; white-space: nowrap; }
+.hero-modal-count b { color: var(--brand); font-size: .92rem; }
+.hero-modal-bar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 14px 22px; border-bottom: 1px solid var(--bg-subtle);
+}
+.hero-modal-search { flex: 1 1 260px; min-width: 0; }
+.hero-modal-attrs { flex: 0 0 auto; }
+.hero-modal-body { padding: 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+.hero-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px;
+}
+.hero-cell {
+  position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; text-align: left;
+  border: 1px solid var(--border); background: #fff; font-family: inherit;
+  transition: border-color .14s ease, background .14s ease, box-shadow .14s ease;
+}
+.hero-cell:hover { border-color: var(--brand); box-shadow: var(--shadow-sm); }
+.hero-cell.selected { border-color: var(--brand); background: var(--brand-soft); }
+.hero-cell-name {
+  font-size: .84rem; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hero-cell.selected .hero-cell-name { color: var(--brand-dark); }
+.hero-cell-alias {
+  font-size: .68rem; color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hero-cell-order {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-size: .66rem; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(37,99,235,.4);
+}
+.hero-empty {
+  grid-column: 1 / -1; text-align: center; padding: 32px 0; color: var(--text-3); font-size: .86rem;
+  overflow-wrap: anywhere;
+}
+.hero-modal-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 12px 22px; border-top: 1px solid var(--border);
+}
+.hero-picked { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 1 1 300px; min-width: 0; max-height: 72px; overflow-y: auto; }
+.hero-picked-empty { font-size: .8rem; color: var(--text-3); }
+.hero-picked-chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 4px;
+  border-radius: 999px; background: var(--bg-subtle); color: var(--text-2);
+  font-size: .78rem; font-weight: 600; white-space: nowrap;
+}
+.hero-picked-chip b {
+  width: 15px; height: 15px; border-radius: 50%; background: var(--text-3); color: #fff;
+  font-size: .62rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
+}
+.hero-picked-del {
+  border: none; background: none; cursor: pointer; color: var(--text-3);
+  font-size: .92rem; line-height: 1; padding: 0 2px; font-family: inherit;
+}
+.hero-picked-del:hover { color: var(--accent); }
+.hero-clear {
+  border: none; background: none; cursor: pointer; color: var(--text-3);
+  font-size: .76rem; text-decoration: underline; font-family: inherit; padding: 0 4px;
+}
+.hero-clear:hover { color: var(--accent); }
+.hero-modal-actions { display: flex; gap: 10px; flex: 0 0 auto; }
+
+@media (max-width: 560px) {
+  .hero-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .hero-modal-foot { align-items: flex-start; }
+  .hero-modal-actions { width: 100%; }
+  .hero-modal-actions .btn { flex: 1 1 auto; }
+}

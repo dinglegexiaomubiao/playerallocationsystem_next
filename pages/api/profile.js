@@ -1,7 +1,7 @@
 // 个人信息接口（登录后可用）
 // GET：返回当前用户的选手资料 + 比赛履历（名次/担任位置）+ 可选地区列表
 // PUT：更新当前用户的选手资料（地区/分数/位置/英雄/评价/默契队友/仇人）
-import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions } from '../../lib/db';
+import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions, ensurePlayerTextColumns } from '../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 
 // 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
@@ -60,6 +60,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: '账号未绑定选手资料，请先在个人信息页补填' });
       }
       const body = req.body || {};
+      // heroes 原来是 varchar(50)，多选英雄会超长，先确保已放宽为 text
+      await ensurePlayerTextColumns();
       const ply = await client.query('SELECT * FROM public.players WHERE id = $1', [playerId]);
       const cur = ply.rows[0];
       if (!cur) {
