@@ -73,6 +73,12 @@ export default function PlayerTable({ signups = [], teams = [] }) {
         .split(',')
         .map((x) => x.trim())
         .filter(Boolean),
+      // 档案里的常玩位置，用于和本届参赛位置对照
+      profPos: String(s.profile_positions || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .join(','),
     }));
 
     if (k) {
@@ -153,8 +159,8 @@ export default function PlayerTable({ signups = [], teams = [] }) {
           <span>#</span>
           <span>头像</span>
           <span>昵称</span>
-          <span style={{ textAlign: 'right' }}>天梯分</span>
-          <span>常玩位置</span>
+          <span style={{ textAlign: 'right' }}>参赛天梯分</span>
+          <span>本届位置</span>
           <span>所属队伍</span>
           <span style={{ textAlign: 'right' }}>报名时间</span>
         </div>
@@ -183,7 +189,16 @@ export default function PlayerTable({ signups = [], teams = [] }) {
                 </span>
               )}
             </span>
-            <span className="t-tr-pos">
+            <span
+              className="t-tr-pos"
+              title={
+                // 报名时确认的本届位置可能和档案里的常玩位置不同，
+                // 把档案值放进 title，需要时能对照
+                s.profPos && s.profPos !== s.posList.join(',')
+                  ? `档案里的常玩位置：${s.profPos.split(',').join(' / ')}`
+                  : ''
+              }
+            >
               {s.posList.length > 0 ? s.posList.join(' / ') : '未填'}
             </span>
             <span className="t-tr-muted">

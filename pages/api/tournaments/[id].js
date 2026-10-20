@@ -70,9 +70,15 @@ export default async function handler(req, res) {
                   tp.heroes, tp.region, tp.self_intro, tp.enemies,
                   tp.signup_status, tp.is_captain, tp.signed_at,
                   p.nickname, p.group_nickname, p.game_id,
-                  COALESCE(NULLIF(p.score, 0), tp.score, 0) AS score,
+                  -- 参赛信息以报名快照为准：报名时选手确认过本届打什么位置、多少分，
+                  -- 和个人档案（常玩位置 / 当前分）是两件事。
+                  -- 快照为空（历史批量导入没填）才回退到档案值。
+                  COALESCE(NULLIF(tp.score, 0), NULLIF(p.score, 0), 0) AS score,
                   NULLIF(p.peak_score, 0) AS peak_score,
-                  COALESCE(NULLIF(p.positions, ''), tp.positions) AS positions
+                  COALESCE(NULLIF(tp.positions, ''), NULLIF(p.positions, '')) AS positions,
+                  -- 档案原值：前端用来提示「与你档案里的不同」
+                  NULLIF(p.score, 0) AS profile_score,
+                  p.positions AS profile_positions
            FROM public.tournament_players tp
            JOIN public.players p ON p.id = tp.player_id
            WHERE tp.tournament_id = $1

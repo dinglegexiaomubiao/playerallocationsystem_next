@@ -21,24 +21,38 @@ export default async function handler(req, res) {
         
         const formattedTeams = await Promise.all(teams.map(async (team) => {
           const playersInTeam = await getPlayersInTeam(team.id, tournament_id);
-          const formattedPlayers = playersInTeam.map(player => ({
-            ...player,
-            id: player.id?.toString(),
-            game_id: player.game_id?.toString(),
-            score: player.score ? parseInt(player.score) : 0,
-            win_rate: player.win_rate ? parseInt(player.win_rate) : 0,
-            championships: player.championships ? parseInt(player.championships) : 0,
-            positions: player.positions ? player.positions.split(',').filter(p => p) : [],
-            heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
-            synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
-            enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
-            created_at: player.created_at || "",
-            updated_at: player.updated_at || "",
-            position_priority: {},
-            team_name: team.name,
-            team_position: player.team_position || null,
-            synergyPlayers: []
-          }));
+          const formattedPlayers = playersInTeam.map(player => {
+            // 队伍是「本届参赛阵容」，位置与分数以报名快照为准；
+            // 没确认过快照的（历史导入）回退到档案值。
+            // profile_* 保留档案原值，前端用于提示差异。
+            const snapScore = player.signup_score !== null && player.signup_score !== undefined
+              ? parseInt(player.signup_score, 10) || 0
+              : null;
+            const snapPositions = player.signup_positions
+              ? String(player.signup_positions).split(',').filter(p => p)
+              : null;
+            const profPositions = player.positions ? String(player.positions).split(',').filter(p => p) : [];
+            return {
+              ...player,
+              id: player.id?.toString(),
+              game_id: player.game_id?.toString(),
+              score: snapScore !== null ? snapScore : (player.score ? parseInt(player.score) : 0),
+              profile_score: player.score ? parseInt(player.score) : 0,
+              positions: snapPositions || profPositions,
+              profile_positions: profPositions,
+              win_rate: player.win_rate ? parseInt(player.win_rate) : 0,
+              championships: player.championships ? parseInt(player.championships) : 0,
+              heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
+              synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
+              enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
+              created_at: player.created_at || "",
+              updated_at: player.updated_at || "",
+              position_priority: {},
+              team_name: team.name,
+              team_position: player.team_position || null,
+              synergyPlayers: []
+            };
+          });
 
           return {
             ...team,

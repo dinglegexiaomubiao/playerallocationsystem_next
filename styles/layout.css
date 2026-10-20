@@ -1374,7 +1374,7 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .ord-chip {
   display: inline-flex; align-items: center; gap: 6px; min-width: 0;
   padding: 4px 6px 4px 4px; border-radius: 999px;
-  background: var(--brand-soft); border: 1px solid #cfe0fb; color: var(--brand-dark);
+  background: var(--brand-soft); border: 1px solid var(--border-strong); color: var(--text);
   font-size: .82rem; font-weight: 600; white-space: nowrap;
 }
 .ord-no {
@@ -1384,16 +1384,18 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 }
 .ord-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ord-btns { display: inline-flex; align-items: center; gap: 1px; flex: 0 0 auto; }
+/* 深色底：按钮不能用白底，否则是一排灰块。
+   走描边 + 透明底，hover 才提亮。 */
 .ord-btn {
   flex: 0 0 auto; width: 20px; height: 20px; padding: 0; cursor: pointer;
-  border: 1px solid transparent; border-radius: 6px; background: rgba(255,255,255,.7);
-  color: var(--brand-dark); font-size: .82rem; line-height: 1; font-family: inherit;
+  border: 1px solid var(--border-strong); border-radius: 6px; background: transparent;
+  color: var(--text-2); font-size: .82rem; line-height: 1; font-family: inherit;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.ord-btn:hover:not(:disabled) { background: var(--bg-card); border-color: #cfe0fb; }
+.ord-btn:hover:not(:disabled) { background: var(--bg-card); border-color: var(--brand); color: var(--brand); }
 .ord-btn:disabled { opacity: .32; cursor: default; }
 .ord-del { color: var(--accent); }
-.ord-del:hover:not(:disabled) { background: var(--bg-card); border-color: #f3c7bf; }
+.ord-del:hover:not(:disabled) { background: var(--bg-card); border-color: var(--accent); }
 
 /* 位置选择器 */
 .pos-picker { display: flex; flex-direction: column; gap: 10px; }
