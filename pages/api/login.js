@@ -1,5 +1,5 @@
 import { initDatabase, query } from '../../lib/db';
-import { setSessionCookie, ADMIN_NAME } from '../../lib/auth';
+import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { getClientIp, getLock, recordFail, resetFail, formatRetry } from '../../lib/rate-limit';
 import crypto from 'crypto';
 
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
           name: trimmedUsername,
           count: updated.rows[0].count,
           message: '登录成功',
-          isAdmin: trimmedUsername.toLowerCase() === ADMIN_NAME
+          isAdmin: isAdminName(trimmedUsername)
         });
       } else {
         // 新用户注册并登录
@@ -137,7 +137,7 @@ export default async function handler(req, res) {
           name: trimmedUsername,
           count: inserted.rows[0].count,
           message: '注册并登录成功',
-          isAdmin: trimmedUsername.toLowerCase() === ADMIN_NAME
+          isAdmin: isAdminName(trimmedUsername)
         });
       }
     } catch (error) {
