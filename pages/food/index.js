@@ -1,10 +1,48 @@
 import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import ExcelIO from '../../components/ExcelIO';
-import { FOOD_COLUMNS } from '../../lib/excel';
+import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
 
 const CUISINES = ['全部', '烧烤', '火锅', '川菜', '湘菜', '粤菜', '江浙', '日料', '韩餐', '西餐', '小吃', '甜点', '夜宵', '其他'];
 const FORM_CUISINES = CUISINES.filter((c) => c !== '全部');
+
+// 兼容不同来源表格的表头写法：
+// 原始群友表用「美团人均价格」「饭后附近娱乐活动（备注）」「群友饭后评价」，
+// 站内模板用「美团人均」「附近娱乐」「群友饭后评价」，两种都要能认。
+const FOOD_FIELD_ALIASES = {
+  name: ['店名', '店铺名称', '店铺', '餐厅名称', '餐厅'],
+  cuisine: ['菜系', '类型', '品类'],
+  area: ['区位', '区域', '行政区', '片区'],
+  address: ['详细地址', '地址', '门店地址'],
+  feature: ['特点', '特色', '招牌'],
+  recommender: ['推荐人', '推荐者'],
+  avg_price: ['美团人均', '美团人均价格', '人均', '人均价格', '人均消费'],
+  rating: ['评分', '星级', '打分'],
+  nearby: ['附近娱乐', '饭后附近娱乐活动（备注）', '饭后附近娱乐活动', '附近娱乐活动', '饭后娱乐'],
+  review: ['群友饭后评价', '群友评价', '饭后评价', '评价', '点评', '群友点评'],
+};
+
+// 清掉单元格内换行（如店名里夹了换行的门店后缀），并按库字段长度截断
+const clean = (v, max) =>
+  String(v === null || v === undefined ? '' : v)
+    .replace(/\s*[\r\n]+\s*/g, ' ')
+    .replace(/\s+([（(])/g, '$1')
+    .trim()
+    .slice(0, max || 10000);
+
+// 店名/区位归一化比对：忽略全部空白与英文大小写差异，
+// 避免同一家店因「换行 vs 空格」等排版差异被重复创建
+const shopKey = (name, area) =>
+  `${String(name || '').replace(/\s+/g, '').toUpperCase()}||${String(area || '')
+    .replace(/\s+/g, '')
+    .toUpperCase()}`;
+
+const reviewKey = (reviewer, content) =>
+  `${String(reviewer || '').trim()}|${String(content || '').trim()}`;
+
+// 预览弹窗用：统计本次文件里一共带了多少条群友评价
+const countReviews = (rows) =>
+  rows.reduce((n, row) => n + parseReviews(pickAlias(row, FOOD_FIELD_ALIASES.review)).length, 0);
 
 const EMPTY_FORM = {
   name: '',
@@ -157,41 +195,98 @@ export default function FoodPage() {
 
   const handleImportFoods = async (rows, onProgress) => {
     const list = rows
-      .map((row) => ({
-        name: String(row['店名'] || '').trim(),
-        cuisine: String(row['菜系'] || '').trim(),
-        area: String(row['区位'] || '').trim(),
-        address: String(row['详细地址'] || '').trim(),
-        feature: String(row['特点'] || '').trim(),
-        recommender: String(row['推荐人'] || '').trim(),
-        avg_price:
-          row['美团人均'] === '' || row['美团人均'] === undefined ? null : Number(row['美团人均']) || null,
-        rating: Number(row['评分']) || 5,
-        nearby: String(row['附近娱乐'] || '').trim(),
-      }))
-      .filter((f) => f.name);
+      .map((row) => {
+        const reviews = parseReviews(pickAlias(row, FOOD_FIELD_ALIASES.review));
+        const avgRaw = pickAlias(row, FOOD_FIELD_ALIASES.avg_price);
+        return {
+          food: {
+            name: clean(pickAlias(row, FOOD_FIELD_ALIASES.name), 100),
+            cuisine: clean(pickAlias(row, FOOD_FIELD_ALIASES.cuisine), 30),
+            area: clean(pickAlias(row, FOOD_FIELD_ALIASES.area), 50),
+            address: clean(pickAlias(row, FOOD_FIELD_ALIASES.address), 200),
+            feature: clean(pickAlias(row, FOOD_FIELD_ALIASES.feature), 300),
+            recommender: clean(pickAlias(row, FOOD_FIELD_ALIASES.recommender), 50),
+            avg_price: avgRaw === '' ? null : Number(String(avgRaw).replace(/[^\d.]/g, '')) || null,
+            rating: Number(pickAlias(row, FOOD_FIELD_ALIASES.rating)) || 5,
+            nearby: clean(pickAlias(row, FOOD_FIELD_ALIASES.nearby), 200),
+          },
+          reviews,
+        };
+      })
+      .filter((x) => x.food.name);
 
     if (list.length === 0) {
-      alert('没有解析到有效数据，请确认表头与「下载模板」一致');
+      alert('没有解析到有效数据，请确认表头包含「店名」列（可用「下载模板」对照）');
       return;
     }
 
+    // 已有店铺按「店名+区位」建索引，命中则复用，不重复建店（等同于补录评价）
+    const index = new Map();
+    const reviewSeen = new Map();
+    const seed = (f) => {
+      index.set(shopKey(f.name, f.area), f);
+      reviewSeen.set(String(f.id), new Set((f.reviews || []).map((r) => reviewKey(r.reviewer, r.content))));
+    };
+    (foods || []).forEach(seed);
+
     const total = list.length;
+    let reviewAdded = 0;
+
     for (let i = 0; i < total; i++) {
-      const f = list[i];
+      const { food, reviews } = list[i];
       let err = '';
       try {
-        const r = await fetch('/api/foods', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(f),
-        });
-        const d = await r.json().catch(() => ({}));
-        if (!r.ok || !d.success) err = d.error || d.message || `请求失败（HTTP ${r.status}）`;
+        const key = shopKey(food.name, food.area);
+        let target = index.get(key);
+
+        if (!target) {
+          const r = await fetch('/api/foods', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(food),
+          });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok || !d.success) {
+            throw new Error(d.error || d.message || `请求失败（HTTP ${r.status}）`);
+          }
+          target = d.food;
+          seed(target);
+        }
+
+        // 逐条挂评价，已存在（同署名+同内容）的跳过
+        if (reviews.length > 0) {
+          const seen = reviewSeen.get(String(target.id)) || new Set();
+          for (const rv of reviews) {
+            const rk = reviewKey(rv.reviewer, rv.content);
+            if (seen.has(rk)) continue;
+            const rr = await fetch('/api/food-reviews', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                food_id: target.id,
+                reviewer: String(rv.reviewer || '').slice(0, 50),
+                content: String(rv.content || '').slice(0, 300),
+              }),
+            });
+            const rd = await rr.json().catch(() => ({}));
+            if (rr.ok && rd.success) {
+              seen.add(rk);
+              reviewAdded += 1;
+            } else if (!err) {
+              err = `评价写入失败：${rd.error || rd.message || `HTTP ${rr.status}`}`;
+            }
+          }
+          reviewSeen.set(String(target.id), seen);
+        }
       } catch (e) {
         err = (e && e.message) || '网络错误';
       }
-      if (onProgress) onProgress(i + 1, total, { name: f.name, error: err });
+      if (onProgress) onProgress(i + 1, total, { name: food.name, error: err });
+    }
+
+    if (reviewAdded > 0) {
+      // 让结果面板能体现评价写入量（追加到失败明细之外的信息位）
+      if (onProgress) onProgress(total, total, { name: `已写入 ${reviewAdded} 条群友评价`, error: '' });
     }
     load();
   };
@@ -217,10 +312,14 @@ export default function FoodPage() {
               filename="群友美食.xlsx"
               templateName="群友美食_导入模板.xlsx"
               onImport={handleImportFoods}
+              countReviews={countReviews}
+              importHint="已存在的店铺（店名+区位相同）不会重复创建，只补录其群友评价；同一格内换行分隔的多条评价会拆成多条记录。"
               checkDuplicate={(row, existing) => {
-                const name = String(row['店名'] || '').trim();
-                const area = String(row['区位'] || '').trim();
-                return existing.some((f) => (f.name || '') === name && (f.area || '') === area);
+                const key = shopKey(
+                  clean(pickAlias(row, FOOD_FIELD_ALIASES.name), 100),
+                  clean(pickAlias(row, FOOD_FIELD_ALIASES.area), 50)
+                );
+                return existing.some((f) => shopKey(f.name, f.area) === key);
               }}
             />
             <button className="btn btn-primary" onClick={startCreate}>

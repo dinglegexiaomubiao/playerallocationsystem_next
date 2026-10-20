@@ -8,7 +8,16 @@ import { exportRows, downloadTemplate, readRows } from '../lib/excel';
  * onImport 签名：(rows, onProgress) => Promise<void>
  *   onProgress(done, total, { name, error })，每提交完一条调用一次
  */
-export default function ExcelIO({ columns, rows, filename, onImport, templateName, checkDuplicate }) {
+export default function ExcelIO({
+  columns,
+  rows,
+  filename,
+  onImport,
+  templateName,
+  checkDuplicate,
+  countReviews,
+  importHint,
+}) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -90,6 +99,17 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
   const pct = job ? Math.min(100, Math.round((job.done / Math.max(job.total, 1)) * 100)) : 0;
   const running = job && job.phase === 'running';
 
+  // 预览时统计随行附带的群友评价条数（如含换行分隔的多条）
+  const reviewCount =
+    preview && countReviews ? countReviews(preview.items.map((it) => it.row)) : 0;
+
+  const previewCell = (v) => {
+    if (Array.isArray(v)) return v.join('，');
+    if (v === null || v === undefined) return '';
+    const s = String(v).replace(/\r?\n/g, ' ｜ ');
+    return s.length > 90 ? s.slice(0, 90) + '…' : s;
+  };
+
   return (
     <>
       <div className="excel-io">
@@ -126,7 +146,14 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
             <div className="modal-stats">
               共 <b>{preview.total}</b> 行 · 可导入 <b className="ok">{preview.validCount}</b> 行 · 重复{' '}
               <b className="dup">{preview.dupCount}</b> 行
+              {reviewCount > 0 && (
+                <>
+                  {' '}
+                  · 另含 <b className="ok">{reviewCount}</b> 条群友评价
+                </>
+              )}
             </div>
+            {importHint && <div className="modal-hint">{importHint}</div>}
             <div className="modal-table-wrap">
               <table className="modal-table">
                 <thead>
@@ -143,9 +170,7 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
                     <tr key={it.idx} className={it.dup ? 'is-dup' : ''}>
                       <td>{it.idx}</td>
                       {columns.map((c) => (
-                        <td key={c.key}>
-                          {Array.isArray(it.row[c.label]) ? it.row[c.label].join('，') : it.row[c.label] ?? ''}
-                        </td>
+                        <td key={c.key}>{previewCell(it.row[c.label])}</td>
                       ))}
                       <td>
                         {it.dup ? <span className="badge-dup">重复</span> : <span className="badge-new">新增</span>}

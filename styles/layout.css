@@ -353,6 +353,10 @@ a { text-decoration: none; color: inherit; }
 .modal-stats b { color: var(--text); }
 .modal-stats .ok { color: var(--brand); }
 .modal-stats .dup { color: var(--accent); }
+.modal-hint {
+  padding: 9px 22px; font-size: .78rem; line-height: 1.5; color: var(--text-2);
+  background: var(--brand-soft); border-bottom: 1px solid var(--border);
+}
 .modal-table-wrap { overflow: auto; padding: 0 22px; }
 .modal-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
 .modal-table th {
