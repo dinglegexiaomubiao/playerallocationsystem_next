@@ -1,9 +1,18 @@
 // Next.js API route for database structure checking
 import { pool } from '../../lib/db';
+import { isAdmin } from '../../lib/auth';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // 该接口会吐出整库表结构/主键/外键，属于内部信息，仅管理员可看
+  if (!isAdmin(req)) {
+    return res.status(403).json({
+      success: false,
+      error: '仅管理员可查看数据库结构',
+    });
   }
 
   const client = await pool.connect();

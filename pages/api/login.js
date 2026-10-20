@@ -1,5 +1,6 @@
 import { initDatabase, query } from '../../lib/db';
 import { setSessionCookie, ADMIN_NAME } from '../../lib/auth';
+import { getClientIp, getLock, recordFail, resetFail, formatRetry } from '../../lib/rate-limit';
 import crypto from 'crypto';
 
 let dbInitialized = false;
@@ -43,6 +44,33 @@ export default async function handler(req, res) {
     const trimmedUsername = String(username).trim();
     const trimmedPassword = password ? String(password).trim() : '';
 
+    // ---- 登录失败限流：同一 IP 或同一账号在 10 分钟内失败 5 次即锁定 ----
+    const limitKeys = [
+      `ip:${getClientIp(req)}`,
+      `user:${trimmedUsername.toLowerCase()}`,
+    ];
+    let locked = null;
+    for (const k of limitKeys) {
+      const st = getLock(k);
+      if (st) {
+        locked = st;
+        break;
+      }
+    }
+    if (locked) {
+      res.setHeader('Retry-After', String(locked.retryAfterSec));
+      return res.status(429).json({
+        error: `登录尝试次数过多，请 ${formatRetry(locked.retryAfterSec)} 后再试`,
+        retryAfterSec: locked.retryAfterSec,
+      });
+    }
+    const markFail = () => {
+      for (const k of limitKeys) recordFail(k);
+    };
+    const clearFail = () => {
+      for (const k of limitKeys) resetFail(k);
+    };
+
     try {
       const result = await query(
         'SELECT name, count, password FROM public.play_score WHERE name = $1',
@@ -59,6 +87,7 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: '请输入密码' });
           }
           if (!verifyPassword(trimmedPassword, existingPassword)) {
+            markFail();
             return res.status(401).json({ error: '密码错误' });
           }
           // 旧格式（无盐）密码校验通过后，自动升级为加盐格式
@@ -84,6 +113,7 @@ export default async function handler(req, res) {
           [trimmedUsername]
         );
         // 下发会话 cookie，供后续接口识别身份（含管理员判定）
+        clearFail();
         setSessionCookie(res, trimmedUsername);
         return res.status(200).json({
           name: trimmedUsername,
@@ -101,6 +131,7 @@ export default async function handler(req, res) {
           'INSERT INTO public.play_score (name, count, password) VALUES ($1, $2, $3) RETURNING count',
           [trimmedUsername, 1, hashPasswordWithSalt(trimmedPassword)]
         );
+        clearFail();
         setSessionCookie(res, trimmedUsername);
         return res.status(200).json({
           name: trimmedUsername,
