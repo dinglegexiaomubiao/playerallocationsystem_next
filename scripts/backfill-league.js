@@ -506,6 +506,8 @@ async function run() {
       let ok = 0;
       let unknown = 0;
       let unparsed = 0;
+      let standinRuns = 0; // 有替补上场的局数
+      let suspect = 0; // 替补数超出常规、疑似队伍认错的局
       for (const cand of cands) {
         const d = detailByMId.get(cand.id);
         const t = cst(cand.start);
@@ -519,13 +521,45 @@ async function run() {
         const parsed = ra !== null;
         if (!parsed) unparsed++;
         const scoreText = parsed ? `${ra}:${rb}` : '未解析';
+
+        /* 替补数校验：
+           正常情况一队替补 1~2 人、一局两边合计 2~3 人。
+           超出这个范围多半不是「真的上了这么多替补」，而是队伍认错了 ——
+           比如某队 5 人只命中 3 个，另外 2 个被算成替补。
+           这里只告警不改数据，人工看一眼再决定。 */
+        const standinsOn = (teamId, isR) => {
+          const set = teamMembers.get(String(teamId));
+          return (d.raw.players || [])
+            .filter((pl) => !!pl.isRadiant === isR)
+            .filter((pl) => {
+              const hit = rosterByPid.get(String(pl.account_id));
+              if (!hit) return true; // 不在群友库里的号也算替补
+              return !set || !set.has(hit[0].playerId);
+            }).length;
+        };
+        const stA = d.teamAId ? standinsOn(d.teamAId, true) : 0;
+        const stB = d.teamBId ? standinsOn(d.teamBId, false) : 0;
+        const stTotal = stA + stB;
+        let flag = '';
+        if (stA > 2 || stB > 2 || stTotal > 3) {
+          flag = `  ⚠ 替补 ${stA}+${stB} 超出常规，疑似队伍认错`;
+          suspect++;
+        }
+        if (stTotal > 0) standinRuns++;
+
         console.log(
           `  ${t.key} ${WEEKDAY_CN[t.weekday]} ${t.hm}  ` +
             `${aName} ${scoreText} ${bName}  ` +
-            `[${p.roundName || '?'} 第${p.orderNo || '?'}局] ${cand.id}`
+            `[${p.roundName || '?'} 第${p.orderNo || '?'}局] ${cand.id}` +
+            (stTotal ? `  替补 ${stTotal}` : '') +
+            flag
         );
       }
-      console.log(`  可识别对阵 ${ok} 场，未识别 ${unknown} 场，其中未解析 ${unparsed} 场`);
+      console.log(
+        `  可识别对阵 ${ok} 场，未识别 ${unknown} 场，其中未解析 ${unparsed} 场；` +
+          `有替补上场 ${standinRuns} 场` +
+          (suspect ? `（${suspect} 场替补数异常，建议人工核对队伍识别）` : '')
+      );
 
       // 6) 写库
       if (!COMMIT) {

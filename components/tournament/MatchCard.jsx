@@ -209,6 +209,7 @@ export default function MatchCard({ match, roundName }) {
     // （有击杀记在非英雄来源上），两处数字不一致会显得像算错了。
     const kills = officialKills ?? sumKills;
     const nw = list.reduce((s, p) => s + (Number(p.net_worth) || 0), 0);
+    const standinN = list.filter((p) => p.is_standin).length;
     const won = hasScore && teamName && m.winner_name === teamName;
     // 有人有经济数据才算「解析过」
     const parsed = list.some(
@@ -221,6 +222,11 @@ export default function MatchCard({ match, roundName }) {
           <span className={`t-team-tag ${tagCls}`}>{tag}</span>
           <span className="t-team-bar-name">{teamName || '待定'}</span>
           {won && <span className="t-team-bar-win">胜利</span>}
+          {standinN > 0 && (
+            <span className="t-team-bar-standin" title="该队本局有替补上场">
+              替补 {standinN}
+            </span>
+          )}
           <span className="t-team-bar-stats">
             {parsed ? (
               <>

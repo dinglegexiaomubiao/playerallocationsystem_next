@@ -1318,3 +1318,16 @@
 .t-prow-name-link:hover {
   color: var(--t-red-ink);
 }
+
+/* 队伍栏上的替补人数标记 */
+.t-team-bar-standin {
+  flex-shrink: 0;
+  font-family: var(--t-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--t-bronze-ink);
+  border: 1px solid rgba(176, 141, 87, 0.45);
+  background: var(--t-bronze-dim);
+  border-radius: var(--t-r-1);
+  padding: 0 5px;
+}

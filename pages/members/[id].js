@@ -92,6 +92,25 @@ export default function MemberDetail() {
   // 比赛记录由 /api/players 一起返回（按队伍归属 + 名次算好），这里只做兜底
   const records = useMemo(() => (player && Array.isArray(player.records) ? player.records : []), [player]);
 
+  /* 出战记录：逐局展开，带替补标记。
+     和上面的「比赛记录」不是一回事——那是按赛事聚合的名次，这是每局上没上场。 */
+  const [appear, setAppear] = useState(null);
+  useEffect(() => {
+    if (!id) return;
+    let alive = true;
+    fetch('/api/player-appearances?player_id=' + id)
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setAppear(d && d.success ? d : { appearances: [], total: 0, standin_count: 0 });
+      })
+      .catch(() => {
+        if (alive) setAppear({ appearances: [], total: 0, standin_count: 0 });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
   // 反向查询：谁把当前选手标记为仇人（「被 xxx 视为仇人」）
   const enemiesOf = useMemo(() => {
     if (!player) return [];
@@ -351,6 +370,57 @@ export default function MemberDetail() {
                 );
               })}
             </div>
+          )}
+
+          {/* 出战记录：逐局展开，替补标记放这里最直接 */}
+          {appear && appear.total > 0 && (
+            <>
+              <h2 className="sec-title">
+                出战记录（{appear.total} 局
+                {appear.standin_count > 0 ? ` · 其中替补 ${appear.standin_count} 局` : ''}）
+              </h2>
+              <div className="ap-tbl">
+                <div className="ap-row ap-head">
+                  <div>赛事</div>
+                  <div>轮次</div>
+                  <div>对阵</div>
+                  <div>比分</div>
+                  <div>身份</div>
+                  <div>时间</div>
+                </div>
+                {appear.appearances.map((a) => (
+                  <div className="ap-row" key={a.match_id}>
+                    <div className="ap-ev">
+                      <Link href={'/tournaments/' + a.tournament_id} className="ap-ev-link">
+                        {a.tournament_name}
+                      </Link>
+                    </div>
+                    <div className="ap-round">
+                      {a.round_name || '对阵'}
+                      {a.order_no ? ` 第${a.order_no}局` : ''}
+                    </div>
+                    <div className="ap-vs">
+                      <span className="ap-team">{a.team_name || '—'}</span>
+                      <span className="ap-vs-sep">vs</span>
+                      <span className="ap-opp">{a.opponent_name || '—'}</span>
+                    </div>
+                    <div className={`ap-score ${a.win === true ? 'win' : a.win === false ? 'lose' : ''}`}>
+                      {a.my_score === null || a.my_score === undefined
+                        ? '—'
+                        : `${a.my_score}:${a.opp_score}`}
+                    </div>
+                    <div>
+                      {a.is_standin ? (
+                        <span className="ap-standin">替补</span>
+                      ) : (
+                        <span className="ap-starter">首发</span>
+                      )}
+                    </div>
+                    <div className="ap-date">{fmtDay(a.start_time) || '—'}</div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </section>
