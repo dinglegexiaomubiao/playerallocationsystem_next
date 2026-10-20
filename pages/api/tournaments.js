@@ -37,9 +37,10 @@ export default async function handler(req, res) {
             tr.name AS runner_up_team_name,
             tt.name AS third_place_team_name
           FROM public.tournaments t
-          LEFT JOIN public.teams tc ON tc.id = t.champion_team_id
-          LEFT JOIN public.teams tr ON tr.id = t.runner_up_team_id
-          LEFT JOIN public.teams tt ON tt.id = t.third_place_team_id
+          -- 只认本赛事的队伍：库里存在指向别的赛事队伍的历史脏数据
+          LEFT JOIN public.teams tc ON tc.id = t.champion_team_id AND tc.tournament_id = t.id
+          LEFT JOIN public.teams tr ON tr.id = t.runner_up_team_id AND tr.tournament_id = t.id
+          LEFT JOIN public.teams tt ON tt.id = t.third_place_team_id AND tt.tournament_id = t.id
           ORDER BY t.id DESC
         `);
         

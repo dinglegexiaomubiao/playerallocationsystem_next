@@ -10,23 +10,31 @@ export default async function handler(req, res) {
   try {
     switch (method) {
       case 'GET': {
-        // 获取指定赛季信息
+        // 获取指定赛季信息（带出冠/亚/季队伍名，页面展示比赛结果不用再查一遍）
         const tournamentResult = await client.query(
           `SELECT 
-            id, 
-            name, 
-            start_date, 
-            end_date, 
-            champion_team_id, 
-            runner_up_team_id,
-            third_place_team_id,
-            sponsor_info,
-            champion_prize,
-            runner_up_prize,
-            status,
-            created_at
-          FROM public.tournaments 
-          WHERE id = $1`,
+            t.id, 
+            t.name, 
+            t.start_date, 
+            t.end_date, 
+            t.champion_team_id, 
+            t.runner_up_team_id,
+            t.third_place_team_id,
+            t.sponsor_info,
+            t.champion_prize,
+            t.runner_up_prize,
+            t.status,
+            t.created_at,
+            ct.name AS champion_team_name,
+            rt.name AS runner_up_team_name,
+            tt.name AS third_place_team_name
+          FROM public.tournaments t
+          -- 只认本赛事的队伍：库里存在 champion/runner_up/third 指向别的赛事队伍的历史脏数据，
+          -- 不加这个条件会把无关队伍当成季军显示出来
+          LEFT JOIN public.teams ct ON ct.id = t.champion_team_id AND ct.tournament_id = t.id
+          LEFT JOIN public.teams rt ON rt.id = t.runner_up_team_id AND rt.tournament_id = t.id
+          LEFT JOIN public.teams tt ON tt.id = t.third_place_team_id AND tt.tournament_id = t.id
+          WHERE t.id = $1`,
           [id]
         );
         
@@ -49,14 +57,14 @@ export default async function handler(req, res) {
           [id]
         );
 
-        // 聚合队伍（含队长昵称与成员数）
+        // 聚合队伍（含队长昵称与成员数）；有名次的排前面，未定名次的按 id
         const teams = await client.query(
           `SELECT t.*, p.nickname AS captain_nickname,
                   (SELECT count(*) FROM public.team_players tp WHERE tp.team_id = t.id) AS member_count
            FROM public.teams t
            LEFT JOIN public.players p ON p.id = t.captain_id
            WHERE t.tournament_id = $1
-           ORDER BY t.id ASC`,
+           ORDER BY t.rank ASC NULLS LAST, t.id ASC`,
           [id]
         );
 

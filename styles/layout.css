@@ -510,6 +510,43 @@ a { text-decoration: none; color: inherit; }
 .kv:last-child { border: none; }
 .kv .k { color: var(--text-3); min-width: 72px; }
 .kv .v { color: var(--text); }
+
+/* ===== 赛事详情：比赛结果 ===== */
+.result-box {
+  margin-top: 16px; padding: 14px; border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #fffdf6, #fff); border: 1px solid #f2e3b8;
+}
+.result-title { font-size: .84rem; font-weight: 800; color: #8a6408; margin-bottom: 10px; letter-spacing: .02em; }
+.result-list { display: flex; flex-direction: column; gap: 8px; }
+.result-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px; background: #fff; border: 1px solid var(--border);
+  font-size: .86rem;
+}
+.result-medal { font-size: 1rem; line-height: 1; flex: 0 0 auto; }
+.result-label { color: var(--text-3); font-size: .78rem; flex: 0 0 auto; min-width: 30px; }
+.result-name { font-weight: 700; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.result-row.gold { border-color: #f2e3b8; background: #fffdf5; }
+.result-row.gold .result-name { color: #8a6408; }
+.result-row.silver { border-color: #dfe6ef; background: #fafcff; }
+.result-row.silver .result-name { color: #4e5d73; }
+.result-row.bronze { border-color: #efd9c8; background: #fffaf6; }
+.result-row.bronze .result-name { color: #8a5230; }
+.result-empty { font-size: .82rem; color: var(--text-3); }
+
+/* ===== 赛事详情：报名选手 ===== */
+.signup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.signup-chip {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-card); border: 1px solid var(--border); font-size: .84rem;
+  transition: all .16s ease;
+}
+.signup-chip:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.signup-chip .sc-name { font-weight: 700; color: var(--text); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.signup-chip .sc-cap { font-size: .68rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); padding: 1px 6px; border-radius: 5px; }
+.signup-chip .sc-score { margin-left: auto; font-weight: 800; color: var(--brand); font-variant-numeric: tabular-nums; }
+.signup-chip .sc-pos { flex: 0 0 100%; font-size: .72rem; color: var(--text-3); }
 .hero-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .hero-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-soft); color: var(--brand); padding: 4px 11px; border-radius: 8px; font-size: .82rem; font-weight: 500; }
 .hero-chip .hero-chip-avatar { margin-left: -5px; }
@@ -527,6 +564,19 @@ a { text-decoration: none; color: inherit; }
 .team-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--bg-subtle); }
 .team-name { font-weight: 800; }
 .team-score { font-weight: 800; color: var(--brand); }
+/* 队伍名次徽章：冠亚季用金/银/铜，其余名次走中性灰 */
+.team-rank {
+  display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 6px;
+  font-size: .7rem; font-weight: 700; vertical-align: 1px; white-space: nowrap;
+}
+.team-rank.r1 { background: #fdf6e3; color: #8a6408; border: 1px solid #f2e3b8; }
+.team-rank.r2 { background: #f2f5f9; color: #4e5d73; border: 1px solid #dfe6ef; }
+.team-rank.r3 { background: #fbf0e8; color: #8a5230; border: 1px solid #efd9c8; }
+.team-rank.rn { background: var(--bg-subtle); color: var(--text-3); border: 1px solid var(--border); }
+.team-order-hint {
+  margin-left: 10px; font-size: .74rem; font-weight: 600; color: var(--text-3);
+  background: var(--bg-subtle); padding: 3px 9px; border-radius: 20px; vertical-align: 2px;
+}
 .team-players { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .team-player { display: flex; justify-content: space-between; font-size: .85rem; padding: 4px 0; color: var(--text-2); }
 .team-player:hover { color: var(--brand); }
