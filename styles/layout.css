@@ -202,6 +202,27 @@ a { text-decoration: none; color: inherit; }
   border-color: var(--brand); background: var(--brand-soft);
   color: var(--brand-dark); font-weight: 600;
 }
+/* 全字段搜索框 */
+.filter-field-search { flex: 1 1 240px; }
+.filter-search { position: relative; }
+.filter-field input {
+  width: 100%; padding: 9px 10px; font-size: .85rem; font-family: inherit;
+  color: var(--text); background: #fff; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); transition: all .15s ease;
+}
+.filter-field input:hover { border-color: var(--brand); }
+.filter-field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.filter-field input.is-active { border-color: var(--brand); font-weight: 600; }
+.filter-search input { padding-right: 30px; }
+.filter-search input::-webkit-search-cancel-button { display: none; }
+.filter-search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%;
+  background: var(--bg-subtle); color: var(--text-2); font-size: 15px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.filter-search-clear:hover { background: var(--border-strong); color: var(--text); }
 .filter-summary {
   display: flex; align-items: center; gap: 10px; margin-left: auto;
   padding-bottom: 1px; font-size: .85rem; color: var(--text-2); white-space: nowrap;

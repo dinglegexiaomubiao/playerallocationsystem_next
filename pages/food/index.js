@@ -13,7 +13,29 @@ const PRICE_RANGES = [
   { value: '500+', label: '¥500 以上', min: 500, max: null },
 ];
 
-const EMPTY_FILTERS = { cuisine: '全部', area: '全部', recommender: '全部', price: 'all' };
+const EMPTY_FILTERS = { keyword: '', cuisine: '全部', area: '全部', recommender: '全部', price: 'all' };
+
+// 把一家店所有可读信息拼成一段小写文本，供搜索使用（含多条群友评价）
+function buildHaystack(f) {
+  const parts = [
+    f.name,
+    f.cuisine,
+    f.area,
+    f.address,
+    f.feature,
+    f.recommender,
+    f.nearby,
+    f.avg_price === null || f.avg_price === undefined ? '' : f.avg_price,
+    f.rating === null || f.rating === undefined ? '' : f.rating,
+  ];
+  (f.reviews || []).forEach((r) => {
+    parts.push(r.reviewer, r.content);
+  });
+  return parts
+    .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+    .join(' ')
+    .toLowerCase();
+}
 
 // 兼容不同来源表格的表头写法：
 // 原始群友表用「美团人均价格」「饭后附近娱乐活动（备注）」「群友饭后评价」，
@@ -135,9 +157,27 @@ export default function FoodPage() {
     [foods]
   );
 
+  // 搜索索引：id -> 全字段小写文本，避免每次筛选重复拼接
+  const searchIndex = useMemo(() => {
+    const m = new Map();
+    foods.forEach((f) => m.set(f.id, buildHaystack(f)));
+    return m;
+  }, [foods]);
+
   const filtered = useMemo(() => {
     const price = PRICE_RANGES.find((r) => r.value === filters.price);
+    // 空格分词，每个词都要命中（如「南山 火锅」）
+    const kws = String(filters.keyword || '')
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
     return foods.filter((f) => {
+      if (kws.length > 0) {
+        const hay = searchIndex.get(f.id) || '';
+        if (!kws.every((k) => hay.includes(k))) return false;
+      }
       if (filters.cuisine !== '全部' && String(f.cuisine || '').trim() !== filters.cuisine) return false;
       if (filters.area !== '全部' && String(f.area || '').trim() !== filters.area) return false;
       if (filters.recommender !== '全部' && String(f.recommender || '').trim() !== filters.recommender) return false;
@@ -149,9 +189,10 @@ export default function FoodPage() {
       }
       return true;
     });
-  }, [foods, filters]);
+  }, [foods, filters, searchIndex]);
 
   const activeCount =
+    (String(filters.keyword || '').trim() ? 1 : 0) +
     (filters.cuisine !== '全部' ? 1 : 0) +
     (filters.area !== '全部' ? 1 : 0) +
     (filters.recommender !== '全部' ? 1 : 0) +
@@ -487,6 +528,29 @@ export default function FoodPage() {
           )}
 
           <div className="filter-bar">
+            <div className="filter-field filter-field-search">
+              <label>搜索</label>
+              <div className="filter-search">
+                <input
+                  className={String(filters.keyword || '').trim() ? 'is-active' : ''}
+                  value={filters.keyword}
+                  onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                  placeholder="店名 / 菜系 / 特点 / 地址 / 推荐人 / 评价…"
+                  aria-label="搜索美食"
+                />
+                {filters.keyword && (
+                  <button
+                    type="button"
+                    className="filter-search-clear"
+                    aria-label="清空搜索"
+                    onClick={() => setFilters({ ...filters, keyword: '' })}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="filter-field">
               <label>菜系</label>
               <select
