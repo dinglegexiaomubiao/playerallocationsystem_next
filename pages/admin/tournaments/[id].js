@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import useSession from '../../../hooks/useSession';
 import { getSession, isAdmin } from '../../../lib/auth';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../lib/api-client.mjs';
+import { dateOnly } from '../../../lib/excel';
 
 const STATUS_LIST = [
   { value: 'planning', label: '筹办中' },
@@ -35,8 +36,9 @@ function normInfo(t) {
   return {
     name: t.name || '',
     status: t.status || 'planning',
-    start_date: String(t.start_date || '').slice(0, 10),
-    end_date: String(t.end_date || '').slice(0, 10),
+    // 不能用 slice(0,10)：start_date 是 timestamp，JSON 出来是 UTC ISO，+08 下会差一天
+    start_date: dateOnly(t.start_date),
+    end_date: dateOnly(t.end_date),
     sponsor_info: t.sponsor_info || '',
     champion_prize: t.champion_prize || '',
   };

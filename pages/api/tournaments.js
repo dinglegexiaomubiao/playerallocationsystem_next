@@ -1,6 +1,14 @@
 // Next.js API route for tournaments management
 import { pool } from '../../lib/db';
-import { denyIfNotLoggedIn, denyIfNotAdmin } from '../../lib/auth';
+import { denyIfNotLoggedIn, denyIfNotAdmin, denyIfImportNotAdmin } from '../../lib/auth';
+
+// POST 可写入的字段。单条「新建赛季」只传 name/起止日期，
+// Excel 批量导入会带上状态、赞助、奖金等完整信息，所以这里统一收口。
+const CREATABLE_FIELDS = [
+  'name', 'start_date', 'end_date', 'status',
+  'sponsor_info', 'champion_prize', 'runner_up_prize',
+  'champion_team_id', 'runner_up_team_id', 'third_place_team_id',
+];
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -9,22 +17,30 @@ export default async function handler(req, res) {
   try {
     switch (method) {
       case 'GET': {
+        // 额外带出冠/亚/季的队伍名：导出 Excel 时表格里要写队名而不是 id，
+        // 否则 N 个赛季就得发 N 次 /api/teams 请求
         const tournamentsResult = await client.query(`
           SELECT 
-            id, 
-            name, 
-            start_date, 
-            end_date, 
-            champion_team_id, 
-            runner_up_team_id,
-            third_place_team_id,
-            sponsor_info,
-            champion_prize,
-            runner_up_prize,
-            status,
-            created_at
-          FROM public.tournaments 
-          ORDER BY id DESC
+            t.id, 
+            t.name, 
+            t.start_date, 
+            t.end_date, 
+            t.champion_team_id, 
+            t.runner_up_team_id,
+            t.third_place_team_id,
+            t.sponsor_info,
+            t.champion_prize,
+            t.runner_up_prize,
+            t.status,
+            t.created_at,
+            tc.name AS champion_team_name,
+            tr.name AS runner_up_team_name,
+            tt.name AS third_place_team_name
+          FROM public.tournaments t
+          LEFT JOIN public.teams tc ON tc.id = t.champion_team_id
+          LEFT JOIN public.teams tr ON tr.id = t.runner_up_team_id
+          LEFT JOIN public.teams tt ON tt.id = t.third_place_team_id
+          ORDER BY t.id DESC
         `);
         
         res.status(200).json({
@@ -36,21 +52,37 @@ export default async function handler(req, res) {
 
       case 'POST': {
         if (denyIfNotLoggedIn(req, res)) break;
-        const { name, start_date, end_date } = req.body;
-        
-        if (!name) {
+        // 带 x-excel-import: 1 的批量导入必须是管理员
+        if (denyIfImportNotAdmin(req, res)) break;
+
+        const body = req.body || {};
+        const name = body.name;
+        if (!name || !String(name).trim()) {
           return res.status(400).json({
             success: false,
             message: '赛季名称不能为空'
           });
         }
-        
+
+        const fields = CREATABLE_FIELDS.filter((f) => body[f] !== undefined);
+        const values = fields.map((f) => {
+          const v = body[f];
+          return v === '' ? null : v;
+        });
+        // 状态没传时按老行为落 planning
+        if (!fields.includes('status')) {
+          fields.push('status');
+          values.push('planning');
+        }
+        fields.push('created_at');
+        values.push(new Date().toISOString());
+
+        const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
         const insertResult = await client.query(
-          `INSERT INTO public.tournaments 
-           (name, start_date, end_date, status, created_at) 
-           VALUES ($1, $2, $3, $4, $5) 
+          `INSERT INTO public.tournaments (${fields.join(', ')})
+           VALUES (${placeholders})
            RETURNING *`,
-          [name, start_date, end_date, 'planning', new Date().toISOString()]
+          values
         );
         
         res.status(201).json({
