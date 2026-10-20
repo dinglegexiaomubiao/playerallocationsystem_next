@@ -17,20 +17,20 @@ export default function Register() {
     if (!username.trim()) return setError('请输入登录账号');
     if (!password.trim()) return setError('请设置密码');
     if (!gameId.trim()) return setError('请填写 Steam 账号');
+    if (!/^\d{1,20}$/.test(gameId.trim())) return setError('Steam 账号应为纯数字 ID，例如 114678450');
+    if (!groupNickname.trim()) return setError('请填写群昵称');
     setLoading(true);
 
     try {
-      const response = await fetch('/api/login', {
+      // 走独立的注册接口（/api/login 只校验已有账号，不会再自动建号）
+      const response = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: username.trim(),
           password: password.trim(),
-          profile: {
-            game_id: gameId.trim(),
-            nickname: username.trim(),
-            group_nickname: groupNickname.trim() || null,
-          },
+          game_id: gameId.trim(),
+          group_nickname: groupNickname.trim() || null,
         }),
       });
 
@@ -88,12 +88,12 @@ export default function Register() {
             <div className="register-section">选手信息</div>
             <div className="form-row">
               <div className="form-field">
-                <label>Steam 账号 <span className="field-note">（唯一不变，用于识别）</span></label>
-                <input type="text" value={gameId} onChange={(e) => setGameId(e.target.value)} placeholder="例如 114678450" disabled={loading} />
+                <label>Steam 账号 <span className="field-note">（数字 ID，唯一不变，用于识别）</span></label>
+                <input type="text" inputMode="numeric" value={gameId} onChange={(e) => setGameId(e.target.value)} placeholder="例如 114678450" disabled={loading} />
               </div>
               <div className="form-field">
-                <label>群昵称</label>
-                <input type="text" value={groupNickname} onChange={(e) => setGroupNickname(e.target.value)} placeholder="群里怎么称呼" disabled={loading} />
+                <label>群昵称 <span className="field-note">（公开显示的名字）</span></label>
+                <input type="text" value={groupNickname} onChange={(e) => setGroupNickname(e.target.value)} placeholder="群里怎么称呼你" disabled={loading} />
               </div>
             </div>
             <div className="register-note">

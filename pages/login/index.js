@@ -6,16 +6,34 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  // 后端返回的错误码：USER_NOT_FOUND 时额外给一个「去注册」入口
+  const [errorCode, setErrorCode] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // 注册页要带上回跳参数，注册完才能回到原目标页
+  const fromQuery =
+    typeof router.query.from === 'string' &&
+    router.query.from.startsWith('/') &&
+    !router.query.from.startsWith('//')
+      ? router.query.from
+      : null;
+  const registerHref = fromQuery ? `/register?from=${encodeURIComponent(fromQuery)}` : '/register';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setErrorCode('');
     setLoading(true);
 
     if (!username.trim()) {
       setError('请输入用户名');
+      setLoading(false);
+      return;
+    }
+
+    if (!password.trim()) {
+      setError('请输入密码');
       setLoading(false);
       return;
     }
@@ -53,6 +71,7 @@ export default function Login() {
         }
       } else {
         setError(data.error || '登录失败');
+        setErrorCode(data.code || '');
       }
     } catch (err) {
       setError('网络错误，请稍后重试');
@@ -75,7 +94,6 @@ export default function Login() {
           <div className="login-header">
             <h1>深圳LaRoja Dota2社区</h1>
             <p>请输入您的用户名和密码</p>
-            <p className="login-hint">新用户将自动注册</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -99,7 +117,7 @@ export default function Login() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入或设置密码"
+                placeholder="请输入密码"
                 className="form-input"
                 disabled={loading}
               />
@@ -108,6 +126,12 @@ export default function Login() {
             {error && (
               <div className="error-message">
                 {error}
+                {errorCode === 'USER_NOT_FOUND' && (
+                  <>
+                    {' '}
+                    <a href={registerHref}>去注册 →</a>
+                  </>
+                )}
               </div>
             )}
 
@@ -121,11 +145,7 @@ export default function Login() {
 
             <div className="login-register-link">
               还没有账号？
-              <a
-                href={'/register' + (typeof router.query.from === 'string' && router.query.from.startsWith('/') ? '?from=' + encodeURIComponent(router.query.from) : '')}
-              >
-                填写选手资料注册
-              </a>
+              <a href={registerHref}>填写选手资料注册</a>
             </div>
           </form>
         </div>
