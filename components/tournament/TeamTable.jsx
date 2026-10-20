@@ -151,7 +151,9 @@ export default function TeamTable({ teams, matches, tournament }) {
             </div>
 
             {/* 天梯总分 */}
-            <div className="t-td-total t-num">{total || <span className="t-dash">—</span>}</div>
+            <div className="t-td-total t-num">
+              {total > 0 ? total : <span className="t-dash" />}
+            </div>
 
             {/* 阵容：默认展开，每行 5 人 */}
             <div className="t-td-roster">
@@ -181,8 +183,8 @@ export default function TeamTable({ teams, matches, tournament }) {
                       </span>
                       <span className="t-rp-pos">{pos || '位置未填'}</span>
                     </span>
-                    <span className={`t-rp-score ${score ? '' : 'empty'}`}>
-                      {score || '—'}
+                    <span className={`t-rp-score ${score ? '' : 't-rp-score--none'}`}>
+                      {score || ''}
                     </span>
                   </Link>
                 );

@@ -76,24 +76,14 @@ export default function TournamentDetail() {
     return {
       teamCount: teams.length,
       playerCount: ids.size,
+      signupCount: signups.length,
       matchCount: matches.length,
       championName:
         (t && (t.champion_team_name || t.champion_team?.name)) ||
         (teams.find((x) => Number(x.rank) === 1) || {}).name ||
         '',
     };
-  }, [teams, matches, t]);
-
-  const results = useMemo(() => {
-    if (!t) return [];
-    const pick = (name, rank) =>
-      name || (teams.find((x) => Number(x.rank) === rank) || {}).name || '';
-    return [
-      { key: 'gold', label: '冠军', name: pick(t.champion_team_name, 1) },
-      { key: 'silver', label: '亚军', name: pick(t.runner_up_team_name, 2) },
-      { key: 'bronze', label: '季军', name: pick(t.third_place_team_name, 3) },
-    ].filter((x) => x.name);
-  }, [t, teams]);
+  }, [teams, matches, t, signups]);
 
   /* 名次口径：teams.rank 优先，为空时回退到赛事的 champion/runner_up/third_place。
      第十一届就是这种情况——teams.rank 全空，冠军只记在 tournaments.champion_team_id。 */
@@ -120,6 +110,17 @@ export default function TournamentDetail() {
     });
   }, [teams, rankMap]);
 
+  const results = useMemo(() => {
+    if (!t) return [];
+    const pick = (name, rank) =>
+      name || (teams.find((x) => Number(x.rank) === rank) || {}).name || '';
+    return [
+      { key: 'gold', label: '冠军', name: pick(t.champion_team_name, 1) },
+      { key: 'silver', label: '亚军', name: pick(t.runner_up_team_name, 2) },
+      { key: 'bronze', label: '季军', name: pick(t.third_place_team_name, 3) },
+    ].filter((x) => x.name);
+  }, [t, teams]);
+
   /* 按轮次分组（没有轮次时归到「对阵」） */
   const groupedMatches = useMemo(() => {
     const list = rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }];
@@ -136,7 +137,7 @@ export default function TournamentDetail() {
   if (loading) {
     return (
       <div className="t-dark" style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
-        <div style={{ color: 'var(--t-text-3)', fontSize: 14 }}>加载赛事数据…</div>
+        <div className="t-eyebrow">加载赛事数据…</div>
       </div>
     );
   }
@@ -146,7 +147,7 @@ export default function TournamentDetail() {
       <div className="t-dark" style={{ minHeight: '70vh', display: 'grid', placeItems: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: 'var(--t-text-2)', marginBottom: 12 }}>赛事不存在</p>
-          <Link href="/tournaments" style={{ color: 'var(--t-brand)', fontSize: 14 }}>
+          <Link href="/tournaments" style={{ color: 'var(--t-red-ink)', fontSize: 13 }}>
             返回赛事列表
           </Link>
         </div>
@@ -180,168 +181,141 @@ export default function TournamentDetail() {
         </div>
       </div>
 
-      <div className="t-wrap" style={{ paddingBottom: 60 }}>
+      <div className="t-wrap" style={{ paddingBottom: 70 }}>
         {/* ==================== 概览 ==================== */}
         {tab === 'overview' && (
           <div className="t-overview">
-            <div>
+            <div className="t-overview-main">
               {groupedMatches.length > 0 && (
-                <div className="t-panel">
-                  <div className="t-panel-head">
-                    <span className="t-panel-title">决赛结果</span>
-                    <span className="t-panel-sub">{matches.length} 场比赛</span>
+                <section className="t-block">
+                  <div className="t-block-head">
+                    <h2 className="t-block-title">赛果</h2>
+                    <span className="t-block-sub">{matches.length} 场</span>
                   </div>
                   {groupedMatches.slice(-1).map((g) =>
                     g.items.map((m) => (
                       <MatchCard key={m.id} match={m} roundName={g.round.name} />
                     ))
                   )}
-                </div>
+                </section>
               )}
 
-              <div className="t-panel">
-                <div className="t-panel-head">
-                  <span className="t-panel-title">参赛队伍</span>
-                  <button
-                    type="button"
-                    onClick={() => setTab('teams')}
-                    style={{
-                      background: 'none',
-                      border: 0,
-                      color: 'var(--t-brand)',
-                      fontSize: 12.5,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      padding: 0,
-                    }}
-                  >
-                    查看全部 {teams.length} 支 →
+              <section className="t-block">
+                <div className="t-block-head">
+                  <h2 className="t-block-title">参赛队伍</h2>
+                  <button type="button" className="t-block-link" onClick={() => setTab('teams')}>
+                    全部 {teams.length} 支 →
                   </button>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {sortedTeams.map((tm) => {
-                    const rk = rankMap.get(String(tm.id)) || 0;
-                    return (
-                      <span key={tm.id} className="t-chip" style={{ padding: '4px 10px', fontSize: 12.5 }}>
-                        {rk > 0 && (
-                          <span style={{ color: 'var(--t-gold)', marginRight: 5 }}>
-                            {rk === 1 ? '冠' : rk === 2 ? '亚' : '季'}
-                          </span>
-                        )}
-                        {tm.name}
-                      </span>
-                    );
-                  })}
-                  {teams.length === 0 && <span className="t-tr-muted">暂无队伍</span>}
-                </div>
-              </div>
+                {sortedTeams.length === 0 ? (
+                  <div className="t-tr-muted">暂无队伍</div>
+                ) : (
+                  <div className="t-team-list">
+                    {sortedTeams.map((tm) => {
+                      const rk = rankMap.get(String(tm.id)) || 0;
+                      return (
+                        <span className="t-team-item" key={tm.id}>
+                          {rk > 0 && (
+                            <span className="rk">{rk === 1 ? '冠' : rk === 2 ? '亚' : '季'}</span>
+                          )}
+                          {tm.name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
 
-            <div>
-              <div className="t-panel">
-                <div className="t-panel-head">
-                  <span className="t-panel-title">最终名次</span>
+            <aside className="t-overview-side">
+              <section className="t-block">
+                <div className="t-block-head">
+                  <h2 className="t-block-title">最终名次</h2>
                 </div>
                 {results.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div className="t-deflist">
                     {results.map((r) => (
-                      <div
-                        key={r.key}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: '9px 12px',
-                          background: 'rgba(255,255,255,.03)',
-                          borderRadius: 9,
-                        }}
-                      >
-                        <span style={{ fontSize: 12.5, color: 'var(--t-text-3)' }}>{r.label}</span>
-                        <span
-                          style={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: r.key === 'gold' ? 'var(--t-gold)' : 'var(--t-text)',
-                          }}
-                        >
+                      <div className="t-def" key={r.key}>
+                        <span className="t-def-k">{r.label}</span>
+                        <span className={`t-def-v ${r.key === 'gold' ? 'bronze' : ''}`}>
                           {r.name}
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="t-empty" style={{ padding: '24px 0' }}>
-                    名次尚未录入
-                  </div>
+                  <div className="t-tr-muted">名次尚未录入</div>
                 )}
-              </div>
+              </section>
 
-              <div className="t-panel">
-                <div className="t-panel-head">
-                  <span className="t-panel-title">赛事信息</span>
+              <section className="t-block">
+                <div className="t-block-head">
+                  <h2 className="t-block-title">赛事信息</h2>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, fontSize: 13 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t-text-3)' }}>时间</span>
-                    <span>
+                <div className="t-deflist">
+                  <div className="t-def">
+                    <span className="t-def-k">时间</span>
+                    <span className="t-def-v">
                       {fmtDate(t.start_date)} — {fmtDate(t.end_date)}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t-text-3)' }}>报名选手</span>
-                    <span>{signups.length} 人</span>
+                  <div className="t-def">
+                    <span className="t-def-k">报名选手</span>
+                    <span className="t-def-v">{signups.length} 人</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--t-text-3)' }}>参赛选手</span>
-                    <span>{stats.playerCount} 人</span>
+                  <div className="t-def">
+                    <span className="t-def-k">参赛选手</span>
+                    <span className="t-def-v">{stats.playerCount} 人</span>
                   </div>
                   {t.sponsor_info && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
-                      <span style={{ color: 'var(--t-text-3)', flexShrink: 0 }}>赞助</span>
-                      <span style={{ textAlign: 'right' }}>{t.sponsor_info}</span>
+                    <div className="t-def">
+                      <span className="t-def-k">赞助</span>
+                      <span className="t-def-v">{t.sponsor_info}</span>
                     </div>
                   )}
                   {t.champion_prize && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--t-text-3)' }}>冠军奖金</span>
-                      <span style={{ color: 'var(--t-gold)' }}>{t.champion_prize}</span>
+                    <div className="t-def">
+                      <span className="t-def-k">冠军奖金</span>
+                      <span className="t-def-v bronze">{t.champion_prize}</span>
                     </div>
                   )}
                   {t.runner_up_prize && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: 'var(--t-text-3)' }}>亚军奖金</span>
-                      <span>{t.runner_up_prize}</span>
+                    <div className="t-def">
+                      <span className="t-def-k">亚军奖金</span>
+                      <span className="t-def-v">{t.runner_up_prize}</span>
                     </div>
                   )}
                 </div>
 
-                <div style={{ marginTop: 16 }}>
+                <div style={{ marginTop: 18 }}>
                   <SignupButton
                     tournamentId={id}
                     locked={t.status === 'finished' || t.status === 'done'}
                   />
                 </div>
-              </div>
-            </div>
+              </section>
+            </aside>
           </div>
         )}
 
         {/* ==================== 赛程与对阵 ==================== */}
         {tab === 'matches' && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 22 }}>
             {groupedMatches.length === 0 ? (
               <div className="t-empty">暂无赛程数据</div>
             ) : (
-              groupedMatches.map((g) => (
-                <div key={g.round.id || 'ungrouped'} style={{ marginBottom: 26 }}>
-                  <div className="t-section-title" style={{ marginTop: 0 }}>
+              groupedMatches.map((g, gi) => (
+                <section key={g.round.id || 'ungrouped'} style={{ marginTop: gi === 0 ? 0 : 34 }}>
+                  <div className="t-section-title">
                     {g.round.name}
                     <span
                       style={{
-                        fontSize: 12.5,
+                        marginLeft: 4,
+                        fontFamily: 'var(--t-mono)',
+                        fontSize: 10.5,
+                        letterSpacing: 0,
                         color: 'var(--t-text-3)',
                         fontWeight: 400,
-                        marginLeft: 10,
                       }}
                     >
                       {g.items.length} 场
@@ -350,7 +324,7 @@ export default function TournamentDetail() {
                   {g.items.map((m) => (
                     <MatchCard key={m.id} match={m} roundName={g.round.name} />
                   ))}
-                </div>
+                </section>
               ))
             )}
           </div>
@@ -358,14 +332,14 @@ export default function TournamentDetail() {
 
         {/* ==================== 参赛队伍 ==================== */}
         {tab === 'teams' && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 26 }}>
             <TeamTable teams={teams} matches={matches} tournament={t} />
           </div>
         )}
 
         {/* ==================== 报名选手 ==================== */}
         {tab === 'players' && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 26 }}>
             <PlayerTable signups={signups} teams={teams} />
           </div>
         )}

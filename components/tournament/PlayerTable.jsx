@@ -27,6 +27,15 @@ function PlayerAvatar({ playerId, name, size = 28 }) {
 
 const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
 
+/* 报名时间：只显示月-日 时:分，年份对单届赛事没意义 */
+const fmtSigned = (v) => {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 /**
  * 报名选手表格
  *
@@ -143,7 +152,7 @@ export default function PlayerTable({ signups = [], teams = [] }) {
           <span style={{ textAlign: 'right' }}>天梯分</span>
           <span>常玩位置</span>
           <span>所属队伍</span>
-          <span>状态</span>
+          <span style={{ textAlign: 'right' }}>报名时间</span>
         </div>
 
         {rows.length === 0 && (
@@ -163,8 +172,8 @@ export default function PlayerTable({ signups = [], teams = [] }) {
               {s.is_captain && <span className="t-chip gold" style={{ marginLeft: 6 }}>队长</span>}
             </Link>
             <span className="t-tr-num">{s.score || 0}</span>
-            <span className="t-tr-muted">
-              {s.posList.length > 0 ? s.posList.slice(0, 2).join(' / ') : '未填'}
+            <span className="t-tr-pos">
+              {s.posList.length > 0 ? s.posList.join(' / ') : '未填'}
             </span>
             <span className="t-tr-muted">
               {s.teamName ? (
@@ -173,9 +182,7 @@ export default function PlayerTable({ signups = [], teams = [] }) {
                 <span className="t-chip muted">未组队</span>
               )}
             </span>
-            <span>
-              <span className="t-chip">{s.is_captain ? '队长' : '选手'}</span>
-            </span>
+            <span className="t-tr-time">{fmtSigned(s.signed_at)}</span>
           </div>
         ))}
       </div>
