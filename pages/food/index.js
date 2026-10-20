@@ -3,9 +3,6 @@ import Head from 'next/head';
 import ExcelIO from '../../components/ExcelIO';
 import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
 
-const CUISINES = ['全部', '烧烤', '火锅', '川菜', '湘菜', '粤菜', '江浙', '日料', '韩餐', '西餐', '小吃', '甜点', '夜宵', '其他'];
-const FORM_CUISINES = CUISINES.filter((c) => c !== '全部');
-
 // 美团人均价格区间（元）。min/max 为 null 表示该侧不设限
 const PRICE_RANGES = [
   { value: 'all', label: '不限', min: null, max: null },
@@ -58,7 +55,7 @@ const countReviews = (rows) =>
 
 const EMPTY_FORM = {
   name: '',
-  cuisine: '小吃',
+  cuisine: '',
   area: '',
   address: '',
   feature: '',
@@ -163,7 +160,7 @@ export default function FoodPage() {
   const startEdit = (f) => {
     setForm({
       name: f.name || '',
-      cuisine: f.cuisine || '小吃',
+      cuisine: f.cuisine || '',
       area: f.area || '',
       address: f.address || '',
       feature: f.feature || '',
@@ -401,11 +398,17 @@ export default function FoodPage() {
                 </div>
                 <div>
                   <label>菜系</label>
-                  <select value={form.cuisine} onChange={(e) => setForm({ ...form, cuisine: e.target.value })}>
-                    {FORM_CUISINES.map((c) => (
-                      <option key={c}>{c}</option>
+                  <input
+                    list="food-cuisine-options"
+                    value={form.cuisine}
+                    onChange={(e) => setForm({ ...form, cuisine: e.target.value })}
+                    placeholder="可输入新菜系，或从已有中选"
+                  />
+                  <datalist id="food-cuisine-options">
+                    {facets.cuisine.map(([k]) => (
+                      <option key={k} value={k} />
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
               <div className="row" style={{ marginTop: 12 }}>
