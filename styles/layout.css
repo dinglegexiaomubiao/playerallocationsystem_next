@@ -357,18 +357,53 @@ a { text-decoration: none; color: inherit; }
 /* ===== 玩家卡片墙 ===== */
 .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
 .p-card {
+  position: relative; /* 整卡点击覆盖层的定位锚点 */
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
   box-shadow: var(--shadow-sm); transition: all .2s ease;
 }
 .p-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--border-strong); }
+/* 卡片整体仍可点进详情：用一层透明链接盖住，避免在卡片里嵌 <a> 又把按钮包进链接 */
+.p-card-hit { position: absolute; inset: 0; border-radius: inherit; z-index: 1; }
+.p-card-hit:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .p-head { display: flex; align-items: center; gap: 12px; }
+.p-head-main { flex: 1 1 auto; min-width: 0; }
 .p-avatar {
   width: 48px; height: 48px; border-radius: 13px; background: linear-gradient(135deg, var(--brand), #60a5fa);
   color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
 }
 .p-name { font-weight: 700; font-size: 1.02rem; }
-.p-id { font-size: .78rem; color: var(--text-3); }
+.p-region {
+  display: flex; align-items: center; gap: 3px; margin-top: 2px;
+  font-size: .76rem; color: var(--text-3); min-width: 0;
+}
+.p-region-icon { flex: 0 0 auto; font-size: .72rem; line-height: 1; }
+.p-region-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-score { margin-left: auto; font-weight: 800; font-size: 1.02rem; padding: 4px 10px; border-radius: 9px; }
+
+/* steamID 独占一行：卡片宽度放不下「steamID + 17 位数字」，与其截断不如换行完整展示 */
+.p-steam {
+  position: relative; z-index: 2; /* 浮到整卡覆盖层之上，文字可选中、按钮可点 */
+  display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 12px;
+  padding: 6px 8px; border-radius: 8px; background: var(--bg-subtle);
+}
+.p-steam-lbl { flex: 0 0 auto; font-size: .7rem; font-weight: 700; letter-spacing: .02em; color: var(--text-3); text-transform: uppercase; }
+.p-steam-val {
+  flex: 1 1 auto; min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .82rem; font-weight: 600; color: var(--text);
+  /* 完整显示：不截断、不省略，实在放不下就换行 */
+  white-space: normal; overflow-wrap: anywhere; word-break: break-all;
+  user-select: all;
+}
+.p-copy {
+  flex: 0 0 auto; min-width: 52px; cursor: pointer;
+  font-size: .72rem; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+  color: var(--brand); background: #fff; border: 1px solid var(--border-strong);
+  transition: all .15s ease;
+}
+.p-copy:hover { background: var(--brand); border-color: var(--brand); color: #fff; }
+.p-copy:active { transform: scale(.96); }
+.p-copy.is-done { background: var(--brand); border-color: var(--brand); color: #fff; }
 .score-immortal { background: #fdece9; color: #c23c2a; }
 .score-divine { background: #ede9fe; color: #6d28d9; }
 .score-ancient { background: #e0f0fe; color: #1e5fa8; }
@@ -384,6 +419,17 @@ a { text-decoration: none; color: inherit; }
 .p-heroes .h .h-avatar { margin-left: -4px; }
 .p-heroes .h-synergy { background: var(--brand-soft); color: var(--brand); }
 .p-heroes .h-enemy { background: var(--accent-soft); color: var(--accent); }
+/* 荣誉徽章：冠军 / 亚军数量是群友页最常看的两项，单独一行给足空间 */
+.p-honors { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.p-honor {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: .75rem; font-weight: 600; padding: 4px 10px; border-radius: 8px;
+  border: 1px solid transparent;
+}
+.p-honor b { font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.p-honor-icon { font-size: .8rem; line-height: 1; }
+.p-honor.gold { background: #fdf6e3; color: #8a6408; border-color: #f2e3b8; }
+.p-honor.silver { background: #f2f5f9; color: #4e5d73; border-color: #dfe6ef; }
 .p-foot {
   margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--bg-subtle);
   display: flex; align-items: center; justify-content: space-between; font-size: .8rem; color: var(--text-2);
@@ -876,8 +922,8 @@ a { text-decoration: none; color: inherit; }
 .detail-head h1,
 .detail-head h2 { overflow-wrap: anywhere; }
 
-/* 单行信息一律截断，不换行 */
-.p-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 单行信息截断统一在各自类里写（.p-region-val）。
+   群友卡片的 steamID 反而要求完整显示，所以这里不再有全局截断规则。 */
 
 /* 弹性/网格行里的文本列：允许收缩，避免把兄弟元素顶出去 */
 .p-head > *,

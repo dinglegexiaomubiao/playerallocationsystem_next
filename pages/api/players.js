@@ -122,6 +122,7 @@ export default async function handler(req, res) {
         const formattedPlayers = players.map(player => {
           const records = recordsByPlayer.get(String(player.id)) || [];
           const titles = records.filter((r) => r.team_rank === 1).length;
+          const runnerUps = records.filter((r) => r.team_rank === 2).length;
           const legacyTitles = player.championships ? parseInt(player.championships, 10) || 0 : 0;
           const ranks = records.map((r) => r.team_rank).filter((n) => typeof n === 'number');
           return {
@@ -134,6 +135,8 @@ export default async function handler(req, res) {
             // 老数据里导入过冠军数的，取两者较大值以免历史战绩"消失"
             championships: Math.max(legacyTitles, titles),
             championships_legacy: legacyTitles,
+            // 亚军数没有历史字段可兼容，直接按 teams.rank=2 实算
+            runner_up: runnerUps,
             // 比赛记录（页面上的「比赛记录」直接用这份）
             records,
             record_count: records.length,

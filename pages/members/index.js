@@ -23,6 +23,33 @@ const SCORE_RANGES = [
   { value: 'none', label: '未填写分数', min: null, max: null, none: true },
 ];
 
+// 复制到剪贴板。navigator.clipboard 只在安全上下文（https / localhost）可用，
+// 局域网 IP 访问时会 undefined，所以保留 execCommand 兜底。
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (e) {
+    /* 落到下面的兜底 */
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 const EMPTY_FILTERS = {
   keyword: '',
   tier: 'all',
@@ -56,8 +83,20 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // 刚复制成功的选手 id，用来把按钮临时切成「已复制」
+  const [copiedId, setCopiedId] = useState(null);
   // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
   const { isAdmin } = useSession();
+
+  const handleCopy = async (e, id, text) => {
+    // 卡片整体是个链接，复制按钮必须拦掉冒泡，否则会顺带跳转
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = await copyText(text);
+    if (!ok) return;
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1600);
+  };
 
   const reload = () => {
     fetch('/api/players')
@@ -436,20 +475,51 @@ export default function MembersPage() {
           <div className="players-grid">
             {filtered.map((p) => {
               const t = tierOf(p.score || 0);
+              const champCount = p.championships || 0;
+              // 亚军数优先用接口实算值；老数据（接口未返回该字段）就地按队伍名次兜底
+              const runnerUpCount =
+                typeof p.runner_up === 'number'
+                  ? p.runner_up
+                  : (p.records || []).filter((r) => r.team_rank === 2).length;
+              const steamId = String(p.game_id || '').trim();
               return (
-                <Link href={'/members/' + p.id} className="p-card" key={p.id}>
+                <div className="p-card" key={p.id}>
+                  {/* 整卡可点：绝对定位的链接盖住卡片，复制按钮/steamID 行再浮到它上面 */}
+                  <Link
+                    href={'/members/' + p.id}
+                    className="p-card-hit"
+                    aria-label={`查看 ${p.nickname || '选手'} 详情`}
+                  />
                   <div className="p-head">
                     <Avatar className="p-avatar" src={p.avatar} name={p.nickname} />
-                    <div>
+                    <div className="p-head-main">
                       <div className="p-name">{p.nickname || '未命名'}</div>
-                      <div className="p-id">
-                        steamID {p.game_id || '—'}
-                        {p.region ? ' · ' + p.region : ''}
+                      <div className="p-region" title={p.region || '未填写地区'}>
+                        <span className="p-region-icon" aria-hidden="true">
+                          📍
+                        </span>
+                        <span className="p-region-val">{p.region || '未填写地区'}</span>
                       </div>
                     </div>
                     <div className={`p-score ${t.cls}`} title={t.label}>
                       {p.score || 0}
                     </div>
+                  </div>
+                  <div className="p-steam">
+                    <span className="p-steam-lbl">steamID</span>
+                    <span className="p-steam-val" title={steamId}>
+                      {steamId || '未填写'}
+                    </span>
+                    {steamId && (
+                      <button
+                        type="button"
+                        className={'p-copy' + (copiedId === p.id ? ' is-done' : '')}
+                        onClick={(e) => handleCopy(e, p.id, steamId)}
+                        title={`复制 steamID：${steamId}`}
+                      >
+                        {copiedId === p.id ? '已复制' : '复制'}
+                      </button>
+                    )}
                   </div>
                   <div className="p-tags">
                     {(p.positions || []).length > 0 ? (
@@ -500,14 +570,25 @@ export default function MembersPage() {
                       )}
                     </div>
                   )}
-                  <div className="p-foot">
-                    <span>
-                      🏆 冠军 {p.championships || 0} 个
-                      {p.record_count > 0 ? ` · 参赛 ${p.record_count} 届` : ''}
+                  <div className="p-honors">
+                    <span className="p-honor gold" title={`冠军 ${champCount} 次`}>
+                      <span className="p-honor-icon" aria-hidden="true">
+                        🏆
+                      </span>
+                      <b>{champCount}</b> 冠军
                     </span>
+                    <span className="p-honor silver" title={`亚军 ${runnerUpCount} 次`}>
+                      <span className="p-honor-icon" aria-hidden="true">
+                        🥈
+                      </span>
+                      <b>{runnerUpCount}</b> 亚军
+                    </span>
+                  </div>
+                  <div className="p-foot">
+                    <span>{p.record_count > 0 ? `参赛 ${p.record_count} 届` : '暂无参赛记录'}</span>
                     <span className="p-foot-go">{t.label} →</span>
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>
