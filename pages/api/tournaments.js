@@ -1,5 +1,6 @@
 // Next.js API route for tournaments management
 import { pool } from '../../lib/db';
+import { denyIfNotLoggedIn, denyIfNotAdmin } from '../../lib/auth';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
       }
 
       case 'POST': {
+        if (denyIfNotLoggedIn(req, res)) break;
         const { name, start_date, end_date } = req.body;
         
         if (!name) {
@@ -59,6 +61,7 @@ export default async function handler(req, res) {
       }
 
       case 'PUT': {
+        if (denyIfNotAdmin(req, res, '仅管理员可修改赛事信息')) break;
         const { id } = req.query;
         const updateData = req.body;
         

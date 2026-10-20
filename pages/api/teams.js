@@ -1,5 +1,6 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { getAllTeams, getPlayersInTeam, addTeam, updateTeam, deleteTeam } from '../../lib/db';
+import { denyIfNotLoggedIn, denyIfNotAdmin } from '../../lib/auth';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -53,6 +54,7 @@ export default async function handler(req, res) {
       break;
 
     case 'POST':
+      if (denyIfNotLoggedIn(req, res)) return;
       try {
         const { name, tournament_id, created_at, updated_at } = req.body;
         const newTeam = await addTeam({ name, created_at, updated_at }, tournament_id);
@@ -64,6 +66,7 @@ export default async function handler(req, res) {
       break;
 
     case 'PUT':
+      if (denyIfNotLoggedIn(req, res)) return;
       try {
         const { id, ...updates } = req.body;
         if (!id) {
@@ -78,6 +81,7 @@ export default async function handler(req, res) {
       break;
 
     case 'DELETE':
+      if (denyIfNotAdmin(req, res, '仅管理员可删除队伍')) return;
       try {
         const { id, teamId } = req.body;
         const targetId = id || teamId;

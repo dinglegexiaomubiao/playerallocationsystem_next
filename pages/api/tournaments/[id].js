@@ -1,5 +1,6 @@
 // Next.js API route for managing individual tournament
 import { pool } from '../../../lib/db';
+import { denyIfNotAdmin } from '../../../lib/auth';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -44,6 +45,7 @@ export default async function handler(req, res) {
       }
 
       case 'PUT': {
+        if (denyIfNotAdmin(req, res, '仅管理员可修改赛事信息')) break;
         const updateData = req.body;
         console.log('PUT tournaments/[id] - updateData:', JSON.stringify(updateData), 'id:', id);
 
@@ -108,6 +110,7 @@ export default async function handler(req, res) {
       }
 
       case 'DELETE': {
+        if (denyIfNotAdmin(req, res, '仅管理员可删除赛季')) break;
         // 先删除关联数据，再删除赛季本身
         await client.query('BEGIN');
         

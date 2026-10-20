@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { denyIfNotLoggedIn } from '../../lib/auth';
 
 // Simple in-memory cache (TTL: 30 minutes)
 const cache = new Map();
@@ -139,6 +140,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // 该接口会真实消耗 Anthropic 额度，必须登录后才能触发
+  if (denyIfNotLoggedIn(req, res, '请先登录后再使用 AI 分析')) return;
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({ error: 'AI API key not configured' });

@@ -1,11 +1,14 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { addPlayerToTeam, removePlayerFromTeam, updateTeamPlayers } from '../../lib/db';
+import { denyIfNotLoggedIn } from '../../lib/auth';
 
 export default async function handler(req, res) {
   const { method } = req;
 
   switch (method) {
+    // 加入队伍 / 踢人 / 调整队员都属于日常操作，只要求登录，不要求管理员
     case 'POST':
+      if (denyIfNotLoggedIn(req, res)) return;
       try {
         const { teamId, playerId, tournament_id } = req.body;
         await addPlayerToTeam(teamId, playerId, tournament_id);
@@ -17,6 +20,7 @@ export default async function handler(req, res) {
       break;
 
     case 'DELETE':
+      if (denyIfNotLoggedIn(req, res)) return;
       try {
         const { teamId, playerId, tournament_id } = req.body;
         await removePlayerFromTeam(teamId, playerId, tournament_id);
@@ -28,6 +32,7 @@ export default async function handler(req, res) {
       break;
 
     case 'PUT':
+      if (denyIfNotLoggedIn(req, res)) return;
       try {
         const { teamId, playerIds, tournament_id } = req.body;
         await updateTeamPlayers(teamId, playerIds, tournament_id);
