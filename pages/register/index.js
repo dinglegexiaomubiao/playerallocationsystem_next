@@ -43,7 +43,9 @@ export default function Register() {
           !router.query.from.startsWith('//')
             ? router.query.from
             : null;
-        router.push(from || (data.isAdmin ? '/main' : '/profile'));
+        // 新注册落「个人信息」继续补资料；有 ?from= 才回跳。
+        // 不再按管理员分流去 /main —— 分配工具只是站内一个子工具，不是登录落点。
+        router.push(from || '/profile');
       } else {
         setError(data.error || '注册失败');
       }

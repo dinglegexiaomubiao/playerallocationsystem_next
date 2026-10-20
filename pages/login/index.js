@@ -66,8 +66,8 @@ export default function Login() {
         if (from) {
           router.push(from);
         } else {
-          // 管理员进管理后台，普通群友回社区首页
-          router.push(data.isAdmin ? '/main' : '/');
+          // 登录后一律回社区首页；管理员想去分配工具/后台，走导航上的「管理后台」入口
+          router.push('/');
         }
       } else {
         setError(data.error || '登录失败');

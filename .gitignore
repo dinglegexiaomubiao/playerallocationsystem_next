@@ -60,3 +60,5 @@ data/*.json
 
 # WorkBuddy 本地数据（记忆等）
 .workbuddy/
+# 无头浏览器临时 profile（验证脚本用，跑完即删，禁止入库）
+_*_profile/
