@@ -5,18 +5,18 @@ import useSession from '../hooks/useSession';
 import { footerAccountItems } from '../lib/nav-items.mjs';
 
 // 顶级导航：只放「全站板块」，个人相关入口按登录态追加
+// 注意：这里是永不折行的原子单元，每一项都在偷宽度预算。
+// 「我的赛事」已并入「个人信息」与「赛事信息」两页，不再单独占一个 tab。
 const PRIMARY_NAV = [
   { href: '/', label: '首页' },
+  { href: '/party', label: '开黑组队' },
   { href: '/tournaments', label: '赛事信息' },
   { href: '/members', label: '群友信息' },
   { href: '/food', label: '群友美食' },
 ];
 
 // 登录后追加的次级入口
-const ACCOUNT_NAV = [
-  { href: '/profile', label: '个人信息' },
-  { href: '/my-tournaments', label: '我的赛事' },
-];
+const ACCOUNT_NAV = [{ href: '/profile', label: '个人信息' }];
 
 export default function Layout({ children }) {
   const router = useRouter();
@@ -161,6 +161,7 @@ export default function Layout({ children }) {
               <Link href="/tournaments">赛事信息</Link>
               <Link href="/members">群友信息</Link>
               <Link href="/food">群友美食</Link>
+              <Link href="/party">开黑组队</Link>
               <Link href="/members/assign">阵容分配</Link>
             </div>
             <div>

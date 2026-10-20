@@ -1002,3 +1002,207 @@ a { text-decoration: none; color: inherit; }
   .bind-search input { flex-basis: 100%; }
   .bind-hit-foot { align-items: flex-start; }
 }
+
+/* ============================================================
+   开黑组队（/party）
+   ------------------------------------------------------------
+   依然遵守上面的安全边界层：徽标/按钮 nowrap 且不压缩，
+   文本列 min-width:0 可换行，卡片内距走 --card-pad。
+   ============================================================ */
+
+/* --- 区块小标题（个人信息页 / 赛事信息页的「我的赛事」） --- */
+.sec-title { font-size: 1.3rem; font-weight: 800; margin: 26px 0 14px; overflow-wrap: anywhere; }
+
+/* --- 个人信息卡片：原来塞在一个 1fr/1.4fr 两列网格里，右列永远空着 --- */
+.profile-cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--gutter); align-items: start;
+}
+@media (max-width: 560px) { .profile-cards { grid-template-columns: minmax(0, 1fr); } }
+
+/* --- 「我的赛事」表：6 列 --- */
+.adm-row-6 { grid-template-columns: 1.5fr .85fr .85fr 1.15fr .8fr .85fr; }
+.my-signup-note {
+  display: inline-block; margin-left: 6px; font-size: .74rem; color: var(--text-3); white-space: nowrap;
+}
+
+/* --- 危险操作按钮 --- */
+.btn-danger { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(194,60,42,.24); }
+.btn-danger:hover { background: #a83325; transform: translateY(-1px); }
+
+/* --- 列表网格 --- */
+.party-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px; align-items: start; /* 卡片按自身内容定高，短卡不跟长卡拉平留白 */
+}
+
+/* --- 卡片 --- */
+.party-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--card-pad); box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.party-card:hover { box-shadow: var(--shadow); border-color: var(--border-strong); }
+.party-card.is-closed { background: #fbfcfd; }
+.party-card.is-closed .pg-rows { opacity: .72; }
+
+/* 顶栏：模式 + 状态 + 时间 */
+.pg-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; row-gap: 6px; }
+.pg-top > * { min-width: 0; flex: 0 0 auto; }
+.pg-mode {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+}
+.pg-mode-ranked { background: var(--accent-soft); color: var(--accent); }
+.pg-mode-normal { background: var(--brand-soft); color: var(--brand); }
+.pg-mode-single_draft { background: var(--gold-soft); color: #8a6d00; }
+.pg-mode-turbo { background: var(--green-soft); color: #15803d; }
+.pg-time {
+  margin-left: auto; font-size: .82rem; color: var(--text-2); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+
+/* 发起人 */
+.pg-owner {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 12px; border-bottom: 1px solid var(--bg-subtle);
+}
+.pg-owner > * { min-width: 0; }
+.pg-av {
+  width: 40px; height: 40px; border-radius: 12px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--brand), #60a5fa); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: .98rem;
+}
+.pg-owner-id { flex: 1 1 auto; min-width: 0; }
+.pg-owner-name {
+  display: block; font-weight: 800; font-size: .98rem; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+a.pg-owner-name:hover { color: var(--brand); text-decoration: underline; }
+.pg-owner-sub {
+  font-size: .76rem; color: var(--text-3); margin-top: 1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 分数徽标 */
+.party-score {
+  display: inline-flex; align-items: baseline; gap: 5px; flex: 0 0 auto;
+  padding: 3px 9px; border-radius: 9px; font-weight: 800; font-size: .92rem; white-space: nowrap;
+}
+.party-score i { font-style: normal; font-size: .68rem; font-weight: 600; opacity: .75; }
+.party-rank-only {
+  display: inline-block; flex: 0 0 auto; white-space: nowrap;
+  padding: 2px 9px; border-radius: 999px; background: var(--bg-subtle);
+  color: var(--text-2); font-size: .74rem; font-weight: 600;
+}
+.party-none { font-size: .8rem; color: var(--text-3); }
+.party-range-text { font-size: .8rem; color: var(--text-2); white-space: nowrap; }
+
+/* 信息行 */
+.pg-rows { display: flex; flex-direction: column; gap: 9px; }
+.pg-row { display: flex; gap: 10px; font-size: .84rem; align-items: flex-start; }
+.pg-row > * { min-width: 0; }
+.pg-k { flex: 0 0 62px; width: 62px; color: var(--text-3); font-size: .78rem; white-space: nowrap; }
+.pg-v { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.pg-note { display: block; color: var(--text-2); line-height: 1.7; white-space: pre-wrap; }
+
+/* 报名名单 */
+.pg-signups { border-top: 1px solid var(--bg-subtle); padding-top: 12px; }
+.pg-signups-head { font-size: .8rem; color: var(--text-2); margin-bottom: 10px; }
+.pg-signups-head b { color: var(--brand); font-size: .95rem; }
+.pg-signup { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; }
+.pg-signup + .pg-signup { border-top: 1px dashed var(--bg-subtle); }
+.pg-signup > * { min-width: 0; }
+.pg-signup-av {
+  width: 28px; height: 28px; border-radius: 9px; flex: 0 0 auto;
+  background: var(--bg-subtle); color: var(--text-2);
+  display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .78rem;
+}
+.pg-signup-main { flex: 1 1 auto; min-width: 0; }
+.pg-signup-name {
+  font-size: .86rem; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
+}
+a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
+.pg-signup-meta { font-size: .75rem; color: var(--text-3); margin-top: 1px; overflow-wrap: anywhere; }
+.pg-signup-side { flex: 0 0 auto; text-align: right; display: flex; flex-direction: column; gap: 2px; }
+.pg-eta { font-size: .76rem; font-weight: 700; color: var(--brand); white-space: nowrap; }
+.pg-signup-time { font-size: .72rem; color: var(--text-3); white-space: nowrap; }
+
+/* 底栏 */
+.pg-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; row-gap: 10px;
+  margin-top: auto; padding-top: 12px; border-top: 1px solid var(--bg-subtle);
+}
+.pg-foot > * { min-width: 0; }
+.pg-foot-note { font-size: .78rem; color: var(--text-3); flex: 1 1 140px; overflow-wrap: anywhere; }
+.pg-actions { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+.party-card .adm-error { margin-bottom: 0; }
+
+/* --- 报名弹窗 --- */
+.party-signup-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+.party-signup-fill {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: var(--radius-sm); background: var(--brand-soft);
+}
+.party-signup-fill-hint { font-size: .78rem; color: var(--brand-dark); flex: 1 1 180px; overflow-wrap: anywhere; }
+.party-signup-body .form-row { grid-template-columns: 1fr 1fr; }
+@media (max-width: 560px) { .party-signup-body .form-row { grid-template-columns: 1fr; } }
+
+/* --- 新建卡片表单 --- */
+.party-form {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: var(--card-pad); box-shadow: var(--shadow); margin-bottom: 22px;
+}
+.party-form-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 16px;
+}
+.party-form-head h3 { font-size: 1.08rem; font-weight: 800; }
+.party-form-head-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.party-section-label {
+  font-size: .78rem; font-weight: 800; color: var(--text-3); letter-spacing: .04em;
+  margin: 18px 0 10px; padding-top: 4px;
+}
+.party-section-label:first-of-type { margin-top: 0; }
+.party-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.party-mode-opt {
+  display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
+  padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; text-align: left;
+  border: 1px solid var(--border-strong); background: #fff; font-family: inherit;
+  transition: all .15s ease; min-width: 0;
+}
+.party-mode-opt b { font-size: .88rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.party-mode-opt span { font-size: .72rem; color: var(--text-3); overflow-wrap: anywhere; }
+.party-mode-opt:hover { border-color: var(--brand); }
+.party-mode-opt.active { border-color: var(--brand); background: var(--brand-soft); }
+.party-mode-opt.active b { color: var(--brand-dark); }
+.party-range { display: flex; align-items: center; gap: 6px; }
+.party-range span { color: var(--text-3); flex: 0 0 auto; }
+.party-range input { min-width: 0; }
+.party-form-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 8px; }
+.party-form-hint { font-size: .78rem; color: var(--text-3); flex: 1 1 200px; overflow-wrap: anywhere; }
+.party-lock {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px; border-radius: var(--radius-sm); background: var(--bg-subtle);
+  font-size: .9rem; color: var(--text-2);
+}
+
+@media (max-width: 900px) {
+  .party-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .party-grid { grid-template-columns: minmax(0, 1fr); }
+  .pg-k { flex-basis: 54px; width: 54px; }
+  .pg-foot { align-items: flex-start; }
+  .pg-actions { width: 100%; }
+  .pg-actions .btn { flex: 1 1 auto; }
+}
+
+
+/* 「我的赛事」6 列表在窄屏需要更宽的滚动区，否则每格只能塞两个字 */
+@media (max-width: 720px) {
+  .adm-row-6 { min-width: 680px; }
+}

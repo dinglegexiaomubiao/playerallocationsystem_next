@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import useSession from '../../hooks/useSession';
+import MyTournamentTable from '../../components/MyTournamentTable';
+import { mergeMyTournaments, statusLabel } from '../../lib/tournament-format.mjs';
 
 const STATUS = {
   planned: { cls: 'b-planned', label: '筹备中' },
@@ -18,9 +21,15 @@ function fmt(d) {
 }
 
 export default function TournamentsPage() {
+  const { me, ready } = useSession();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // 我的赛事（登录后才有）
+  const [mine, setMine] = useState([]);
+  const [mineBound, setMineBound] = useState(true);
+  const [mineLoading, setMineLoading] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -41,6 +50,30 @@ export default function TournamentsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!ready || !me) {
+      setMine([]);
+      return;
+    }
+    let alive = true;
+    setMineLoading(true);
+    // 名次/担任位置在 /api/profile，队长身份/队伍在 /api/my-tournaments，合并才是完整履历
+    Promise.all([
+      fetch('/api/profile').then((r) => r.json()).catch(() => ({})),
+      fetch('/api/my-tournaments').then((r) => r.json()).catch(() => ({})),
+    ])
+      .then(([d, m]) => {
+        if (!alive) return;
+        setMine(mergeMyTournaments(d.tournaments || [], m.tournaments || []));
+        setMineBound(m.bound !== false && d.bound !== false);
+        setMineLoading(false);
+      })
+      .catch(() => alive && setMineLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [ready, me]);
+
   return (
     <>
       <Head>
@@ -56,8 +89,49 @@ export default function TournamentsPage() {
         </div>
       </section>
 
+      {ready && me && (
+        <section className="section" style={{ paddingTop: 0, paddingBottom: 0 }}>
+          <div className="wrap">
+            <div className="sec-head">
+              <div>
+                <h2>我的赛事</h2>
+                <div className="sub">
+                  我报名的比赛、我的队长身份与所在队伍
+                  {mine.length > 0 ? ` · 共 ${mine.length} 届` : ''}
+                </div>
+              </div>
+              <Link className="more" href="/profile">
+                查看个人信息 →
+              </Link>
+            </div>
+            {mineLoading ? (
+              <div className="empty" style={{ padding: '30px 0' }}>
+                加载中…
+              </div>
+            ) : !mineBound ? (
+              <div className="empty" style={{ padding: '24px 0' }}>
+                你的账号还未绑定选手资料，请先
+                <Link href="/profile" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+                  补填选手资料
+                </Link>
+                。
+              </div>
+            ) : (
+              <MyTournamentTable items={mine} />
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          {ready && me && <div className="sec-head" style={{ marginTop: 8 }}>
+            <div>
+              <h2>全部赛事</h2>
+              <div className="sub">历届群内对决，点进去看赛程与战报</div>
+            </div>
+          </div>}
+
           {loading && <div className="empty">加载中…</div>}
           {error && <div className="empty">加载失败：{error}</div>}
           {!loading && !error && list.length === 0 && <div className="empty">还没有赛事记录</div>}
@@ -69,7 +143,7 @@ export default function TournamentsPage() {
                 <Link href={'/tournaments/' + t.id} className="t-card" key={t.id}>
                   <div className="t-top">
                     <div className="t-name">{t.name || '未命名赛事'}</div>
-                    <span className={`t-badge ${s.cls}`}>{s.label}</span>
+                    <span className={`t-badge ${s.cls}`}>{s.label || statusLabel(t.status)}</span>
                   </div>
                   <div className="t-meta">
                     <div>

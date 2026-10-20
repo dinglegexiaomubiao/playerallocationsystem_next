@@ -5,29 +5,11 @@ import { useRouter } from 'next/router';
 import useSession from '../hooks/useSession';
 import PlayerPicker from '../components/PlayerPicker';
 import PlayerBind from '../components/PlayerBind';
+import MyTournamentTable from '../components/MyTournamentTable';
+import { mergeMyTournaments } from '../lib/tournament-format.mjs';
+import { POSITIONS } from '../lib/options.mjs';
 
-const POSITION_OPTIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
-
-// 名次中文（1=冠军，2=亚军，3=季军，其余「第 N 名」）
-function rankLabel(rank) {
-  if (rank === 1) return '冠军';
-  if (rank === 2) return '亚军';
-  if (rank === 3) return '季军';
-  if (rank && rank > 3) return '第 ' + rank + ' 名';
-  return '参赛';
-}
-
-function rankCls(rank) {
-  if (rank === 1) return 'rank-gold';
-  if (rank === 2) return 'rank-silver';
-  if (rank === 3) return 'rank-bronze';
-  return 'rank-plain';
-}
-
-const STATUS_LABEL = {
-  planning: '筹办中', ongoing: '进行中', elimination: '淘汰赛', semifinal: '半决赛',
-  final: '决赛', finished: '已完赛', postponed: '延期', planned: '筹备中', active: '进行中', done: '已结束',
-};
+const POSITION_OPTIONS = POSITIONS;
 
 export default function Profile() {
   const router = useRouter();
@@ -58,13 +40,17 @@ export default function Profile() {
 
   const load = () => {
     setLoading(true);
-    fetch('/api/profile')
-      .then((r) => r.json())
-      .then((d) => {
+    // 两个来源各有各的字段：/api/profile 给名次与担任位置，
+    // /api/my-tournaments 给队长身份、报名状态、所在队伍，合并后才是完整的「我的赛事」。
+    Promise.all([
+      fetch('/api/profile').then((r) => r.json()).catch(() => ({})),
+      fetch('/api/my-tournaments').then((r) => r.json()).catch(() => ({})),
+    ])
+      .then(([d, mine]) => {
         if (d.success) {
           setBound(d.bound !== false);
           setProfile(d.profile || null);
-          setTournaments(d.tournaments || []);
+          setTournaments(mergeMyTournaments(d.tournaments || [], mine.tournaments || []));
           setRegions(d.regions || []);
           if (d.profile) {
             setForm({
@@ -255,59 +241,40 @@ export default function Profile() {
               </div>
             </div>
           ) : (
-            <div className="detail-grid">
-              <div>
-                <div className="side-card">
-                  <h4>基本信息</h4>
-                  <div className="kv"><span className="k">所处地区</span><span className="v">{profile.region || '未填写'}</span></div>
-                  <div className="kv"><span className="k">天梯分</span><span className="v">{profile.score || '未填写'}</span></div>
-                  <div className="kv"><span className="k">擅长位置</span><span className="v">{(profile.positions || []).join(' / ') || '未填写'}</span></div>
-                  <div className="kv"><span className="k">自报胜率</span><span className="v">{profile.win_rate || 0}%</span></div>
-                  {profile.self_intro && (
-                    <div className="kv" style={{ alignItems: 'flex-start' }}><span className="k">自我评价</span><span className="v">{profile.self_intro}</span></div>
-                  )}
+            <div className="profile-cards">
+              <div className="side-card">
+                <h4>基本信息</h4>
+                <div className="kv"><span className="k">所处地区</span><span className="v">{profile.region || '未填写'}</span></div>
+                <div className="kv"><span className="k">天梯分</span><span className="v">{profile.score || '未填写'}</span></div>
+                <div className="kv"><span className="k">擅长位置</span><span className="v">{(profile.positions || []).join(' / ') || '未填写'}</span></div>
+                <div className="kv"><span className="k">自报胜率</span><span className="v">{profile.win_rate || 0}%</span></div>
+                {profile.self_intro && (
+                  <div className="kv" style={{ alignItems: 'flex-start' }}><span className="k">自我评价</span><span className="v">{profile.self_intro}</span></div>
+                )}
+              </div>
+              <div className="side-card">
+                <h4>擅长英雄</h4>
+                <div className="hero-chips">
+                  {(profile.heroes || []).length > 0 ? profile.heroes.map((h, i) => <span className="hero-chip" key={i}>{h}</span>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>未填写</span>}
                 </div>
-                <div className="side-card" style={{ marginTop: 18 }}>
-                  <h4>擅长英雄</h4>
-                  <div className="hero-chips">
-                    {(profile.heroes || []).length > 0 ? profile.heroes.map((h, i) => <span className="hero-chip" key={i}>{h}</span>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>未填写</span>}
-                  </div>
+              </div>
+              <div className="side-card">
+                <h4>默契队友</h4>
+                <div className="hero-chips">
+                  {(profile.synergy_players || []).length > 0 ? profile.synergy_players.map((sid, i) => <Link className="hero-chip" href={'/members/' + sid} key={i}>{nameMap.get(String(sid)) || sid}</Link>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>}
                 </div>
-                <div className="side-card" style={{ marginTop: 18 }}>
-                  <h4>默契队友</h4>
-                  <div className="hero-chips">
-                    {(profile.synergy_players || []).length > 0 ? profile.synergy_players.map((sid, i) => <Link className="hero-chip" href={'/members/' + sid} key={i}>{nameMap.get(String(sid)) || sid}</Link>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>}
-                  </div>
-                </div>
-                <div className="side-card" style={{ marginTop: 18 }}>
-                  <h4>仇人</h4>
-                  <div className="hero-chips">
-                    {(profile.enemies || []).length > 0 ? profile.enemies.map((sid, i) => <Link className="hero-chip hero-chip-enemy" href={'/members/' + sid} key={i}>{nameMap.get(String(sid)) || sid}</Link>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>}
-                  </div>
+              </div>
+              <div className="side-card">
+                <h4>仇人</h4>
+                <div className="hero-chips">
+                  {(profile.enemies || []).length > 0 ? profile.enemies.map((sid, i) => <Link className="hero-chip hero-chip-enemy" href={'/members/' + sid} key={i}>{nameMap.get(String(sid)) || sid}</Link>) : <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>}
                 </div>
               </div>
             </div>
           )}
 
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '26px 0 14px' }}>参赛履历（{tournaments.length}）</h2>
-          {tournaments.length === 0 ? (
-            <div className="empty">还没有参加过比赛。去 <Link href="/tournaments" style={{ color: 'var(--brand)', fontWeight: 600 }}>报名</Link> 吧。</div>
-          ) : (
-            <div className="adm-table">
-              <div className="adm-row adm-row-5 adm-head">
-                <div>比赛</div><div>名次</div><div>担任位置</div><div>所属队伍</div><div>状态</div>
-              </div>
-              {tournaments.map((t, i) => (
-                <Link href={'/tournaments/' + t.tournament_id} className="adm-row adm-row-5 adm-row-link" key={i}>
-                  <div className="adm-name">{t.tournament_name}</div>
-                  <div><span className={`rank-badge ${rankCls(t.team_rank)}`}>{rankLabel(t.team_rank)}</span></div>
-                  <div>{t.my_position || '未标注'}</div>
-                  <div>{t.team_name || '—'}</div>
-                  <div className="adm-date">{STATUS_LABEL[t.tournament_status] || t.tournament_status || '—'}</div>
-                </Link>
-              ))}
-            </div>
-          )}
+          <h2 className="sec-title">我的赛事（{tournaments.length}）</h2>
+          <MyTournamentTable items={tournaments} />
         </div>
       </section>
     </>
