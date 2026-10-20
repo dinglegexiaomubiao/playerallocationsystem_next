@@ -421,7 +421,17 @@ export default function FoodPage() {
               <div className="row" style={{ marginTop: 12 }}>
                 <div>
                   <label>区位</label>
-                  <input value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} placeholder="例如：城南 / 大学城" />
+                  <input
+                    list="food-area-options"
+                    value={form.area}
+                    onChange={(e) => setForm({ ...form, area: e.target.value })}
+                    placeholder="可输入新区位，或从已有中选"
+                  />
+                  <datalist id="food-area-options">
+                    {facets.area.map(([k]) => (
+                      <option key={k} value={k} />
+                    ))}
+                  </datalist>
                 </div>
                 <div>
                   <label>详细地址</label>
