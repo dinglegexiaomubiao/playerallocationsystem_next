@@ -3,6 +3,8 @@
 // POST / PUT / DELETE：管理员，编排赛程、录入比分、删除对阵/轮次
 import { pool } from '../../../../lib/db';
 import { denyIfNotAdmin } from '../../../../lib/auth';
+import heroIdToName from '../../../../lib/heroMapping';
+import heroSlugByName from '../../../../lib/heroSlugs';
 
 // 判断两队之间是否存在仇人关系（任意方向命中即「恩怨局」）
 // 仇人标注由选手在个人资料里维护，存于全局 players.enemies，
@@ -51,20 +53,50 @@ export default async function handler(req, res) {
       const matches = await client.query(
         `SELECT m.*,
                 ta.name AS team_a_name, tb.name AS team_b_name,
-                tw.name AS winner_name
+                tw.name AS winner_name,
+                dm.duration  AS dota_duration,
+                dm.start_time AS dota_start_time
          FROM public.matches m
          LEFT JOIN public.teams ta ON ta.id = m.team_a_id
          LEFT JOIN public.teams tb ON tb.id = m.team_b_id
          LEFT JOIN public.teams tw ON tw.id = m.winner_team_id
+         LEFT JOIN public.dota_matches dm ON dm.match_id = m.dota_match_id
          WHERE m.tournament_id = $1
          ORDER BY m.order_no ASC, m.id ASC`,
         [id]
       );
 
-      // 为每场标记恩怨局
+      // 为每场标记恩怨局，并附上 Dota2 对局明细（选手 / 英雄 / KDA）
+      // 明细一次性查出来，避免每场比赛单独查一次（N+1）
+      const dotaIds = matches.rows.map((m) => m.dota_match_id).filter(Boolean);
+      const dotaPlayers = new Map();
+      if (dotaIds.length > 0) {
+        const dp = await client.query(
+          `SELECT mp.match_id, mp.account_id, mp.player_id, mp.hero_id, mp.is_radiant,
+                  mp.kills, mp.deaths, mp.assists, mp.net_worth, mp.gpm, mp.xpm,
+                  mp.last_hits, mp.hero_damage, mp.is_standin,
+                  p.nickname, p.group_nickname, p.score
+             FROM public.dota_match_players mp
+             LEFT JOIN public.players p ON p.id = mp.player_id
+            WHERE mp.match_id = ANY($1::bigint[])
+            ORDER BY mp.is_radiant DESC, mp.net_worth DESC NULLS LAST`,
+          [dotaIds]
+        );
+        dp.rows.forEach((r) => {
+          const k = String(r.match_id);
+          if (!dotaPlayers.has(k)) dotaPlayers.set(k, []);
+          dotaPlayers.get(k).push({
+            ...r,
+            hero_name: heroIdToName[r.hero_id] || null,
+            hero_slug: heroIdToName[r.hero_id] ? heroSlugByName[heroIdToName[r.hero_id]] || null : null,
+          });
+        });
+      }
+
       const withGrudge = [];
       for (const m of matches.rows) {
         m.is_grudge = await isGrudgeMatch(client, id, m.team_a_id, m.team_b_id);
+        m.dota_players = m.dota_match_id ? dotaPlayers.get(String(m.dota_match_id)) || [] : [];
         withGrudge.push(m);
       }
 
