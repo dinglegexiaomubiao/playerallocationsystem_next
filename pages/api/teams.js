@@ -1,6 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { getAllTeams, getPlayersInTeam, addTeam, updateTeam, deleteTeam } from '../../lib/db';
 import { denyIfNotLoggedIn, denyIfNotAdmin } from '../../lib/auth';
+import { canManageTeam } from '../../lib/team-permission.mjs';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -71,6 +72,11 @@ export default async function handler(req, res) {
         const { id, ...updates } = req.body;
         if (!id) {
           return res.status(400).json({ success: false, error: '缺少队伍ID' });
+        }
+        // 改队名需要队长或管理员（P3）
+        const perm = await canManageTeam(req, id);
+        if (!perm.allowed) {
+          return res.status(perm.status).json({ success: false, error: perm.reason });
         }
         await updateTeam(id, { ...updates, updated_at: new Date().toISOString() });
         res.status(200).json({ success: true, message: '更新队伍成功' });

@@ -37,9 +37,34 @@ export default async function handler(req, res) {
           });
         }
         
+        const tournament = tournamentResult.rows[0];
+
+        // 聚合报名名单（赛事选手快照，含队长标记）
+        const signups = await client.query(
+          `SELECT tp.*, p.nickname, p.group_nickname, p.game_id
+           FROM public.tournament_players tp
+           JOIN public.players p ON p.id = tp.player_id
+           WHERE tp.tournament_id = $1
+           ORDER BY tp.signed_at ASC`,
+          [id]
+        );
+
+        // 聚合队伍（含队长昵称与成员数）
+        const teams = await client.query(
+          `SELECT t.*, p.nickname AS captain_nickname,
+                  (SELECT count(*) FROM public.team_players tp WHERE tp.team_id = t.id) AS member_count
+           FROM public.teams t
+           LEFT JOIN public.players p ON p.id = t.captain_id
+           WHERE t.tournament_id = $1
+           ORDER BY t.id ASC`,
+          [id]
+        );
+
         res.status(200).json({
           success: true,
-          tournament: tournamentResult.rows[0]
+          tournament,
+          signups: signups.rows,
+          teams: teams.rows,
         });
         break;
       }
@@ -115,31 +140,45 @@ export default async function handler(req, res) {
         await client.query('BEGIN');
         
         try {
-          // 1. 删除 team_players 关联
+          // 1. 删除赛程结果（matches / tournament_rounds）
+          await client.query(
+            `DELETE FROM public.matches WHERE tournament_id = $1`,
+            [id]
+          );
+          await client.query(
+            `DELETE FROM public.tournament_rounds WHERE tournament_id = $1`,
+            [id]
+          );
+
+          // 2. 删除该赛季下的队伍成员关系（team_players）
           await client.query(
             `DELETE FROM public.team_players WHERE tournament_id = $1`,
             [id]
           );
-          
-          // 2. 删除 player_tournament_participations 关联
+
+          // 3. 删除赛事报名快照（tournament_players）
+          await client.query(
+            `DELETE FROM public.tournament_players WHERE tournament_id = $1`,
+            [id]
+          );
+
+          // 4. 删除历史关联表（老体系）
           await client.query(
             `DELETE FROM public.player_tournament_participations WHERE tournament_id = $1`,
             [id]
           );
-          
-          // 3. 删除 tournament_teams 关联
           await client.query(
             `DELETE FROM public.tournament_teams WHERE tournament_id = $1`,
             [id]
           );
-          
-          // 4. 删除该赛季下的队伍
+
+          // 5. 删除该赛季下的队伍
           await client.query(
             `DELETE FROM public.teams WHERE tournament_id = $1`,
             [id]
           );
           
-          // 5. 删除赛季
+          // 6. 删除赛季
           const deleteResult = await client.query(
             'DELETE FROM public.tournaments WHERE id = $1 RETURNING id',
             [id]

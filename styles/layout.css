@@ -606,3 +606,46 @@ a { text-decoration: none; color: inherit; }
   .form-row { grid-template-columns: 1fr; }
   .register-card { padding: 24px 18px; }
 }
+
+/* ===== 管理后台 ===== */
+.adm-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.adm-tabs { display: flex; gap: 6px; }
+.adm-tab {
+  padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: #fff; color: var(--text-2); font-size: .88rem; font-weight: 500; cursor: pointer;
+  transition: all .15s ease;
+}
+.adm-tab:hover { border-color: var(--brand); color: var(--brand); }
+.adm-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.adm-create {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 18px;
+}
+.adm-create-head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; margin-bottom: 14px; }
+.adm-close { border: none; background: none; font-size: 1.3rem; cursor: pointer; color: var(--text-3); }
+.adm-create .form-row { margin-bottom: 14px; }
+.adm-error, .adm-msg {
+  padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 14px; font-size: .88rem;
+}
+.adm-error { background: var(--accent-soft); color: var(--accent); }
+.adm-msg { background: var(--green-soft); color: #1a7f37; }
+.adm-table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: #fff; }
+.adm-row {
+  display: grid; grid-template-columns: 1.4fr 1fr 1.4fr 1fr; gap: 12px; align-items: center;
+  padding: 12px 16px; font-size: .9rem; border-bottom: 1px solid var(--bg-subtle);
+}
+.adm-row:last-child { border-bottom: none; }
+.adm-head { background: var(--bg-subtle); font-size: .78rem; color: var(--text-3); font-weight: 600; }
+.adm-name { font-weight: 600; color: var(--text); }
+.adm-date { color: var(--text-2); font-size: .85rem; }
+.adm-link { color: var(--brand); font-weight: 500; text-decoration: none; }
+.adm-link:hover { text-decoration: underline; }
+.adm-status { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.adm-link-btn { border: none; background: none; color: var(--brand); cursor: pointer; font-size: .85rem; font-weight: 500; padding: 2px 6px; }
+.adm-link-btn:hover { text-decoration: underline; }
+.adm-captain-tag {
+  display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--gold-soft); color: #8a6d00;
+  font-size: .75rem; font-weight: 600; margin-right: 6px;
+}
+.adm-detail-head { display: flex; align-items: center; }
+.adm-detail-head h1 { margin: 0; }
