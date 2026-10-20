@@ -1,0 +1,910 @@
+/* ============================================================
+   赛事详情页 · Dark Social Gaming 主题
+   ------------------------------------------------------------
+   作用域：只在 .t-dark 内生效，不影响站内其他浅色页面。
+   后续要做整站深色时，把 .t-dark 的变量上提到 :root 即可复用。
+   ============================================================ */
+
+.t-dark {
+  --t-bg: #14171d;
+  --t-bg-2: #1b2027;
+  --t-card: #232931;
+  --t-card-hover: #2b333d;
+  --t-brand: #a9d39c;
+  --t-brand-dim: rgba(169, 211, 156, 0.12);
+  --t-gold: #e4b66d;
+  --t-gold-dim: rgba(228, 182, 109, 0.12);
+  --t-red: #d77b68;
+  --t-red-dim: rgba(215, 123, 104, 0.12);
+  --t-text: #f1f3f5;
+  --t-text-2: #a7afba;
+  --t-text-3: #788390;
+  --t-line: #343b45;
+  --t-line-soft: rgba(255, 255, 255, 0.06);
+  --t-radius: 14px;
+  --t-radius-sm: 10px;
+
+  background: var(--t-bg);
+  color: var(--t-text);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.t-dark .t-wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+/* ==================== Hero ==================== */
+.t-hero {
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--t-line);
+  min-height: 280px;
+}
+.t-hero-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 40%;
+  opacity: 0.42;
+}
+.t-hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--t-bg) 0%,
+    rgba(20, 23, 29, 0.92) 32%,
+    rgba(20, 23, 29, 0.55) 62%,
+    rgba(20, 23, 29, 0.3) 100%
+  );
+}
+.t-hero-inner {
+  position: relative;
+  padding: 30px 0 34px;
+}
+.t-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--t-text-2);
+  margin-bottom: 18px;
+  transition: color 0.15s ease;
+}
+.t-back:hover {
+  color: var(--t-brand);
+}
+.t-hero-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.t-hero-title h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+.t-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 13.5px;
+  color: var(--t-text-2);
+  margin-bottom: 6px;
+}
+.t-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.t-hero-desc {
+  font-size: 13.5px;
+  color: var(--t-text-3);
+  max-width: 620px;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+/* 状态徽章 */
+.t-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+}
+.t-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.t-badge.done {
+  color: var(--t-text-2);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--t-line);
+}
+.t-badge.live {
+  color: var(--t-gold);
+  background: var(--t-gold-dim);
+  border-color: rgba(228, 182, 109, 0.28);
+}
+.t-badge.open {
+  color: var(--t-brand);
+  background: var(--t-brand-dim);
+  border-color: rgba(169, 211, 156, 0.28);
+}
+
+/* ==================== 统计卡 ==================== */
+.t-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: -22px;
+  position: relative;
+  z-index: 2;
+}
+.t-stat {
+  background: var(--t-card);
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.t-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(169, 211, 156, 0.1);
+  color: var(--t-brand);
+  flex-shrink: 0;
+}
+.t-stat-icon.gold {
+  background: var(--t-gold-dim);
+  color: var(--t-gold);
+}
+.t-stat-num {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.t-stat-label {
+  font-size: 12px;
+  color: var(--t-text-3);
+  margin-top: 2px;
+}
+
+/* ==================== Tabs ==================== */
+.t-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgba(20, 23, 29, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--t-line);
+  margin-top: 28px;
+}
+.t-tabs-inner {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.t-tabs-inner::-webkit-scrollbar {
+  display: none;
+}
+.t-tab {
+  position: relative;
+  padding: 14px 16px;
+  font-size: 14px;
+  color: var(--t-text-2);
+  white-space: nowrap;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.t-tab:hover {
+  color: var(--t-text);
+}
+.t-tab.active {
+  color: var(--t-brand);
+  font-weight: 600;
+}
+.t-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--t-brand);
+  border-radius: 2px 2px 0 0;
+}
+.t-tab-count {
+  font-size: 11px;
+  color: var(--t-text-3);
+  margin-left: 5px;
+  font-weight: 400;
+}
+
+/* ==================== 通用卡片 ==================== */
+.t-panel {
+  background: var(--t-card);
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  padding: 20px 22px;
+}
+.t-panel + .t-panel {
+  margin-top: 16px;
+}
+.t-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.t-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.t-panel-sub {
+  font-size: 12px;
+  color: var(--t-text-3);
+}
+
+/* ==================== 概览双栏 ==================== */
+.t-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 24px;
+}
+.t-section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 34px 0 16px;
+  letter-spacing: -0.01em;
+}
+
+/* ==================== 比赛卡片 ==================== */
+.t-match {
+  background: var(--t-card);
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  overflow: hidden;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.t-match + .t-match {
+  margin-top: 12px;
+}
+.t-match:hover {
+  border-color: #414a57;
+  background: #262d36;
+}
+.t-match-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--t-line-soft);
+  font-size: 12px;
+  color: var(--t-text-3);
+}
+.t-match-round {
+  font-weight: 600;
+  color: var(--t-text-2);
+}
+.t-match-meta {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.t-match-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
+  align-items: center;
+  padding: 18px 20px 14px;
+  gap: 10px;
+}
+.t-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.t-side.right {
+  justify-content: flex-end;
+}
+.t-side-name {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-side.lose .t-side-name {
+  color: var(--t-text-3);
+}
+.t-side-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.t-side-tag.radiant {
+  color: #7fb8e6;
+  background: rgba(80, 150, 200, 0.14);
+}
+.t-side-tag.dire {
+  color: #e08d7f;
+  background: rgba(200, 90, 70, 0.14);
+}
+.t-match-score {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.t-match-score.pending {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t-text-3);
+  letter-spacing: 0;
+}
+.t-match-score-cap {
+  display: block;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--t-text-3);
+}
+.t-match-win {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--t-brand);
+  padding-bottom: 14px;
+}
+
+/* 双方选手（带英雄与玩家头像） */
+.t-rosters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--t-line-soft);
+}
+.t-roster-col {
+  padding: 12px 18px 14px;
+}
+.t-roster-col + .t-roster-col {
+  border-left: 1px solid var(--t-line-soft);
+}
+.t-roster-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.t-roster-head.radiant {
+  color: #7fb8e6;
+}
+.t-roster-head.dire {
+  color: #e08d7f;
+}
+.t-roster-head::before {
+  content: '';
+  width: 3px;
+  height: 11px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.t-prow {
+  display: grid;
+  grid-template-columns: 26px 24px minmax(0, 1fr) 62px;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 0;
+  font-size: 12.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.t-prow:last-child {
+  border-bottom: 0;
+}
+.t-prow-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.t-prow-name.standin {
+  color: var(--t-gold);
+}
+.t-prow-kda {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text-2);
+  font-size: 12px;
+}
+
+/* 头像 */
+.t-ava {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--t-bg-2);
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--t-line);
+}
+.t-ava-fallback {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--t-brand-dim);
+  color: var(--t-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid rgba(169, 211, 156, 0.2);
+}
+.t-hero-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--t-bg-2);
+  flex-shrink: 0;
+  border: 1px solid var(--t-line);
+}
+
+/* ==================== 队伍表格 ==================== */
+.t-tbl {
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  overflow: hidden;
+  background: var(--t-card);
+}
+.t-tbl-head,
+.t-trow {
+  display: grid;
+  grid-template-columns: 186px 96px minmax(0, 1fr) 194px;
+  gap: 16px;
+  align-items: center;
+}
+.t-tbl-head {
+  padding: 11px 18px;
+  background: var(--t-bg-2);
+  border-bottom: 1px solid var(--t-line);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--t-text-3);
+}
+.t-trow {
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--t-line-soft);
+  transition: background 0.15s ease;
+}
+.t-trow:last-child {
+  border-bottom: 0;
+}
+.t-trow:hover {
+  background: rgba(255, 255, 255, 0.022);
+}
+.t-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 队伍 / 名次 */
+.t-td-team {
+  min-width: 0;
+}
+.t-td-team-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.t-td-name {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-td-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--t-text-3);
+  font-variant-numeric: tabular-nums;
+}
+.t-td-total {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--t-brand);
+}
+.t-dash {
+  color: var(--t-text-3);
+  font-weight: 400;
+}
+
+/* 名次徽标 */
+.t-team-rank {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--t-text-2);
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+.t-team-rank.gold {
+  background: var(--t-gold-dim);
+  color: var(--t-gold);
+}
+.t-team-rank.silver {
+  background: rgba(180, 190, 200, 0.14);
+  color: #c3ccd6;
+}
+.t-team-rank.bronze {
+  background: rgba(190, 130, 95, 0.14);
+  color: #d3a184;
+}
+
+/* 阵容：默认展开，5 人一行，窄屏自动折行 */
+.t-td-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+  gap: 6px;
+}
+.t-rp {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid transparent;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.t-rp:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--t-line);
+}
+.t-rp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+.t-rp-name {
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-rp-name.cap::after {
+  content: '★';
+  color: var(--t-gold);
+  font-size: 9px;
+  margin-left: 3px;
+  vertical-align: 1px;
+}
+.t-rp-pos {
+  font-size: 10.5px;
+  color: var(--t-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-rp-score {
+  font-size: 10.5px;
+  color: var(--t-text-2);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.t-rp-score.empty {
+  color: var(--t-text-3);
+  opacity: 0.55;
+}
+
+/* 交战记录 */
+.t-td-vs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.t-vs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--t-line-soft);
+  font-size: 11px;
+  max-width: 100%;
+}
+.t-vs-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 82px;
+  color: var(--t-text-2);
+}
+.t-vs-w {
+  color: var(--t-brand);
+  font-weight: 600;
+}
+.t-vs-l {
+  color: var(--t-red);
+  font-weight: 600;
+}
+.t-vs-p {
+  color: var(--t-text-3);
+}
+
+/* ==================== 选手表格 ==================== */
+.t-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.t-input,
+.t-select {
+  background: var(--t-bg-2);
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-small, 9px);
+  color: var(--t-text);
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  font-family: inherit;
+}
+.t-input {
+  flex: 1 1 220px;
+  min-width: 160px;
+}
+.t-input::placeholder {
+  color: var(--t-text-3);
+}
+.t-input:focus,
+.t-select:focus {
+  border-color: var(--t-brand);
+}
+.t-select {
+  cursor: pointer;
+}
+
+.t-table {
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-radius);
+  overflow: hidden;
+}
+.t-thead,
+.t-tr {
+  display: grid;
+  grid-template-columns: 40px 34px minmax(0, 1fr) 82px minmax(0, 130px) minmax(0, 120px) 76px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 18px;
+}
+.t-thead {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--t-line);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t-text-3);
+  letter-spacing: 0.04em;
+}
+.t-tr {
+  border-bottom: 1px solid var(--t-line-soft);
+  font-size: 13px;
+  transition: background 0.12s ease;
+}
+.t-tr:last-child {
+  border-bottom: 0;
+}
+.t-tr:hover {
+  background: var(--t-card-hover);
+}
+.t-tr-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t-tr-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--t-text-2);
+}
+.t-tr-muted {
+  color: var(--t-text-3);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 小标签 */
+.t-chip {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--t-text-2);
+  white-space: nowrap;
+}
+.t-chip.brand {
+  background: var(--t-brand-dim);
+  color: var(--t-brand);
+}
+.t-chip.gold {
+  background: var(--t-gold-dim);
+  color: var(--t-gold);
+}
+.t-chip.muted {
+  background: transparent;
+  color: var(--t-text-3);
+}
+
+/* 空状态 */
+.t-empty {
+  text-align: center;
+  padding: 46px 20px;
+  color: var(--t-text-3);
+  font-size: 13.5px;
+}
+
+/* ==================== 响应式 ==================== */
+@media (max-width: 1024px) {
+  .t-wrap {
+    padding: 0 20px;
+  }
+  .t-hero-title h1 {
+    font-size: 1.6rem;
+  }
+  .t-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .t-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* 队伍表格：窄屏把阵容/交战折到下一行，避免列被压扁 */
+  .t-tbl-head {
+    display: none;
+  }
+  .t-trow {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    row-gap: 9px;
+    padding: 14px 16px;
+  }
+  .t-td-team {
+    grid-column: 1;
+  }
+  .t-td-total {
+    grid-column: 2;
+  }
+  .t-td-roster {
+    grid-column: 1 / -1;
+  }
+  .t-td-vs {
+    grid-column: 1 / -1;
+  }
+  .t-match-body {
+    grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr);
+    padding: 14px 14px 10px;
+  }
+  .t-rosters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .t-roster-col + .t-roster-col {
+    border-left: 0;
+    border-top: 1px solid var(--t-line-soft);
+  }
+  .t-thead {
+    display: none;
+  }
+  .t-tr {
+    grid-template-columns: 30px 30px minmax(0, 1fr) 66px;
+    row-gap: 2px;
+  }
+  .t-tr > :nth-child(5),
+  .t-tr > :nth-child(6) {
+    grid-column: span 2;
+    font-size: 11.5px;
+  }
+}
+
+@media (max-width: 640px) {
+  .t-wrap {
+    padding: 0 16px;
+  }
+  .t-hero {
+    min-height: 0;
+  }
+  .t-hero-inner {
+    padding: 22px 0 26px;
+  }
+  .t-hero-title h1 {
+    font-size: 1.3rem;
+  }
+  .t-stats {
+    margin-top: 16px;
+  }
+  .t-stat {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .t-stat-num {
+    font-size: 1.2rem;
+  }
+  .t-tab {
+    padding: 12px 12px;
+    font-size: 13px;
+  }
+  .t-match-body {
+    grid-template-columns: minmax(0, 1fr);
+    text-align: center;
+    gap: 6px;
+  }
+  .t-side,
+  .t-side.right {
+    justify-content: center;
+  }
+  .t-prow {
+    grid-template-columns: 24px 22px minmax(0, 1fr) 56px;
+  }
+}

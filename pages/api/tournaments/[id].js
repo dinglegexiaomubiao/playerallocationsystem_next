@@ -48,8 +48,15 @@ export default async function handler(req, res) {
         const tournament = tournamentResult.rows[0];
 
         // 聚合报名名单（赛事选手快照，含队长标记）
+        // 天梯分 / 常用位置以 players 实时值为准，快照仅作兜底：
+        // 批量导入的报名快照里这两列是空的（导入时还没填），直接用会显示 0 分、未填位置。
         const signups = await client.query(
-          `SELECT tp.*, p.nickname, p.group_nickname, p.game_id
+          `SELECT tp.id, tp.player_id, tp.tournament_id,
+                  tp.heroes, tp.region, tp.self_intro, tp.enemies,
+                  tp.signup_status, tp.is_captain, tp.signed_at,
+                  p.nickname, p.group_nickname, p.game_id,
+                  COALESCE(NULLIF(p.score, 0), tp.score, 0) AS score,
+                  COALESCE(NULLIF(p.positions, ''), tp.positions) AS positions
            FROM public.tournament_players tp
            JOIN public.players p ON p.id = tp.player_id
            WHERE tp.tournament_id = $1

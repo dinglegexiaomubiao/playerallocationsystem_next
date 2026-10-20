@@ -1963,3 +1963,20 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .tt-member.cap .pos { font-weight: 400; }
 .tt-member, .tt-member:hover { text-decoration: none; }
 .tt-member:hover { color: var(--brand); }
+
+/* ===== 微调 v3：英雄列放宽、队名列收紧、阵容行浅底分组 ===== */
+.duel-row { grid-template-columns: minmax(0, 1fr) 94px 64px; }
+.duel-hero { font-size: .76rem; }
+
+.tt-head, .tt-row {
+  grid-template-columns: 44px minmax(90px, 142px) 132px 84px minmax(0, 1fr);
+}
+.tt-roster { background: #fcfcfd; border-bottom: 1px solid var(--border); }
+.tt-roster:last-child { border-bottom: 0; }
+
+/* ===== 微调 v4：选手行两列均分，KDA 贴右 ===== */
+.duel-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px; gap: 12px; }
+.duel-hero { text-align: left; }
+
+/* ===== 微调 v5：名字固定宽度，英雄紧随其后，KDA 贴右 ===== */
+.duel-row { grid-template-columns: 112px minmax(0, 1fr) 62px; gap: 10px; }

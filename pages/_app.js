@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import '../styles/main/index.css';
 import '../styles/layout.css';
+import '../styles/tournament-dark.css';
 import Layout from '../components/Layout';
 import FeedbackWidget from '../components/FeedbackWidget';
 import { installErrorReporting } from '../lib/support-client.mjs';
