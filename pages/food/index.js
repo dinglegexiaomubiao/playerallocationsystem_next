@@ -155,7 +155,7 @@ export default function FoodPage() {
     if (r.ok) load();
   };
 
-  const handleImportFoods = async (rows) => {
+  const handleImportFoods = async (rows, onProgress) => {
     const list = rows
       .map((row) => ({
         name: String(row['店名'] || '').trim(),
@@ -176,23 +176,23 @@ export default function FoodPage() {
       return;
     }
 
-    let ok = 0;
-    let fail = 0;
-    for (const f of list) {
+    const total = list.length;
+    for (let i = 0; i < total; i++) {
+      const f = list[i];
+      let err = '';
       try {
         const r = await fetch('/api/foods', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(f),
         });
-        const d = await r.json();
-        if (r.ok && d.success) ok++;
-        else fail++;
-      } catch {
-        fail++;
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) err = d.error || d.message || `请求失败（HTTP ${r.status}）`;
+      } catch (e) {
+        err = (e && e.message) || '网络错误';
       }
+      if (onProgress) onProgress(i + 1, total, { name: f.name, error: err });
     }
-    alert(`导入完成：成功 ${ok} 条，失败 ${fail} 条`);
     load();
   };
 

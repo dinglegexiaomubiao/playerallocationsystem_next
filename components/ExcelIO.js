@@ -1,10 +1,18 @@
 import { useRef, useState } from 'react';
 import { exportRows, downloadTemplate, readRows } from '../lib/excel';
 
+/**
+ * Excel 导入/导出/模板下载三件套。
+ *
+ * 导入流程：选文件 → 预览（标红重复行）→ 确认 → 逐条提交（实时进度条）→ 结果汇总
+ * onImport 签名：(rows, onProgress) => Promise<void>
+ *   onProgress(done, total, { name, error })，每提交完一条调用一次
+ */
 export default function ExcelIO({ columns, rows, filename, onImport, templateName, checkDuplicate }) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [job, setJob] = useState(null);
 
   const onFile = async (e) => {
     const file = e.target.files && e.target.files[0];
@@ -35,14 +43,52 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
       alert('没有可导入的数据');
       return;
     }
+
+    const total = list.length;
+    let okCount = 0;
+    const errors = [];
+
+    // 关掉预览，切到进度面板
+    setPreview(null);
     setBusy(true);
+    setJob({ phase: 'running', total, done: 0, ok: 0, fail: 0, current: '', errors: [], fatal: '' });
+
+    // 页面每提交完一条就回调一次，这里统一累加并刷新面板
+    const report = (done, t, meta = {}) => {
+      if (meta && meta.error) {
+        errors.push({ no: done, name: meta.name || '（未命名）', error: meta.error });
+      } else {
+        okCount += 1;
+      }
+      setJob({
+        phase: 'running',
+        total: t || total,
+        done,
+        ok: okCount,
+        fail: errors.length,
+        current: (meta && meta.name) || '',
+        errors: errors.slice(-100),
+        fatal: '',
+      });
+    };
+
     try {
-      await onImport(list.map((it) => it.row));
-      setPreview(null);
+      await onImport(
+        list.map((it) => it.row),
+        report
+      );
+      setJob((prev) => (prev ? { ...prev, phase: 'done', done: prev.total, current: '' } : prev));
+    } catch (err) {
+      setJob((prev) =>
+        prev ? { ...prev, phase: 'done', current: '', fatal: (err && err.message) || '导入过程中断' } : prev
+      );
     } finally {
       setBusy(false);
     }
   };
+
+  const pct = job ? Math.min(100, Math.round((job.done / Math.max(job.total, 1)) * 100)) : 0;
+  const running = job && job.phase === 'running';
 
   return (
     <>
@@ -62,6 +108,7 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
         </button>
       </div>
 
+      {/* ===== 导入预览 ===== */}
       {preview && (
         <div
           className="modal-mask"
@@ -125,6 +172,71 @@ export default function ExcelIO({ columns, rows, filename, onImport, templateNam
               >
                 仅导入新数据（{preview.validCount}）
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 导入进度 / 结果 ===== */}
+      {job && (
+        <div className="modal-mask">
+          <div className="modal-card modal-card-sm">
+            <div className="modal-head">
+              <h3>{running ? '正在导入数据' : '导入完成'}</h3>
+              {!running && (
+                <button className="modal-close" onClick={() => setJob(null)}>
+                  ×
+                </button>
+              )}
+            </div>
+
+            <div className="import-progress">
+              <div className="ip-head">
+                <span>{running ? `已处理 ${job.done} / ${job.total} 条` : `共 ${job.total} 条`}</span>
+                <b>{pct}%</b>
+              </div>
+              <div className="ip-track">
+                <div
+                  className={'ip-fill' + (running ? '' : ' is-done')}
+                  style={{ width: pct + '%' }}
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                />
+              </div>
+              <div className="ip-meta">
+                <span className="ok">成功 {job.ok}</span>
+                <span className={job.fail > 0 ? 'err' : 'muted'}>失败 {job.fail}</span>
+                {running && job.current && <span className="cur">当前：{job.current}</span>}
+              </div>
+            </div>
+
+            {job.fatal && <div className="ip-fatal">{job.fatal}</div>}
+
+            {job.errors.length > 0 && (
+              <div className="ip-errors">
+                <div className="ip-errors-title">失败明细（最多显示 100 条）</div>
+                <ul>
+                  {job.errors.map((e) => (
+                    <li key={e.no}>
+                      <span className="no">#{e.no}</span>
+                      <span className="nm">{e.name}</span>
+                      <span className="rs">{e.error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="modal-actions">
+              {running ? (
+                <span className="ip-hint">正在写入，请不要关闭页面…</span>
+              ) : (
+                <button className="btn btn-primary" onClick={() => setJob(null)}>
+                  完成
+                </button>
+              )}
             </div>
           </div>
         </div>

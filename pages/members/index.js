@@ -74,7 +74,7 @@ export default function MembersPage() {
     return list;
   }, [players, q, pos, sort]);
 
-  const handleImport = async (rows) => {
+  const handleImport = async (rows, onProgress) => {
     const list = rows
       .map((row) => ({
         nickname: String(row['昵称'] || '').trim(),
@@ -94,23 +94,23 @@ export default function MembersPage() {
       return;
     }
 
-    let ok = 0;
-    let fail = 0;
-    for (const p of list) {
+    const total = list.length;
+    for (let i = 0; i < total; i++) {
+      const p = list[i];
+      let err = '';
       try {
         const r = await fetch('/api/players', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(p),
         });
-        const d = await r.json();
-        if (r.ok && d.success) ok++;
-        else fail++;
-      } catch {
-        fail++;
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.success) err = d.error || d.message || `请求失败（HTTP ${r.status}）`;
+      } catch (e) {
+        err = (e && e.message) || '网络错误';
       }
+      if (onProgress) onProgress(i + 1, total, { name: p.nickname, error: err });
     }
-    alert(`导入完成：成功 ${ok} 条，失败 ${fail} 条`);
     reload();
   };
 
