@@ -108,7 +108,10 @@ export default function MatchCard({ match, roundName }) {
         {fmtNw(p.net_worth)}
       </span>
       <span className="t-prow-kda" title="击杀 / 阵亡 / 助攻">
-        {p.kills}/{p.deaths}/{p.assists}
+        {/* 未解析的局逐人数据是 NULL，显示破折号而不是假的 0/0/0 */}
+        {p.kills === null || p.kills === undefined
+          ? '—'
+          : `${p.kills}/${p.deaths}/${p.assists}`}
       </span>
     </div>
   );
