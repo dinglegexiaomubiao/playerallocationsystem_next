@@ -58,8 +58,8 @@ export default function Register() {
   return (
     <>
       <Head>
-        <title>注册 - DOTA 群英荟</title>
-        <meta name="description" content="注册 DOTA 群英荟账号" />
+        <title>注册 · 深圳LaRoja Dota2社区</title>
+        <meta name="description" content="注册深圳LaRoja Dota2社区账号" />
       </Head>
 
       <div className="register-wrap">

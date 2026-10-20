@@ -65,15 +65,15 @@ export default function Login() {
   return (
     <>
       <Head>
-        <title>登录 - Dom的比赛记录</title>
-        <meta name="description" content="比赛选手人员分配系统登录页面" />
+        <title>登录 · 深圳LaRoja Dota2社区</title>
+        <meta name="description" content="深圳LaRoja Dota2社区登录页，群友信息均由群友提供" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <h1>Dom的比赛记录</h1>
+            <h1>深圳LaRoja Dota2社区</h1>
             <p>请输入您的用户名和密码</p>
             <p className="login-hint">新用户将自动注册</p>
           </div>

@@ -1,5 +1,5 @@
 /* ============================================================
-   DOTA 群英荟 · 社区风设计系统（亮色现代社区风）
+   深圳LaRoja Dota2社区 · 社区风设计系统（亮色现代社区风）
    独立于 globals.css（保留旧 --color-* token 给 /main 分配工具使用）
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -131,6 +131,25 @@ a { text-decoration: none; color: inherit; }
 .sec-head h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -.02em; }
 .sec-head .sub { color: var(--text-2); font-size: .95rem; margin-top: 4px; }
 .sec-head a.more { color: var(--brand); font-weight: 600; font-size: .9rem; }
+
+/* ===== 群内日常（活动标签条） ===== */
+.life-strip {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px 26px; box-shadow: var(--shadow-sm);
+}
+.life-head h2 { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; }
+.life-head .sub { color: var(--text-2); font-size: .92rem; margin-top: 4px; }
+.life-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.life-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px; border-radius: 999px;
+  background: var(--bg-subtle); border: 1px solid var(--border);
+  font-size: .9rem; font-weight: 600; color: var(--text);
+  transition: all .18s ease;
+}
+.life-tag:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); transform: translateY(-2px); }
+.life-ic { font-size: 1.05rem; line-height: 1; }
+.life-note { margin-top: 12px; font-size: .82rem; color: var(--text-3); }
 
 /* ===== 板块入口 卡片 ===== */
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }

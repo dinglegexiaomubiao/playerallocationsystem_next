@@ -264,7 +264,7 @@ export default function AdminTournament({ denied }) {
   return (
     <>
       <Head>
-        <title>{data?.tournament?.name || '赛事'} · 管理 · DOTA 群英荟</title>
+        <title>{data?.tournament?.name || '赛事'} · 管理 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

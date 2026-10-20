@@ -44,7 +44,7 @@ export default function TournamentsPage() {
   return (
     <>
       <Head>
-        <title>赛事信息 · DOTA 群英荟</title>
+        <title>赛事信息 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

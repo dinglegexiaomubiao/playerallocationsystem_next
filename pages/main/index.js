@@ -311,7 +311,7 @@ function MainTool() {
       )}
 
       <header className="header">
-        <h1>Dom的比赛纪录</h1>
+        <h1>深圳LaRoja Dota2社区 · 阵容分配</h1>
         <div className="instructions">
           <p>点击选手卡片上的「➕ 入队」按钮进行分配 | 点击队伍中的「+ 添加选手」选择选手 | 支持搜索和筛选功能</p>
         </div>
@@ -971,7 +971,7 @@ function DeniedNotice() {
   return (
     <>
       <Head>
-        <title>无权访问 - Dom的比赛记录</title>
+        <title>无权访问 · 深圳LaRoja Dota2社区</title>
       </Head>
       <section className="page-hero">
         <div className="wrap">

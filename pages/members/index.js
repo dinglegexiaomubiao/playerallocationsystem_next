@@ -132,7 +132,7 @@ export default function MembersPage() {
   return (
     <>
       <Head>
-        <title>群友信息 · DOTA 群英荟</title>
+        <title>群友信息 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

@@ -78,7 +78,7 @@ export default function TournamentDetail() {
   return (
     <>
       <Head>
-        <title>{t.name} · 赛事详情 · DOTA 群英荟</title>
+        <title>{t.name} · 赛事详情 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

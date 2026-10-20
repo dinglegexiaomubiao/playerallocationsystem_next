@@ -9,6 +9,17 @@ const ENTRIES = [
   { ic: '🎯', cls: 'c-green', title: '阵容分配', desc: '按赛事快速组队，自动检测默契与位置覆盖。', href: '/members/assign', go: '开始分配 →' },
 ];
 
+// 群内日常活动（纯展示，用户明确要求体现「不止 Dota2」）
+const ACTIVITIES = [
+  { ic: '🎮', label: 'Dota2 内战' },
+  { ic: '🍲', label: '吃饭' },
+  { ic: '🧗', label: '攀岩' },
+  { ic: '🏊', label: '游泳' },
+  { ic: '⛰️', label: '爬山' },
+  { ic: '🏀', label: '篮球' },
+  { ic: '🚴', label: '骑车' },
+];
+
 const FALLBACK_POSTS = [
   { av: '赛', tag: '赛事', tagCls: 'tag-tour', time: '赛事', title: '打开赛事信息，查看历届内战', desc: '赛程、对阵与战报都在这里。', href: '/tournaments' },
   { av: '友', tag: '群友', tagCls: 'tag-member', time: '群友', title: '认识群里的高手与乐子人', desc: '天梯分、擅长位置与英雄池一览。', href: '/members' },
@@ -117,8 +128,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>DOTA 群英荟 · 社区首页</title>
-        <meta name="description" content="一个属于我们自己的 Dota2 社区：赛事、群友、美食，全都在这里。" />
+        <title>深圳LaRoja Dota2社区 · 社区首页</title>
+        <meta name="description" content="深圳 LaRoja 社区：不止 Dota2，吃饭、攀岩、游泳、爬山、篮球、骑车日常都在组织。本页信息均由群友提供。" />
       </Head>
 
       {/* ===== Hero ===== */}
@@ -127,9 +138,12 @@ export default function Home() {
           <h1>
             一群人的<span className="hl">刀塔</span>江湖
             <br />
-            赛事、群友与深夜美食
+            不止游戏，还有饭局与山野湖海
           </h1>
-          <p>记录每一届内战战报，认识群里的高手与乐子人，顺便收藏大家私藏的美食地图。</p>
+          <p>
+            深圳 LaRoja 社区：Dota2 内战、吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。
+            本页信息均由群友提供。
+          </p>
           <div className="hero-cta">
             <Link href="/tournaments" className="btn btn-primary">
               浏览最新赛事 →
@@ -168,6 +182,27 @@ export default function Home() {
           ) : (
             <div style={{ fontSize: '.85rem', color: 'var(--text-2)', marginTop: 8 }}>暂无赛事数据</div>
           )}
+        </div>
+      </section>
+
+      {/* ===== 群内日常 ===== */}
+      <section className="section" style={{ paddingBottom: 0 }}>
+        <div className="wrap">
+          <div className="life-strip">
+            <div className="life-head">
+              <h2>群内日常</h2>
+              <div className="sub">不止 Dota2，这些活动我们日常都在组织</div>
+            </div>
+            <div className="life-tags">
+              {ACTIVITIES.map((a) => (
+                <span className="life-tag" key={a.label}>
+                  <span className="life-ic">{a.ic}</span>
+                  {a.label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="life-note">网页信息均由群友提供，仅供群内交流使用。</div>
         </div>
       </section>
 

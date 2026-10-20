@@ -103,7 +103,7 @@ export default function Admin({ denied }) {
   return (
     <>
       <Head>
-        <title>管理后台 · DOTA 群英荟</title>
+        <title>管理后台 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

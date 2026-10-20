@@ -393,7 +393,7 @@ export default function FoodPage() {
   return (
     <>
       <Head>
-        <title>群友美食 · DOTA 群英荟</title>
+        <title>群友美食 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

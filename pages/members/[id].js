@@ -110,7 +110,7 @@ export default function MemberDetail() {
   return (
     <>
       <Head>
-        <title>{player.nickname} · 群友详情 · DOTA 群英荟</title>
+        <title>{player.nickname} · 群友详情 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">

@@ -41,7 +41,7 @@ export default function Layout({ children }) {
       <header className="site-nav">
         <div className="wrap nav-inner">
           <Link href="/" className="logo">
-            <span className="mark">刀</span> DOTA<b>群英荟</b>
+            <span className="mark">刀</span> 深圳LaRoja<b>Dota2社区</b>
           </Link>
           <nav className="nav-links">
             {NAV.map((n) => (
@@ -97,10 +97,12 @@ export default function Layout({ children }) {
           <div className="cols">
             <div>
               <div className="logo" style={{ color: '#fff' }}>
-                <span className="mark">刀</span> DOTA<b style={{ color: 'var(--accent)' }}>群英荟</b>
+                <span className="mark">刀</span> 深圳LaRoja<b style={{ color: 'var(--accent)' }}>Dota2社区</b>
               </div>
-              <p style={{ marginTop: 10, fontSize: '.85rem', maxWidth: 260 }}>
-                一个属于我们自己的 Dota2 社区：赛事、群友、美食，全都在这里。
+              <p style={{ marginTop: 10, fontSize: '.85rem', maxWidth: 300 }}>
+                不止 Dota2：吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。
+                <br />
+                本页信息均由群友提供。
               </p>
             </div>
             <div>
@@ -152,7 +154,7 @@ export default function Layout({ children }) {
             </div>
           </div>
           <div className="copy">
-            © 2026 DOTA 群英荟 · 社区由群友共建，数据仅限内部使用。
+            © 2026 深圳LaRoja Dota2社区 · 网页信息均由群友提供，数据仅限内部使用。
           </div>
         </div>
       </footer>

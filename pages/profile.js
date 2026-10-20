@@ -147,7 +147,7 @@ export default function Profile() {
   if (!bound || !profile) {
     return (
       <>
-        <Head><title>个人信息 · DOTA 群英荟</title></Head>
+        <Head><title>个人信息 · 深圳LaRoja Dota2社区</title></Head>
         <section className="page-hero">
           <div className="wrap"><h1>个人<span className="hl">信息</span></h1></div>
         </section>
@@ -167,7 +167,7 @@ export default function Profile() {
   return (
     <>
       <Head>
-        <title>{profile.nickname || '个人信息'} · 个人信息 · DOTA 群英荟</title>
+        <title>{profile.nickname || '个人信息'} · 个人信息 · 深圳LaRoja Dota2社区</title>
       </Head>
 
       <section className="page-hero">
