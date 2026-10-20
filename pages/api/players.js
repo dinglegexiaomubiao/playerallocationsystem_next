@@ -2,6 +2,81 @@
 import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, getPlayerById, pool } from '../../lib/db';
 import { denyIfImportNotAdmin } from '../../lib/auth';
 
+// 一次查出所有人的参赛记录，避免按人循环查库（N+1）
+//
+// 名次存在 teams.rank 上，而「谁在这支队伍里」要 join team_players；
+// 队长可能还没被写进 team_players，所以额外按 captain_id 捞一遍。
+async function getTeamRecordsByPlayer() {
+  const byPlayer = new Map();
+  const push = (playerId, rec) => {
+    const key = String(playerId);
+    if (!byPlayer.has(key)) byPlayer.set(key, []);
+    const list = byPlayer.get(key);
+    if (list.some((x) => String(x.team_id) === String(rec.team_id))) return; // 队长+队员同一支队只记一次
+    list.push(rec);
+  };
+
+  const members = await pool.query(
+    `SELECT tp.player_id, tp.position,
+            tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
+            t.id AS tournament_id, t.name AS tournament_name,
+            t.status AS tournament_status, t.start_date, t.end_date
+       FROM public.team_players tp
+       JOIN public.teams tm ON tm.id = tp.team_id
+       JOIN public.tournaments t ON t.id = tm.tournament_id`
+  );
+  for (const r of members.rows) {
+    push(r.player_id, {
+      team_id: String(r.team_id),
+      team_name: r.team_name || '未命名队伍',
+      team_rank: r.team_rank === null || r.team_rank === undefined ? null : Number(r.team_rank),
+      position: r.position || null,
+      is_captain: false,
+      tournament_id: r.tournament_id === null ? null : String(r.tournament_id),
+      tournament_name: r.tournament_name || '未命名赛事',
+      tournament_status: r.tournament_status || null,
+      start_date: r.start_date || null,
+      end_date: r.end_date || null,
+    });
+  }
+
+  const captains = await pool.query(
+    `SELECT tm.captain_id AS player_id,
+            tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
+            t.id AS tournament_id, t.name AS tournament_name,
+            t.status AS tournament_status, t.start_date, t.end_date
+       FROM public.teams tm
+       JOIN public.tournaments t ON t.id = tm.tournament_id
+      WHERE tm.captain_id IS NOT NULL`
+  );
+  for (const r of captains.rows) {
+    push(r.player_id, {
+      team_id: String(r.team_id),
+      team_name: r.team_name || '未命名队伍',
+      team_rank: r.team_rank === null || r.team_rank === undefined ? null : Number(r.team_rank),
+      position: '队长',
+      is_captain: true,
+      tournament_id: r.tournament_id === null ? null : String(r.tournament_id),
+      tournament_name: r.tournament_name || '未命名赛事',
+      tournament_status: r.tournament_status || null,
+      start_date: r.start_date || null,
+      end_date: r.end_date || null,
+    });
+  }
+
+  // 已完赛的排后面，其余按开赛时间倒序
+  for (const list of byPlayer.values()) {
+    list.sort((a, b) => {
+      const w = (s) => (s === 'finished' || s === 'done' ? 1 : 0);
+      const d = w(a.tournament_status) - w(b.tournament_status);
+      if (d !== 0) return d;
+      return String(b.start_date || '').localeCompare(String(a.start_date || ''));
+    });
+  }
+
+  return byPlayer;
+}
+
 export default async function handler(req, res) {
   const { method } = req;
 
@@ -10,25 +85,39 @@ export default async function handler(req, res) {
       try {
         const { tournament_id } = req.query;
         let players = await getAllPlayers(tournament_id);
-        
+        const recordsByPlayer = await getTeamRecordsByPlayer();
+
         // 格式化选手数据
-        const formattedPlayers = players.map(player => ({
-          ...player,
-          id: player.id?.toString(),
-          game_id: player.game_id?.toString(),
-          score: player.score ? parseInt(player.score) : 0,
-          win_rate: player.win_rate ? parseInt(player.win_rate) : 0,
-          championships: player.championships ? parseInt(player.championships) : 0,
-          positions: player.positions ? player.positions.split(',').filter(p => p) : [],
-          heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
-          synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
-          enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
-          region: player.region || '',
-          self_intro: player.self_intro || '',
-          created_at: player.created_at || "",
-          updated_at: player.updated_at || "",
-          position_priority: {}
-        }));
+        const formattedPlayers = players.map(player => {
+          const records = recordsByPlayer.get(String(player.id)) || [];
+          const titles = records.filter((r) => r.team_rank === 1).length;
+          const legacyTitles = player.championships ? parseInt(player.championships, 10) || 0 : 0;
+          const ranks = records.map((r) => r.team_rank).filter((n) => typeof n === 'number');
+          return {
+            ...player,
+            id: player.id?.toString(),
+            game_id: player.game_id?.toString(),
+            score: player.score ? parseInt(player.score) : 0,
+            win_rate: player.win_rate ? parseInt(player.win_rate) : 0,
+            // 冠军数不再只看写死的字段：以 teams.rank=1 实算为准，
+            // 老数据里导入过冠军数的，取两者较大值以免历史战绩"消失"
+            championships: Math.max(legacyTitles, titles),
+            championships_legacy: legacyTitles,
+            // 比赛记录（页面上的「比赛记录」直接用这份）
+            records,
+            record_count: records.length,
+            best_rank: ranks.length ? Math.min(...ranks) : null,
+            positions: player.positions ? player.positions.split(',').filter(p => p) : [],
+            heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
+            synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
+            enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
+            region: player.region || '',
+            self_intro: player.self_intro || '',
+            created_at: player.created_at || "",
+            updated_at: player.updated_at || "",
+            position_priority: {}
+          };
+        });
 
         res.status(200).json({ success: true, players: formattedPlayers });
       } catch (error) {

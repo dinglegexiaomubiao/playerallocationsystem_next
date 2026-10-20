@@ -496,8 +496,11 @@ export default function MembersPage() {
                     </div>
                   )}
                   <div className="p-foot">
-                    <span>🏆 冠军 {p.championships || 0} 个</span>
-                    <span>{t.label} · 查看详情 →</span>
+                    <span>
+                      🏆 冠军 {p.championships || 0} 个
+                      {p.record_count > 0 ? ` · 参赛 ${p.record_count} 届` : ''}
+                    </span>
+                    <span className="p-foot-go">{t.label} →</span>
                   </div>
                 </Link>
               );

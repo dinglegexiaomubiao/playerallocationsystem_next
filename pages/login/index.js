@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { notifySessionChanged } from '../../hooks/useSession';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -69,6 +70,8 @@ export default function Login() {
           // 登录后一律回社区首页；管理员想去分配工具/后台，走导航上的「管理后台」入口
           router.push('/');
         }
+        // 让导航栏立刻换成「昵称 + 个人信息」，不用等换页或刷新
+        notifySessionChanged();
       } else {
         setError(data.error || '登录失败');
         setErrorCode(data.code || '');

@@ -4,6 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import useAIAnalysis from '../../hooks/useAIAnalysis';
 import useSession from '../../hooks/useSession';
+import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
+
+// 只到「日」，比赛时间不需要精确到分
+function fmtDay(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return String(v).slice(0, 10);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 function tier(score) {
   if (score >= 5420) return '冠绝一世';
@@ -56,6 +66,9 @@ export default function MemberDetail() {
     players.forEach((p) => m.set(String(p.id), p.nickname));
     return m;
   }, [players]);
+
+  // 比赛记录由 /api/players 一起返回（按队伍归属 + 名次算好），这里只做兜底
+  const records = useMemo(() => (player && Array.isArray(player.records) ? player.records : []), [player]);
 
   // 反向查询：谁把当前选手标记为仇人（「被 xxx 视为仇人」）
   const enemiesOf = useMemo(() => {
@@ -267,6 +280,55 @@ export default function MemberDetail() {
               )}
             </div>
           </div>
+
+          {/* 比赛记录：名次来自 teams.rank，队伍归属来自 team_players / captain_id */}
+          <h2 className="sec-title">
+            比赛记录
+            {records.length > 0 ? `（${records.length} 届）` : ''}
+          </h2>
+          {records.length === 0 ? (
+            <div className="empty">还没有参加过群内比赛。</div>
+          ) : (
+            <div className="adm-table">
+              <div className="adm-row adm-row-rec adm-head">
+                <div>赛事</div>
+                <div>队伍</div>
+                <div>名次</div>
+                <div>担任</div>
+                <div>时间</div>
+              </div>
+              {records.map((r) => {
+                const inner = (
+                  <>
+                    <div className="adm-name">{r.tournament_name}</div>
+                    <div>{r.team_name}</div>
+                    <div>
+                      <span className={`rank-badge ${rankCls(r.team_rank)}`}>
+                        {rankLabel(r.team_rank)}
+                      </span>
+                    </div>
+                    <div>
+                      {r.is_captain ? <span className="adm-captain-tag">队长</span> : r.position || '未标注'}
+                    </div>
+                    <div className="adm-date">{fmtDay(r.start_date) || '—'}</div>
+                  </>
+                );
+                return r.tournament_id ? (
+                  <Link
+                    href={'/tournaments/' + r.tournament_id}
+                    className="adm-row adm-row-rec adm-row-link"
+                    key={r.team_id}
+                  >
+                    {inner}
+                  </Link>
+                ) : (
+                  <div className="adm-row adm-row-rec" key={r.team_id}>
+                    {inner}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
     </>

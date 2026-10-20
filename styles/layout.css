@@ -905,6 +905,17 @@ a { text-decoration: none; color: inherit; }
 /* 底栏里的次要操作保持右对齐（换行后依然成立） */
 .f-foot { justify-content: flex-end; }
 
+/* 群友卡片：列布局 + 底栏贴底，让同一行卡片的底栏落在同一水平线上
+   （卡片高度由网格 stretch 拉齐，内容少的那张靠 margin-top:auto 把底栏推到底） */
+.p-card { display: flex; flex-direction: column; }
+.p-card .p-foot { margin-top: auto; }
+
+/* 群友卡片底栏：整体允许换行，但每一段内部不折断
+   （否则「参赛 1 届」会被拆成「· 参赛 1」/「届」，底栏被撑成 3 行） */
+.p-foot > span { white-space: nowrap; }
+/* 右侧引导语是次要信息，空间紧张时整段换到第二行即可 */
+.p-foot .p-foot-go { margin-left: auto; color: var(--brand); font-weight: 600; }
+
 /* --- ④ 页面头部条（替代各页内联 flex） --- */
 .hero-bar {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -1323,3 +1334,7 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
   .hero-modal-actions { width: 100%; }
   .hero-modal-actions .btn { flex: 1 1 auto; }
 }
+
+/* 选手详情页「比赛记录」表：赛事 / 队伍 / 名次 / 担任 / 时间 */
+.adm-row-rec { grid-template-columns: 1.7fr 1.15fr .85fr .85fr 1fr; }
+@media (max-width: 720px) { .adm-row-rec { min-width: 620px; } }

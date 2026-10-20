@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSession from '../hooks/useSession';
 import { footerAccountItems } from '../lib/nav-items.mjs';
 
@@ -21,15 +21,25 @@ const ACCOUNT_NAV = [{ href: '/profile', label: '个人信息' }];
 export default function Layout({ children }) {
   const router = useRouter();
   const { pathname } = router;
-  const { me, name, isAdmin, logout, ready } = useSession();
+  const { me, name, isAdmin, logout, ready, refresh } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);
   // 窄屏抽屉菜单
   const [menuOpen, setMenuOpen] = useState(false);
+  const firstRender = useRef(true);
 
   // 换页后自动收起抽屉，避免残留在新页面上
+  //
+  // 顺带解决一个真实 bug：登录/登出都是客户端跳转（router.push），
+  // Layout 不会重新挂载，useSession 也就不会重新拉身份 —— 结果登录成功回到首页后
+  // 导航还停在「登录/注册」，要么刷新才生效。这里在换页后补一次身份刷新。
   useEffect(() => {
     setMenuOpen(false);
-  }, [pathname]);
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    refresh();
+  }, [pathname, refresh]);
 
   const handleLogout = async () => {
     if (loggingOut) return;

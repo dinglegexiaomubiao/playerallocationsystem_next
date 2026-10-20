@@ -11,6 +11,17 @@ import { useState, useEffect, useCallback } from 'react';
 
 const SESSION_EVENT = 'dd:session-changed';
 
+/**
+ * 手动广播「登录态可能变了」。
+ * 登录/注册成功后立刻调一次，导航栏不必等到换页才更新
+ * （Layout 也会在 pathname 变化时补一次刷新，两条路互为兜底）。
+ */
+export function notifySessionChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(SESSION_EVENT));
+  }
+}
+
 export default function useSession() {
   const [me, setMe] = useState(null);
   const [ready, setReady] = useState(false);
