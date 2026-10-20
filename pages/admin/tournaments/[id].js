@@ -6,6 +6,7 @@ import useSession from '../../../hooks/useSession';
 import { getSession, isAdmin } from '../../../lib/auth';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../lib/api-client.mjs';
 import { dateOnly } from '../../../lib/excel';
+import TournamentPackageIO from '../../../components/TournamentPackageIO';
 
 const STATUS_LIST = [
   { value: 'planning', label: '筹办中' },
@@ -20,7 +21,15 @@ const STATUS_LIST = [
 const POSITION_OPTIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
 
 // 赛事信息里可编辑、且会被 diff 的字段
-const INFO_FIELDS = ['name', 'status', 'start_date', 'end_date', 'sponsor_info', 'champion_prize'];
+const INFO_FIELDS = [
+  'name',
+  'status',
+  'start_date',
+  'end_date',
+  'sponsor_info',
+  'champion_prize',
+  'runner_up_prize',
+];
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
@@ -41,6 +50,7 @@ function normInfo(t) {
     end_date: dateOnly(t.end_date),
     sponsor_info: t.sponsor_info || '',
     champion_prize: t.champion_prize || '',
+    runner_up_prize: t.runner_up_prize || '',
   };
 }
 
@@ -711,6 +721,23 @@ export default function AdminTournament({ denied }) {
           <Link href="/admin" className="back-link">← 返回赛事列表</Link>
           <div className="adm-detail-head">
             <h1 style={{ fontSize: '1.7rem' }}>{info.name || '未命名赛事'}</h1>
+            {/* 单赛事整包导入 / 导出 / 模板（管理员）：赛事信息 + 报名 + 队伍 + 对阵 */}
+            <div className="adm-detail-actions">
+              <TournamentPackageIO
+                tid={id}
+                data={draft}
+                tournamentName={info.name}
+                onImported={load}
+                guard={() => {
+                  if (!dirty) return true;
+                  return window.confirm(
+                    `当前有 ${dirtyCount} 处未保存的修改。\n\n` +
+                      '导入会直接写入服务器并刷新页面，这些未保存的修改会丢失。\n' +
+                      '建议先「保存修改」再导入。仍要继续吗？'
+                  );
+                }}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -773,7 +800,7 @@ export default function AdminTournament({ denied }) {
                 <input type="date" value={info.end_date} onChange={(e) => patchInfo('end_date', e.target.value)} />
               </div>
             </div>
-            <div className="form-row">
+            <div className="form-row" style={{ marginBottom: 12 }}>
               <div className={'form-field' + (baseline.info.sponsor_info !== info.sponsor_info ? ' adm-dirty-field' : '')}>
                 <label>赞助信息</label>
                 <input value={info.sponsor_info} onChange={(e) => patchInfo('sponsor_info', e.target.value)} />
@@ -781,6 +808,12 @@ export default function AdminTournament({ denied }) {
               <div className={'form-field' + (baseline.info.champion_prize !== info.champion_prize ? ' adm-dirty-field' : '')}>
                 <label>冠军奖金</label>
                 <input value={info.champion_prize} onChange={(e) => patchInfo('champion_prize', e.target.value)} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className={'form-field' + (baseline.info.runner_up_prize !== info.runner_up_prize ? ' adm-dirty-field' : '')}>
+                <label>亚军奖金</label>
+                <input value={info.runner_up_prize} onChange={(e) => patchInfo('runner_up_prize', e.target.value)} />
               </div>
             </div>
           </div>
