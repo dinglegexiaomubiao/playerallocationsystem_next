@@ -1,5 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllTeams, getPlayersInTeam, addTeam, updateTeam, deleteTeam } from '../../lib/db';
+import { getAllTeams, getPlayersInTeam, addTeam, updateTeam, updateTeamRank, deleteTeam } from '../../lib/db';
 import { denyIfNotLoggedIn, denyIfNotAdmin } from '../../lib/auth';
 import { canManageTeam } from '../../lib/team-permission.mjs';
 
@@ -36,6 +36,7 @@ export default async function handler(req, res) {
             updated_at: player.updated_at || "",
             position_priority: {},
             team_name: team.name,
+            team_position: player.team_position || null,
             synergyPlayers: []
           }));
 
@@ -74,10 +75,14 @@ export default async function handler(req, res) {
         if (!id) {
           return res.status(400).json({ success: false, error: '缺少队伍ID' });
         }
-        // 改队名需要队长或管理员（P3）
         const perm = await canManageTeam(req, id);
         if (!perm.allowed) {
           return res.status(perm.status).json({ success: false, error: perm.reason });
+        }
+        // 更新队伍名次（rank）
+        if (updates.rank !== undefined) {
+          await updateTeamRank(id, updates.rank);
+          return res.status(200).json({ success: true, message: '队伍名次已更新' });
         }
         await updateTeam(id, { ...updates, updated_at: new Date().toISOString() });
         res.status(200).json({ success: true, message: '更新队伍成功' });

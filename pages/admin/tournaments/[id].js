@@ -15,6 +15,8 @@ const STATUS_LIST = [
   { value: 'postponed', label: '延期' },
 ];
 
+const POSITION_OPTIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
+
 export default function AdminTournament({ denied }) {
   const router = useRouter();
   const { id } = router.query;
@@ -216,6 +218,28 @@ export default function AdminTournament({ denied }) {
     }
   };
 
+  const saveRank = async (teamId, rank) => {
+    const r = await fetch('/api/teams', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: teamId, rank: rank === '' ? null : Number(rank) }),
+    });
+    const d = await r.json();
+    if (!r.ok) setMsg(d.error || '名次更新失败');
+    else { setMsg('名次已更新'); load(); }
+  };
+
+  const savePosition = async (teamId, playerId, position) => {
+    const r = await fetch('/api/team-players', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, playerId, position: position || null }),
+    });
+    const d = await r.json();
+    if (!r.ok) setMsg(d.error || '位置更新失败');
+    else { setMsg('担任位置已更新'); load(); }
+  };
+
   if (denied) {
     return (
       <div className="empty" style={{ padding: '110px 0' }}>
@@ -337,15 +361,53 @@ export default function AdminTournament({ denied }) {
           )}
 
           {tab === 'teams' && (
-            <div className="adm-table">
-              <div className="adm-row adm-head">
-                <div>队伍</div><div>队长</div><div>成员</div>
-              </div>
+            <div>
               {teams.map((t) => (
-                <div className="adm-row" key={t.id}>
-                  <div className="adm-name">{t.name}</div>
-                  <div>{t.captain_nickname || '—'}</div>
-                  <div>{t.member_count || 0} 人</div>
+                <div className="side-card" key={t.id} style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <h4 style={{ margin: 0 }}>{t.name}</h4>
+                    <span className="adm-captain-tag">队长 {t.captain_nickname || '—'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                      <label style={{ fontSize: '.85rem', color: 'var(--text-2)' }}>名次</label>
+                      <select
+                        value={t.rank ?? ''}
+                        onChange={(e) => saveRank(t.id, e.target.value)}
+                        style={{ width: 110 }}
+                      >
+                        <option value="">未定</option>
+                        <option value="1">冠军</option>
+                        <option value="2">亚军</option>
+                        <option value="3">季军</option>
+                        {[4, 5, 6, 7, 8].map((n) => (
+                          <option key={n} value={n}>第 {n} 名</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {(t.members || []).length > 0 ? (
+                    <div className="adm-table" style={{ marginTop: 12 }}>
+                      <div className="adm-row adm-head">
+                        <div>队员</div><div>担任位置</div><div>steamID</div>
+                      </div>
+                      {t.members.map((m) => (
+                        <div className="adm-row" key={m.player_id}>
+                          <div className="adm-name">{m.nickname || m.group_nickname || '未命名'}</div>
+                          <div>
+                            <select value={m.position || ''} onChange={(e) => savePosition(t.id, m.player_id, e.target.value)}>
+                              <option value="">未标注</option>
+                              {POSITION_OPTIONS.map((p) => (
+                                <option key={p} value={p}>{p}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="adm-date">{m.player_id}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="empty" style={{ padding: '12px 0' }}>暂无队员</div>
+                  )}
                 </div>
               ))}
               {teams.length === 0 && <div className="empty">暂无队伍（在报名名单里设为队长可自动建队）</div>}

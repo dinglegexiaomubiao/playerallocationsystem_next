@@ -50,6 +50,11 @@ export default function Layout({ children }) {
               </Link>
             ))}
             {ready && me && (
+              <Link href="/profile" className={isActive('/profile') ? 'active' : ''}>
+                个人信息
+              </Link>
+            )}
+            {ready && me && (
               <Link href="/my-tournaments" className={isActive('/my-tournaments') ? 'active' : ''}>
                 我的赛事
               </Link>

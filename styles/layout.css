@@ -568,6 +568,17 @@ a { text-decoration: none; color: inherit; }
 }
 .register-submit:hover:not(:disabled) { background: var(--brand-dark); transform: translateY(-1px); }
 .register-submit:disabled { opacity: .6; cursor: not-allowed; }
+.register-note {
+  margin: 10px 0 16px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-subtle); color: var(--text-2); font-size: .84rem; line-height: 1.6;
+}
+.register-note .note-strong { color: var(--accent); font-weight: 600; }
+.register-footer {
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);
+  text-align: center; font-size: .88rem; color: var(--text-2);
+}
+.register-footer a { color: var(--brand); font-weight: 600; text-decoration: none; }
+.register-footer a:hover { text-decoration: underline; }
 
 /* 可搜索选择器（默契队友 / 仇人） */
 .picker { position: relative; }
@@ -680,3 +691,15 @@ a { text-decoration: none; color: inherit; }
   background: var(--accent-soft); color: var(--accent);
   font-size: .75rem; font-weight: 600;
 }
+
+/* 名次徽标 */
+.rank-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.rank-gold { background: #fdf3d0; color: #8a6d00; }
+.rank-silver { background: #eef1f5; color: #4b5563; }
+.rank-bronze { background: #f6e8dd; color: #9a5b22; }
+.rank-plain { background: var(--bg-subtle); color: var(--text-2); }
+
+/* 可点击的行（参赛履历） */
+.adm-row-5 { grid-template-columns: 1.4fr 1fr 1fr 1.2fr 1fr; }
+.adm-row-link { text-decoration: none; color: inherit; display: grid; cursor: pointer; }
+.adm-row-link:hover { background: var(--brand-soft); }

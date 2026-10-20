@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-// 队内成员管理：加人 / 踢人 / 换人。
+// 队内成员管理：加人 / 踢人 / 换人 / 标担任位置。
 // 权限规则（P3）：操作者必须是「该队队长」（队长身份限定在对应赛季），或管理员。
-import { addPlayerToTeam, removePlayerFromTeam, updateTeamPlayers } from '../../lib/db';
+import { addPlayerToTeam, removePlayerFromTeam, updateTeamPlayers, updateTeamPlayerPosition } from '../../lib/db';
 import { denyIfNotLoggedIn } from '../../lib/auth';
 import { canManageTeam } from '../../lib/team-permission.mjs';
 
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     case 'PUT': {
       if (denyIfNotLoggedIn(req, res)) return;
       try {
-        const { teamId, playerIds, tournament_id } = req.body;
+        const { teamId, playerIds, tournament_id, playerId, position } = req.body;
         if (!teamId) {
           return res.status(400).json({ success: false, error: '缺少 teamId' });
         }
@@ -60,6 +60,12 @@ export default async function handler(req, res) {
         if (!perm.allowed) {
           return res.status(perm.status).json({ success: false, error: perm.reason });
         }
+        // 单个队员的「担任位置」更新
+        if (playerId && position !== undefined) {
+          await updateTeamPlayerPosition(teamId, playerId, position || null);
+          return res.status(200).json({ success: true, message: '担任位置已更新' });
+        }
+        // 否则为整队选手列表更新
         await updateTeamPlayers(teamId, playerIds || [], tournament_id);
         res.status(200).json({ success: true, message: '队伍选手更新成功' });
       } catch (error) {

@@ -60,11 +60,30 @@ export default async function handler(req, res) {
           [id]
         );
 
+        // 聚合每队成员（含担任位置）
+        const members = await client.query(
+          `SELECT tp.team_id, tp.player_id, tp.position, pl.nickname, pl.group_nickname
+             FROM public.team_players tp
+             JOIN public.players pl ON pl.id = tp.player_id
+            WHERE tp.tournament_id = $1
+            ORDER BY tp.team_id ASC, tp.id ASC`,
+          [id]
+        );
+        const membersByTeam = {};
+        for (const m of members.rows) {
+          if (!membersByTeam[String(m.team_id)]) membersByTeam[String(m.team_id)] = [];
+          membersByTeam[String(m.team_id)].push(m);
+        }
+        const teamsWithMembers = teams.rows.map((t) => ({
+          ...t,
+          members: membersByTeam[String(t.id)] || [],
+        }));
+
         res.status(200).json({
           success: true,
           tournament,
           signups: signups.rows,
-          teams: teams.rows,
+          teams: teamsWithMembers,
         });
         break;
       }
