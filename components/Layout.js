@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useState } from 'react';
+import useSession from '../hooks/useSession';
 
 const NAV = [
   { href: '/', label: '首页' },
@@ -11,6 +13,19 @@ const NAV = [
 export default function Layout({ children }) {
   const router = useRouter();
   const { pathname } = router;
+  const { me, name, isAdmin, logout, ready } = useSession();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    await logout();
+    setLoggingOut(false);
+    // 需要登录才能看的页面，登出后直接回首页，避免停在无权页
+    if (pathname === '/main' || pathname.startsWith('/main/')) {
+      router.replace('/');
+    }
+  };
 
   // 登录页保持纯净，不套用社区导航与页脚
   if (pathname === '/login') {
@@ -35,9 +50,28 @@ export default function Layout({ children }) {
             ))}
           </nav>
           <div className="nav-right">
-            <Link href="/login" className="btn btn-ghost">
-              登录
-            </Link>
+            {!ready ? (
+              <span className="nav-user-placeholder" aria-hidden="true" />
+            ) : me ? (
+              <>
+                <span className="nav-user" title={isAdmin ? '管理员' : '已登录'}>
+                  {isAdmin && <span className="nav-role">管理</span>}
+                  <span className="nav-user-name">{name}</span>
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                >
+                  {loggingOut ? '登出中…' : '登出'}
+                </button>
+              </>
+            ) : (
+              <Link href="/login" className="btn btn-ghost">
+                登录
+              </Link>
+            )}
             <Link href="/members" className="btn btn-primary">
               进入社区
             </Link>
@@ -74,9 +108,30 @@ export default function Layout({ children }) {
             </div>
             <div>
               <h5>账号</h5>
-              <Link href="/login">登录</Link>
-              <Link href="/login">注册</Link>
-              <Link href="/login">管理后台</Link>
+              {/* ready 之前不渲染，避免已登录用户先看到「登录 / 注册」再跳变 */}
+              {!ready ? null : me ? (
+                <>
+                  <span className="footer-user">
+                    {name}
+                    {isAdmin ? '（管理员）' : ''}
+                  </span>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLogout();
+                    }}
+                  >
+                    登出
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">登录</Link>
+                  <Link href="/login">注册</Link>
+                  <Link href="/login">管理后台</Link>
+                </>
+              )}
             </div>
           </div>
           <div className="copy">

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import useAIAnalysis from '../../hooks/useAIAnalysis';
+import useSession from '../../hooks/useSession';
 
 function tier(score) {
   if (score >= 5420) return '冠绝一世';
@@ -24,6 +25,7 @@ export default function MemberDetail() {
   const [stats, setStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const { analyzing, analysis, error: aiError, runAnalysis } = useAIAnalysis();
+  const { me, ready: sessionReady } = useSession();
 
   useEffect(() => {
     if (!id) return;
@@ -173,7 +175,19 @@ export default function MemberDetail() {
             <div>
               <div className="side-card">
                 <h4>🤖 AI 战力分析</h4>
-                {!analysis && !analyzing && !loadingStats && (
+                {!sessionReady && <div className="empty" style={{ padding: '20px 0' }}>加载中…</div>}
+                {sessionReady && !me && (
+                  <div className="ai-locked">
+                    <p>AI 分析会消耗接口额度，登录后即可使用。</p>
+                    <Link
+                      href={'/login?from=' + encodeURIComponent(router.asPath || '/members/' + id)}
+                      className="btn btn-primary"
+                    >
+                      登录后使用
+                    </Link>
+                  </div>
+                )}
+                {sessionReady && me && !analysis && !analyzing && !loadingStats && (
                   <button className="btn btn-primary" onClick={handleAI}>
                     生成 AI 分析
                   </button>

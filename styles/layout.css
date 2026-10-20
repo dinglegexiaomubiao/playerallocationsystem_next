@@ -76,6 +76,32 @@ a { text-decoration: none; color: inherit; }
 .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
 .btn-ghost { background: #fff; color: var(--text); border-color: var(--border-strong); }
 .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+.btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* ===== 导航栏登录态 ===== */
+/* 未确认身份时占位，避免「登录 → 用户名」的宽度跳动 */
+.nav-user-placeholder { display: inline-block; width: 96px; height: 20px; }
+.nav-user {
+  display: inline-flex; align-items: center; gap: 7px;
+  max-width: 180px; padding: 7px 12px 7px 10px;
+  border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--border);
+  font-size: .88rem; font-weight: 600; color: var(--text);
+}
+.nav-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nav-role {
+  flex: none; padding: 1px 7px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+}
+.footer-user { display: block; margin-bottom: 4px; color: rgba(255,255,255,.86); font-size: .85rem; }
+
+/* AI 分析：未登录时的替代内容 */
+.ai-locked p { margin: 0 0 12px; font-size: .88rem; color: var(--text-2); line-height: 1.6; }
+
+@media (max-width: 720px) {
+  .nav-user { max-width: 96px; padding: 6px 10px; }
+  .nav-role { display: none; }
+  .nav-user-placeholder { width: 60px; }
+}
 
 /* ===== Hero ===== */
 .hero {

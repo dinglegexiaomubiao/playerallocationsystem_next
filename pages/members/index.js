@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import ExcelIO from '../../components/ExcelIO';
+import useSession from '../../hooks/useSession';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 
 const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
@@ -22,8 +23,8 @@ export default function MembersPage() {
   const [q, setQ] = useState('');
   const [pos, setPos] = useState('全部');
   const [sort, setSort] = useState('score');
-  // 当前登录身份；null 表示尚未确认（此时不渲染导入导出，避免闪一下再隐藏）
-  const [me, setMe] = useState(null);
+  // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
+  const { isAdmin } = useSession();
 
   const reload = () => {
     fetch('/api/players')
@@ -49,13 +50,6 @@ export default function MembersPage() {
     return () => {
       alive = false;
     };
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => r.json())
-      .then((d) => setMe(d || { isAdmin: false }))
-      .catch(() => setMe({ isAdmin: false }));
   }, []);
 
   // 选手 id -> 昵称，用于把「默契选手」里的 id 显示成昵称
@@ -171,7 +165,7 @@ export default function MembersPage() {
               filename="群友信息.xlsx"
               templateName="群友信息_导入模板.xlsx"
               onImport={handleImport}
-              canManage={!!(me && me.isAdmin)}
+              canManage={isAdmin}
               checkDuplicate={checkDuplicate}
             />
           </div>
