@@ -7,6 +7,39 @@ import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 
 const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
 
+// 段位（与 tierOf 阈值保持一致，避免两处口径不同）
+const TIERS = [
+  { key: 'immortal', label: '冠绝一世', min: 5420, max: null },
+  { key: 'divine', label: '超凡入圣', min: 4620, max: 5420 },
+  { key: 'ancient', label: '万古流芳', min: 3850, max: 4620 },
+  { key: 'legend', label: '传奇', min: 3080, max: 3850 },
+  { key: 'archon', label: '统帅', min: 2310, max: 3080 },
+  { key: 'others', label: '中军以下', min: null, max: 2310 },
+];
+
+// 天梯分区间。min/max 为 null 表示该侧不设限；none 表示「未填写分数」
+const SCORE_RANGES = [
+  { value: 'all', label: '不限', min: null, max: null },
+  { value: '6000+', label: '6000 分以上', min: 6000, max: null },
+  { value: '5000-6000', label: '5000 - 6000', min: 5000, max: 6000 },
+  { value: '4000-5000', label: '4000 - 5000', min: 4000, max: 5000 },
+  { value: '3000-4000', label: '3000 - 4000', min: 3000, max: 4000 },
+  { value: '2000-3000', label: '2000 - 3000', min: 2000, max: 3000 },
+  { value: '0-2000', label: '2000 分以下', min: null, max: 2000 },
+  { value: 'none', label: '未填写分数', min: null, max: null, none: true },
+];
+
+const EMPTY_FILTERS = {
+  keyword: '',
+  tier: 'all',
+  score: 'all',
+  position: '全部',
+  region: '全部',
+  hero: '全部',
+  sort: 'score',
+};
+
+// 卡片上的段位信息（含样式类名）
 function tierOf(score) {
   if (score >= 5420) return { cls: 'score-immortal', label: '冠绝一世' };
   if (score >= 4620) return { cls: 'score-divine', label: '超凡入圣' };
@@ -16,13 +49,29 @@ function tierOf(score) {
   return { cls: 'score-others', label: '中军以下' };
 }
 
+// 把一名选手所有可检索信息拼成小写文本，供搜索使用（全字段）
+function buildHaystack(p) {
+  const parts = [
+    p.nickname,
+    p.group_nickname,
+    p.game_id,
+    p.region,
+    p.self_intro,
+    tierOf(Number(p.score) || 0).label,
+    ...(p.positions || []),
+    ...(p.heroes || []),
+  ];
+  return parts
+    .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+    .join(' ')
+    .toLowerCase();
+}
+
 export default function MembersPage() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [q, setQ] = useState('');
-  const [pos, setPos] = useState('全部');
-  const [sort, setSort] = useState('score');
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
   const { isAdmin } = useSession();
 
@@ -59,23 +108,120 @@ export default function MembersPage() {
     return m;
   }, [players]);
 
+  // 地区 / 擅长英雄 选项从真实数据生成，按出现次数降序（英雄池可达上百种，写死会漏）
+  const facets = useMemo(() => {
+    const build = (picker) => {
+      const m = new Map();
+      players.forEach((p) => {
+        picker(p).forEach((v) => {
+          const key = String(v === null || v === undefined ? '' : v).trim();
+          if (key) m.set(key, (m.get(key) || 0) + 1);
+        });
+      });
+      return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+    };
+    return {
+      region: build((p) => [p.region]),
+      hero: build((p) => p.heroes || []),
+    };
+  }, [players]);
+
+  // 各段位 / 分数区间命中数
+  const tierFacets = useMemo(
+    () =>
+      TIERS.map((t) => ({
+        ...t,
+        count: players.filter((p) => {
+          const s = Number(p.score) || 0;
+          if (t.min !== null && s < t.min) return false;
+          if (t.max !== null && s >= t.max) return false;
+          return true;
+        }).length,
+      })),
+    [players]
+  );
+
+  const scoreFacets = useMemo(
+    () =>
+      SCORE_RANGES.map((r) => ({
+        ...r,
+        count: players.filter((p) => {
+          const raw = p.score;
+          const has = raw !== null && raw !== undefined && Number(raw) > 0;
+          if (r.none) return !has;
+          if (!has) return false;
+          const v = Number(raw);
+          if (r.min !== null && v < r.min) return false;
+          if (r.max !== null && v >= r.max) return false;
+          return true;
+        }).length,
+      })),
+    [players]
+  );
+
+  // 搜索索引：id -> 全字段小写文本，避免每次筛选重复拼接
+  const searchIndex = useMemo(() => {
+    const m = new Map();
+    players.forEach((p) => m.set(p.id, buildHaystack(p)));
+    return m;
+  }, [players]);
+
   const filtered = useMemo(() => {
-    let list = players.slice();
-    const kw = q.trim().toLowerCase();
-    if (kw) {
-      list = list.filter(
-        (p) =>
-          (p.nickname || '').toLowerCase().includes(kw) ||
-          String(p.game_id || '').toLowerCase().includes(kw) ||
-          (p.group_nickname || '').toLowerCase().includes(kw)
-      );
-    }
-    if (pos !== '全部') list = list.filter((p) => (p.positions || []).includes(pos));
-    if (sort === 'score') list.sort((a, b) => (b.score || 0) - (a.score || 0));
-    else if (sort === 'champion') list.sort((a, b) => (b.championships || 0) - (a.championships || 0));
-    else if (sort === 'name') list.sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
+    const tier = TIERS.find((t) => t.key === filters.tier);
+    const score = SCORE_RANGES.find((r) => r.value === filters.score);
+    // 空格分词，每个词都要命中（如「南山 中单」）
+    const kws = String(filters.keyword || '')
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    const list = players.filter((p) => {
+      if (kws.length > 0) {
+        const hay = searchIndex.get(p.id) || '';
+        if (!kws.every((k) => hay.includes(k))) return false;
+      }
+      // 段位
+      if (tier) {
+        const s = Number(p.score) || 0;
+        if (tier.min !== null && s < tier.min) return false;
+        if (tier.max !== null && s >= tier.max) return false;
+      }
+      // 分数区间
+      if (score && score.value !== 'all') {
+        const raw = p.score;
+        const has = raw !== null && raw !== undefined && Number(raw) > 0;
+        if (score.none) {
+          if (has) return false;
+        } else {
+          if (!has) return false;
+          const v = Number(raw);
+          if (score.min !== null && v < score.min) return false;
+          if (score.max !== null && v >= score.max) return false;
+        }
+      }
+      // 擅长位置
+      if (filters.position !== '全部' && !(p.positions || []).includes(filters.position)) return false;
+      // 地区
+      if (filters.region !== '全部' && String(p.region || '').trim() !== filters.region) return false;
+      // 擅长英雄
+      if (filters.hero !== '全部' && !(p.heroes || []).includes(filters.hero)) return false;
+      return true;
+    });
+
+    if (filters.sort === 'score') list.sort((a, b) => (b.score || 0) - (a.score || 0));
+    else if (filters.sort === 'champion') list.sort((a, b) => (b.championships || 0) - (a.championships || 0));
+    else if (filters.sort === 'name') list.sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
     return list;
-  }, [players, q, pos, sort]);
+  }, [players, filters, searchIndex]);
+
+  const activeCount =
+    (String(filters.keyword || '').trim() ? 1 : 0) +
+    (filters.tier !== 'all' ? 1 : 0) +
+    (filters.score !== 'all' ? 1 : 0) +
+    (filters.position !== '全部' ? 1 : 0) +
+    (filters.region !== '全部' ? 1 : 0) +
+    (filters.hero !== '全部' ? 1 : 0);
 
   const handleImport = async (rows, onProgress) => {
     const list = rows
@@ -136,32 +282,14 @@ export default function MembersPage() {
       </Head>
 
       <section className="page-hero">
-        <div className="wrap">
-          <h1>
-            群友<span className="hl">信息</span>
-          </h1>
-          <p>共 {players.length} 位群友 · 天梯分、擅长位置与英雄池一览</p>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="toolbar">
-            <div className="search-box">
-              <input placeholder="搜索昵称 / steamID / 群昵称" value={q} onChange={(e) => setQ(e.target.value)} />
-            </div>
-            <div className="chips">
-              {['全部', ...POSITIONS].map((p) => (
-                <button key={p} className={`chip ${pos === p ? 'active' : ''}`} onClick={() => setPos(p)}>
-                  {p}
-                </button>
-              ))}
-            </div>
-            <select className="chip" value={sort} onChange={(e) => setSort(e.target.value)} style={{ paddingRight: 28 }}>
-              <option value="score">按天梯分</option>
-              <option value="champion">按冠军数</option>
-              <option value="name">按昵称</option>
-            </select>
+        <div className="wrap" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>
+              群友<span className="hl">信息</span>
+            </h1>
+            <p>共 {players.length} 位群友 · 天梯分、擅长位置与英雄池一览</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <ExcelIO
               columns={PLAYER_COLUMNS}
               rows={players}
@@ -172,10 +300,153 @@ export default function MembersPage() {
               checkDuplicate={checkDuplicate}
             />
           </div>
+        </div>
+      </section>
+
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="filter-bar">
+            <div className="filter-field filter-field-search">
+              <label>搜索</label>
+              <div className="filter-search">
+                <input
+                  className={String(filters.keyword || '').trim() ? 'is-active' : ''}
+                  value={filters.keyword}
+                  onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+                  placeholder="昵称 / steamID / 群昵称 / 地区 / 英雄 / 评价…"
+                  aria-label="搜索群友"
+                />
+                {filters.keyword && (
+                  <button
+                    type="button"
+                    className="filter-search-clear"
+                    aria-label="清空搜索"
+                    onClick={() => setFilters({ ...filters, keyword: '' })}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="filter-field">
+              <label>段位</label>
+              <select
+                className={filters.tier !== 'all' ? 'is-active' : ''}
+                value={filters.tier}
+                onChange={(e) => setFilters({ ...filters, tier: e.target.value })}
+              >
+                <option value="all">全部段位（{players.length}）</option>
+                {tierFacets.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}（{t.count}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>天梯分</label>
+              <select
+                className={filters.score !== 'all' ? 'is-active' : ''}
+                value={filters.score}
+                onChange={(e) => setFilters({ ...filters, score: e.target.value })}
+              >
+                {scoreFacets.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.value === 'all' ? `不限（${r.count} 人有分数）` : `${r.label}（${r.count}）`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>位置</label>
+              <select
+                className={filters.position !== '全部' ? 'is-active' : ''}
+                value={filters.position}
+                onChange={(e) => setFilters({ ...filters, position: e.target.value })}
+              >
+                <option value="全部">全部位置（{players.length}）</option>
+                {POSITIONS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}（{players.filter((x) => (x.positions || []).includes(p)).length}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>地区</label>
+              <select
+                className={filters.region !== '全部' ? 'is-active' : ''}
+                value={filters.region}
+                onChange={(e) => setFilters({ ...filters, region: e.target.value })}
+              >
+                <option value="全部">全部地区（{players.length}）</option>
+                {facets.region.map(([k, n]) => (
+                  <option key={k} value={k}>
+                    {k}（{n}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>擅长英雄</label>
+              <select
+                className={filters.hero !== '全部' ? 'is-active' : ''}
+                value={filters.hero}
+                onChange={(e) => setFilters({ ...filters, hero: e.target.value })}
+              >
+                <option value="全部">全部英雄（{facets.hero.length}）</option>
+                {facets.hero.map(([k, n]) => (
+                  <option key={k} value={k}>
+                    {k}（{n}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>排序</label>
+              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })}>
+                <option value="score">按天梯分</option>
+                <option value="champion">按冠军数</option>
+                <option value="name">按昵称</option>
+              </select>
+            </div>
+
+            <div className="filter-summary">
+              <span>
+                筛出 <b>{filtered.length}</b> / {players.length} 位
+              </span>
+              {activeCount > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setFilters(EMPTY_FILTERS)}>
+                  重置
+                </button>
+              )}
+            </div>
+          </div>
 
           {loading && <div className="empty">加载中…</div>}
           {error && <div className="empty">加载失败：{error}</div>}
-          {!loading && !error && filtered.length === 0 && <div className="empty">没有符合条件的群友</div>}
+          {!loading && !error && filtered.length === 0 && (
+            activeCount > 0 ? (
+              <div className="empty">
+                没有符合条件的群友
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginLeft: 10 }}
+                  onClick={() => setFilters(EMPTY_FILTERS)}
+                >
+                  清除筛选
+                </button>
+              </div>
+            ) : (
+              <div className="empty">还没有群友数据</div>
+            )
+          )}
 
           <div className="players-grid">
             {filtered.map((p) => {
