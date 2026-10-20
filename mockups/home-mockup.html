@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DOTA 群英荟 · 社区首页 Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* ===== 亮色现代社区风 Design Tokens ===== */
+    --bg-page: #f6f7f9;
+    --bg-card: #ffffff;
+    --bg-subtle: #eef1f5;
+    --brand: #2563eb;          /* 沉稳蓝 · 主操作色 */
+    --brand-dark: #1d4ed8;
+    --brand-soft: #e8f0fe;
+    --accent: #c23c2a;         /* Dota 红 · 品牌点缀 */
+    --accent-soft: #fdece9;
+    --gold: #e8b923;
+    --text: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9aa3af;
+    --border: #e6e9ee;
+    --border-strong: #d4d9e0;
+    --radius-sm: 8px;
+    --radius: 14px;
+    --radius-lg: 20px;
+    --shadow-sm: 0 1px 3px rgba(16,24,40,.06);
+    --shadow: 0 4px 16px rgba(16,24,40,.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,40,.12);
+    --maxw: 1180px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg-page);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { text-decoration: none; color: inherit; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  /* ===== Header / Nav ===== */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: saturate(160%) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display:flex; align-items:center; gap:28px; height:64px; }
+  .logo { display:flex; align-items:center; gap:10px; font-weight:800; font-size:1.15rem; letter-spacing:-.02em; }
+  .logo .mark {
+    width:34px; height:34px; border-radius:9px;
+    background: linear-gradient(135deg, var(--accent), #e0593f);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:1rem;
+    box-shadow: 0 4px 12px rgba(194,60,42,.3);
+  }
+  .logo b { color: var(--accent); }
+  .nav-links { display:flex; gap:6px; margin-left:8px; }
+  .nav-links a {
+    padding:8px 14px; border-radius:10px; font-weight:500; color:var(--text-2); font-size:.92rem;
+    transition: all .18s ease;
+  }
+  .nav-links a:hover { background: var(--bg-subtle); color: var(--text); }
+  .nav-links a.active { background: var(--brand-soft); color: var(--brand); font-weight:600; }
+  .nav-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .btn {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:9px 18px; border-radius:11px; font-weight:600; font-size:.9rem; cursor:pointer;
+    border:1px solid transparent; transition: all .18s ease;
+  }
+  .btn-primary { background: var(--brand); color:#fff; box-shadow:0 4px 12px rgba(37,99,235,.28); }
+  .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
+  .btn-ghost { background: #fff; color: var(--text); border-color: var(--border-strong); }
+  .btn-ghost:hover { border-color: var(--brand); color: var(--brand); }
+
+  /* ===== Hero ===== */
+  .hero {
+    position:relative; overflow:hidden;
+    padding: 72px 0 64px;
+    background:
+      radial-gradient(1100px 380px at 85% -10%, rgba(194,60,42,.08), transparent 60%),
+      radial-gradient(900px 360px at 10% 110%, rgba(37,99,235,.10), transparent 60%);
+  }
+  .hero h1 { font-size: 3rem; font-weight:800; letter-spacing:-.03em; line-height:1.12; }
+  .hero h1 .hl { color: var(--accent); }
+  .hero p { margin-top:18px; font-size:1.1rem; color: var(--text-2); max-width:560px; }
+  .hero-cta { margin-top:30px; display:flex; gap:14px; flex-wrap:wrap; }
+  .hero-stats { margin-top:46px; display:flex; gap:36px; flex-wrap:wrap; }
+  .hero-stats .s .n { font-size:1.9rem; font-weight:800; color:var(--text); letter-spacing:-.02em; }
+  .hero-stats .s .l { font-size:.85rem; color:var(--text-2); }
+  .hero-card {
+    position:absolute; right:0; top:50%; transform:translateY(-50%);
+    width:360px; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg);
+    box-shadow: var(--shadow-lg); padding:22px; display:none;
+  }
+  @media(min-width:1080px){ .hero-card{ display:block; } }
+
+  /* ===== Section ===== */
+  section.block { padding: 56px 0; }
+  .sec-head { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:26px; }
+  .sec-head h2 { font-size:1.6rem; font-weight:800; letter-spacing:-.02em; }
+  .sec-head .sub { color:var(--text-2); font-size:.95rem; margin-top:4px; }
+  .sec-head a.more { color:var(--brand); font-weight:600; font-size:.9rem; }
+
+  /* ===== 板块入口 卡片 ===== */
+  .grid-4 { display:grid; grid-template-columns: repeat(4,1fr); gap:18px; }
+  .entry {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:22px;
+    box-shadow: var(--shadow-sm); transition: all .2s ease; cursor:pointer; position:relative; overflow:hidden;
+  }
+  .entry:hover { transform: translateY(-4px); box-shadow: var(--shadow); border-color: var(--border-strong); }
+  .entry .ic {
+    width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    font-size:1.4rem; margin-bottom:14px;
+  }
+  .entry h3 { font-size:1.08rem; font-weight:700; }
+  .entry p { color:var(--text-2); font-size:.86rem; margin-top:6px; min-height:38px; }
+  .entry .go { margin-top:14px; color:var(--brand); font-weight:600; font-size:.85rem; }
+  .c-blue { background: var(--brand-soft); } .c-red { background: var(--accent-soft); }
+  .c-gold { background: #fdf6e3; } .c-green { background: #e7f6ec; }
+
+  /* ===== Feed ===== */
+  .feed { display:grid; grid-template-columns: 2fr 1fr; gap:18px; }
+  .feed-main { display:flex; flex-direction:column; gap:14px; }
+  .post {
+    background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px;
+    box-shadow: var(--shadow-sm); display:flex; gap:14px; align-items:flex-start;
+  }
+  .post .av { width:42px; height:42px; border-radius:11px; background:var(--brand-soft); color:var(--brand);
+    display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0; }
+  .post .meta { font-size:.8rem; color:var(--text-3); }
+  .post .tag { display:inline-block; font-size:.72rem; font-weight:600; padding:2px 9px; border-radius:20px; margin-right:8px; }
+  .tag-tour { background: var(--accent-soft); color: var(--accent); }
+  .tag-member { background: var(--brand-soft); color: var(--brand); }
+  .tag-food { background: #fdf6e3; color: #b8860b; }
+  .post h4 { font-size:1rem; font-weight:700; margin:4px 0 4px; }
+  .post p { color:var(--text-2); font-size:.88rem; }
+  .side-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); }
+  .side-card h4 { font-size:1rem; font-weight:700; margin-bottom:14px; }
+  .rank { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--bg-subtle); }
+  .rank:last-child { border:none; }
+  .rank .no { width:22px; height:22px; border-radius:7px; background:var(--bg-subtle); font-size:.75rem; font-weight:700;
+    display:flex; align-items:center; justify-content:center; color:var(--text-2); }
+  .rank .no.top { background: var(--gold); color:#fff; }
+  .rank .nm { font-weight:600; font-size:.9rem; }
+  .rank .sc { margin-left:auto; font-weight:700; color:var(--brand); font-size:.88rem; }
+
+  /* ===== Footer ===== */
+  footer { background:#11151c; color:#aab2bd; margin-top:40px; padding:40px 0 28px; }
+  footer .cols { display:flex; gap:48px; flex-wrap:wrap; }
+  footer h5 { color:#fff; font-size:.92rem; margin-bottom:12px; }
+  footer a { display:block; color:#aab2bd; font-size:.85rem; padding:3px 0; }
+  footer a:hover { color:#fff; }
+  footer .copy { margin-top:28px; padding-top:18px; border-top:1px solid #232a34; font-size:.8rem; color:#7b8493; }
+
+  @media(max-width: 920px){
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+    .feed { grid-template-columns: 1fr; }
+    .nav-links { display:none; }
+    .hero h1 { font-size:2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Nav ===== -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="logo"><span class="mark">刀</span> DOTA<b>群英荟</b></div>
+    <nav class="nav-links">
+      <a href="#" class="active">首页</a>
+      <a href="#">赛事信息</a>
+      <a href="#">群友信息</a>
+      <a href="#">群友美食</a>
+    </nav>
+    <div class="nav-right">
+      <a href="#" class="btn btn-ghost">登录</a>
+      <a href="#" class="btn btn-primary">进入社区</a>
+    </div>
+  </div>
+</header>
+
+<!-- ===== Hero ===== -->
+<section class="hero">
+  <div class="wrap">
+    <h1>一群人的<span class="hl">刀塔</span>江湖<br/>赛事、群友与深夜美食</h1>
+    <p>记录每一届内战战报，认识群里的高手与乐子人，顺便收藏大家私藏的美食地图。</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-primary">浏览最新赛事 →</a>
+      <a href="#" class="btn btn-ghost">认识群友</a>
+    </div>
+    <div class="hero-stats">
+      <div class="s"><div class="n">128</div><div class="l">注册群友</div></div>
+      <div class="s"><div class="n">36</div><div class="l">历史赛事</div></div>
+      <div class="s"><div class="n">54</div><div class="l">美食推荐</div></div>
+      <div class="s"><div class="n">2.4k</div><div class="l">对局记录</div></div>
+    </div>
+  </div>
+  <div class="hero-card">
+    <div style="font-size:.78rem;color:var(--text-3);font-weight:600;">本周焦点赛事</div>
+    <div style="font-weight:800;font-size:1.1rem;margin:8px 0 4px;">第十届群内精英赛</div>
+    <div style="font-size:.85rem;color:var(--text-2);">8 强已决出 · 半决赛本周六 20:00</div>
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <span style="background:var(--accent-soft);color:var(--accent);padding:4px 10px;border-radius:8px;font-size:.78rem;font-weight:600;">进行中</span>
+      <span style="background:var(--brand-soft);color:var(--brand);padding:4px 10px;border-radius:8px;font-size:.78rem;font-weight:600;">16 支队伍</span>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 板块入口 ===== -->
+<section class="block">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><h2>探索社区</h2><div class="sub">四大板块，覆盖从赛场到饭桌的全部乐趣</div></div>
+    </div>
+    <div class="grid-4">
+      <div class="entry">
+        <div class="ic c-red">🏆</div>
+        <h3>赛事信息</h3>
+        <p>历届内战赛程、对阵、排名与战报，一键复盘。</p>
+        <div class="go">进入赛事 →</div>
+      </div>
+      <div class="entry">
+        <div class="ic c-blue">👥</div>
+        <h3>群友信息</h3>
+        <p>群友档案、天梯分、擅长英雄与 AI 战力分析。</p>
+        <div class="go">认识群友 →</div>
+      </div>
+      <div class="entry">
+        <div class="ic c-gold">🍜</div>
+        <h3>群友美食</h3>
+        <p>群友私藏美食地图，附推荐人、评分与吐槽。</p>
+        <div class="go">查看美食 →</div>
+      </div>
+      <div class="entry">
+        <div class="ic c-green">🎯</div>
+        <h3>阵容分配</h3>
+        <p>按赛事快速组队，自动检测默契与位置覆盖。</p>
+        <div class="go">开始分配 →</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Feed ===== -->
+<section class="block" style="padding-top:0;">
+  <div class="wrap">
+    <div class="sec-head">
+      <div><h2>社区动态</h2><div class="sub">来自赛事、群友与美食的最新消息</div></div>
+      <a href="#" class="more">查看全部 →</a>
+    </div>
+    <div class="feed">
+      <div class="feed-main">
+        <div class="post">
+          <div class="av">赛</div>
+          <div>
+            <div class="meta"><span class="tag tag-tour">赛事</span> 2 小时前</div>
+            <h4>第十届群内精英赛 · 八强出炉</h4>
+            <p>“夜魇军团”与“天辉养老院”携手晋级，半决赛对阵将在本周六晚八点开打，敬请关注。</p>
+          </div>
+        </div>
+        <div class="post">
+          <div class="av">友</div>
+          <div>
+            <div class="meta"><span class="tag tag-member">群友</span> 5 小时前</div>
+            <h4>「影魔王子」天梯冲上万古流芳</h4>
+            <p>本周群内最高分段更新，附带其绝活影魔近 100 场 58% 胜率数据，BP 建议已生成。</p>
+          </div>
+        </div>
+        <div class="post">
+          <div class="av">食</div>
+          <div>
+            <div class="meta"><span class="tag tag-food">美食</span> 昨天</div>
+            <h4>夜宵推荐：楼下烧烤摊的蒜香茄子</h4>
+            <p>群友 @老K 五星推荐，配冰可乐绝佳，地址已更新到美食地图，评分 4.8。</p>
+          </div>
+        </div>
+      </div>
+      <div class="side-card">
+        <h4>🏅 群友天梯榜</h4>
+        <div class="rank"><span class="no top">1</span><span class="nm">影魔王子</span><span class="sc">5420</span></div>
+        <div class="rank"><span class="no top">2</span><span class="nm">中路杀神</span><span class="sc">5180</span></div>
+        <div class="rank"><span class="no top">3</span><span class="nm">辅助之神</span><span class="sc">4990</span></div>
+        <div class="rank"><span class="no">4</span><span class="nm">野区之王</span><span class="sc">4760</span></div>
+        <div class="rank"><span class="no">5</span><span class="nm">团战发动机</span><span class="sc">4610</span></div>
+        <div style="margin-top:14px;"><a href="#" style="color:var(--brand);font-weight:600;font-size:.85rem;">完整榜单 →</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Footer ===== -->
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <div class="logo" style="color:#fff;"><span class="mark">刀</span> DOTA<b style="color:var(--accent);">群英荟</b></div>
+        <p style="margin-top:10px;font-size:.85rem;max-width:260px;">一个属于我们自己的 Dota2 社区：赛事、群友、美食，全都在这里。</p>
+      </div>
+      <div>
+        <h5>板块</h5>
+        <a href="#">赛事信息</a><a href="#">群友信息</a><a href="#">群友美食</a><a href="#">阵容分配</a>
+      </div>
+      <div>
+        <h5>社区</h5>
+        <a href="#">关于我们</a><a href="#">加入群聊</a><a href="#">投稿美食</a><a href="#">反馈建议</a>
+      </div>
+      <div>
+        <h5>账号</h5>
+        <a href="#">登录</a><a href="#">注册</a><a href="#">管理后台</a>
+      </div>
+    </div>
+    <div class="copy">© 2026 DOTA 群英荟 · 社区由群友共建，数据仅限内部使用。</div>
+  </div>
+</footer>
+
+</body>
+</html>

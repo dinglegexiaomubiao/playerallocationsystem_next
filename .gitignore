@@ -57,3 +57,6 @@ data/*.json
 
 # Claude Code 本地配置
 .claude/
+
+# WorkBuddy 本地数据（记忆等）
+.workbuddy/
