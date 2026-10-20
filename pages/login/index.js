@@ -36,7 +36,21 @@ export default function Login() {
           name: data.name,
           count: data.count
         }));
-        router.push('/main');
+
+        // 回跳地址只接受站内路径，避免被利用做开放重定向
+        const from =
+          typeof router.query.from === 'string' &&
+          router.query.from.startsWith('/') &&
+          !router.query.from.startsWith('//')
+            ? router.query.from
+            : null;
+
+        if (from) {
+          router.push(from);
+        } else {
+          // 管理员进管理后台，普通群友回社区首页
+          router.push(data.isAdmin ? '/main' : '/');
+        }
       } else {
         setError(data.error || '登录失败');
       }

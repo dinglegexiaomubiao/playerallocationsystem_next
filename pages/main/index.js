@@ -10,8 +10,9 @@ import { useTournaments } from '../../hooks/useTournaments';
 import { usePlayerManagement } from '../../hooks/usePlayerManagement';
 import { useTeamManagement } from '../../hooks/useTeamManagement';
 import heroesList from '../../lib/heroesData';
+import { getSession, isAdmin } from '../../lib/auth';
 
-export default function Home() {
+function MainTool() {
   const router = useRouter();
   const importFileRef = useRef(null);
   const [user, setUser] = useState(null);
@@ -963,4 +964,45 @@ export default function Home() {
       )}
     </div>
   );
+}
+
+// 已登录但不是管理员时展示（不重定向，避免「登录 → 被踢回登录页」的死循环）
+function DeniedNotice() {
+  return (
+    <>
+      <Head>
+        <title>无权访问 - Dom的比赛记录</title>
+      </Head>
+      <section className="page-hero">
+        <div className="wrap">
+          <h1>
+            无权<span className="hl">访问</span>
+          </h1>
+          <p>阵容分配工具仅对管理员开放，当前账号没有管理权限。</p>
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <a className="btn btn-primary" href="/">
+              返回首页
+            </a>
+            <a className="btn btn-ghost" href="/food">
+              去看看群友美食
+            </a>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+export default function MainPage({ denied }) {
+  if (denied) return <DeniedNotice />;
+  return <MainTool />;
+}
+
+// 服务端校验：未登录踢去登录页并带回跳地址；已登录但非管理员则渲染无权提示
+export async function getServerSideProps({ req }) {
+  const session = getSession(req);
+  if (!session) {
+    return { redirect: { destination: '/login?from=/main', permanent: false } };
+  }
+  return { props: { denied: !isAdmin(req) } };
 }

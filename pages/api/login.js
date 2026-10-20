@@ -1,5 +1,5 @@
 import { initDatabase, query } from '../../lib/db';
-import { setSessionCookie } from '../../lib/auth';
+import { setSessionCookie, ADMIN_NAME } from '../../lib/auth';
 import crypto from 'crypto';
 
 let dbInitialized = false;
@@ -88,7 +88,8 @@ export default async function handler(req, res) {
         return res.status(200).json({
           name: trimmedUsername,
           count: updated.rows[0].count,
-          message: '登录成功'
+          message: '登录成功',
+          isAdmin: trimmedUsername.toLowerCase() === ADMIN_NAME
         });
       } else {
         // 新用户注册并登录
@@ -104,7 +105,8 @@ export default async function handler(req, res) {
         return res.status(200).json({
           name: trimmedUsername,
           count: inserted.rows[0].count,
-          message: '注册并登录成功'
+          message: '注册并登录成功',
+          isAdmin: trimmedUsername.toLowerCase() === ADMIN_NAME
         });
       }
     } catch (error) {
