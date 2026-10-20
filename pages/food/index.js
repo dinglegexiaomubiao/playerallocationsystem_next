@@ -397,14 +397,14 @@ export default function FoodPage() {
       </Head>
 
       <section className="page-hero">
-        <div className="wrap" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
+        <div className="wrap hero-bar">
+          <div className="hero-bar-main">
             <h1>
               群友<span className="hl">美食</span>
             </h1>
             <p>共 {foods.length} 家店 · 店名 / 菜系 / 区位 / 人均 / 饭后评价全记录</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="hero-actions">
             <ExcelIO
               columns={FOOD_COLUMNS}
               rows={foods}

@@ -134,54 +134,56 @@ export default function Home() {
 
       {/* ===== Hero ===== */}
       <section className="hero">
-        <div className="wrap">
-          <h1>
-            一群人的<span className="hl">刀塔</span>江湖
-            <br />
-            不止游戏，还有饭局与山野湖海
-          </h1>
-          <p>
-            深圳 LaRoja 社区：Dota2 内战、吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。
-            本页信息均由群友提供。
-          </p>
-          <div className="hero-cta">
-            <Link href="/tournaments" className="btn btn-primary">
-              浏览最新赛事 →
-            </Link>
-            <Link href="/members" className="btn btn-ghost">
-              认识群友
-            </Link>
+        <div className="wrap hero-grid">
+          <div className="hero-main">
+            <h1>
+              一群人的<span className="hl">刀塔</span>江湖
+              <br />
+              不止游戏，还有饭局与山野湖海
+            </h1>
+            <p>
+              深圳 LaRoja 社区：Dota2 内战、吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。
+              本页信息均由群友提供。
+            </p>
+            <div className="hero-cta">
+              <Link href="/tournaments" className="btn btn-primary">
+                浏览最新赛事 →
+              </Link>
+              <Link href="/members" className="btn btn-ghost">
+                认识群友
+              </Link>
+            </div>
+            <div className="hero-stats">
+              {stats.map((s) => (
+                <div className="s" key={s.l}>
+                  <div className="n">{s.n}</div>
+                  <div className="l">{s.l}</div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="hero-stats">
-            {stats.map((s) => (
-              <div className="s" key={s.l}>
-                <div className="n">{s.n}</div>
-                <div className="l">{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="hero-card">
-          <div style={{ fontSize: '.78rem', color: 'var(--text-3)', fontWeight: 600 }}>本周焦点赛事</div>
-          {focus ? (
-            <>
-              <div style={{ fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 4px' }}>{focus.name}</div>
-              <div style={{ fontSize: '.85rem', color: 'var(--text-2)' }}>
-                {STATUS_LABEL[focus.status] || '赛程'} · {fmt(focus.start_date)} ~ {fmt(focus.end_date)}
-              </div>
-              <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
-                <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600 }}>
-                  {STATUS_LABEL[focus.status] || '赛事'}
-                </span>
-                <Link href="/tournaments" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600 }}>
-                  查看详情
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div style={{ fontSize: '.85rem', color: 'var(--text-2)', marginTop: 8 }}>暂无赛事数据</div>
-          )}
+          <div className="hero-card">
+            <div style={{ fontSize: '.78rem', color: 'var(--text-3)', fontWeight: 600 }}>本周焦点赛事</div>
+            {focus ? (
+              <>
+                <div style={{ fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 4px' }}>{focus.name}</div>
+                <div style={{ fontSize: '.85rem', color: 'var(--text-2)' }}>
+                  {STATUS_LABEL[focus.status] || '赛程'} · {fmt(focus.start_date)} ~ {fmt(focus.end_date)}
+                </div>
+                <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {STATUS_LABEL[focus.status] || '赛事'}
+                  </span>
+                  <Link href="/tournaments" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    查看详情
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: '.85rem', color: 'var(--text-2)', marginTop: 8 }}>暂无赛事数据</div>
+            )}
+          </div>
         </div>
       </section>
 

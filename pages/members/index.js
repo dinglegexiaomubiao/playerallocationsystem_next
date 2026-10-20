@@ -282,14 +282,14 @@ export default function MembersPage() {
       </Head>
 
       <section className="page-hero">
-        <div className="wrap" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
+        <div className="wrap hero-bar">
+          <div className="hero-bar-main">
             <h1>
               群友<span className="hl">信息</span>
             </h1>
             <p>共 {players.length} 位群友 · 天梯分、擅长位置与英雄池一览</p>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="hero-actions">
             <ExcelIO
               columns={PLAYER_COLUMNS}
               rows={players}

@@ -1,14 +1,21 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import useSession from '../hooks/useSession';
 import { footerAccountItems } from '../lib/nav-items.mjs';
 
-const NAV = [
+// 顶级导航：只放「全站板块」，个人相关入口按登录态追加
+const PRIMARY_NAV = [
   { href: '/', label: '首页' },
   { href: '/tournaments', label: '赛事信息' },
   { href: '/members', label: '群友信息' },
   { href: '/food', label: '群友美食' },
+];
+
+// 登录后追加的次级入口
+const ACCOUNT_NAV = [
+  { href: '/profile', label: '个人信息' },
+  { href: '/my-tournaments', label: '我的赛事' },
 ];
 
 export default function Layout({ children }) {
@@ -16,6 +23,13 @@ export default function Layout({ children }) {
   const { pathname } = router;
   const { me, name, isAdmin, logout, ready } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);
+  // 窄屏抽屉菜单
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // 换页后自动收起抽屉，避免残留在新页面上
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -36,58 +50,95 @@ export default function Layout({ children }) {
   const isActive = (href) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
 
+  const navItems = ready && me ? [...PRIMARY_NAV, ...ACCOUNT_NAV] : PRIMARY_NAV;
+
+  // 导航右侧账号区（桌面）与抽屉底部（窄屏）复用同一份结构
+  const accountBlock = !ready ? (
+    <span className="nav-user-placeholder" aria-hidden="true" />
+  ) : me ? (
+    <>
+      <span className="nav-user" title={isAdmin ? '管理员' : '已登录'}>
+        {isAdmin && <span className="nav-role">管理</span>}
+        <span className="nav-user-name">{name}</span>
+      </span>
+      {isAdmin && (
+        <Link href="/main" className="btn btn-sm btn-primary">
+          管理后台
+        </Link>
+      )}
+      <button
+        type="button"
+        className="btn btn-sm btn-ghost"
+        onClick={handleLogout}
+        disabled={loggingOut}
+      >
+        {loggingOut ? '登出中…' : '登出'}
+      </button>
+    </>
+  ) : (
+    <>
+      <Link href="/login" className="btn btn-sm btn-ghost">
+        登录
+      </Link>
+      <Link href="/register" className="btn btn-sm btn-primary">
+        注册
+      </Link>
+    </>
+  );
+
   return (
     <div className="site-root">
       <header className="site-nav">
         <div className="wrap nav-inner">
-          <Link href="/" className="logo">
-            <span className="mark">刀</span> 深圳LaRoja<b>Dota2社区</b>
+          <Link href="/" className="logo" aria-label="深圳LaRoja Dota2社区 · 返回首页">
+            <span className="mark" aria-hidden="true">
+              刀
+            </span>
+            <span className="logo-text">
+              深圳LaRoja<b>Dota2社区</b>
+            </span>
           </Link>
-          <nav className="nav-links">
-            {NAV.map((n) => (
+
+          <nav className="nav-links" aria-label="主导航">
+            {navItems.map((n) => (
               <Link key={n.href} href={n.href} className={isActive(n.href) ? 'active' : ''}>
                 {n.label}
               </Link>
             ))}
-            {ready && me && (
-              <Link href="/profile" className={isActive('/profile') ? 'active' : ''}>
-                个人信息
-              </Link>
-            )}
-            {ready && me && (
-              <Link href="/my-tournaments" className={isActive('/my-tournaments') ? 'active' : ''}>
-                我的赛事
-              </Link>
-            )}
           </nav>
-          <div className="nav-right">
-            {!ready ? (
-              <span className="nav-user-placeholder" aria-hidden="true" />
-            ) : me ? (
-              <>
-                <span className="nav-user" title={isAdmin ? '管理员' : '已登录'}>
-                  {isAdmin && <span className="nav-role">管理</span>}
-                  <span className="nav-user-name">{name}</span>
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                >
-                  {loggingOut ? '登出中…' : '登出'}
-                </button>
-              </>
-            ) : (
-              <Link href="/login" className="btn btn-ghost">
-                登录
-              </Link>
-            )}
-            <Link href="/members" className="btn btn-primary">
-              进入社区
-            </Link>
-          </div>
+
+          <div className="nav-right">{accountBlock}</div>
+
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-label={menuOpen ? '关闭导航菜单' : '打开导航菜单'}
+            aria-expanded={menuOpen}
+            aria-controls="site-nav-drawer"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
         </div>
+
+        {menuOpen && (
+          <div className="nav-drawer" id="site-nav-drawer">
+            <div className="wrap nav-drawer-inner">
+              {navItems.map((n) => (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  className={'nav-drawer-link' + (isActive(n.href) ? ' active' : '')}
+                >
+                  {n.label}
+                </Link>
+              ))}
+              <div className="nav-drawer-actions">{accountBlock}</div>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="site-main">{children}</main>

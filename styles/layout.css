@@ -29,6 +29,10 @@
   --shadow: 0 4px 16px rgba(16,24,40,.08);
   --shadow-lg: 0 12px 32px rgba(16,24,40,.12);
   --maxw: 1180px;
+  /* 布局骨架令牌（安全边界统一走这几个值，别再各页写死） */
+  --nav-h: 64px;
+  --card-pad: 20px;
+  --gutter: 18px;
 }
 
 .site-root {
@@ -46,31 +50,54 @@ a { text-decoration: none; color: inherit; }
 /* ===== Header / Nav ===== */
 .site-nav {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.88);
   backdrop-filter: saturate(160%) blur(12px);
   border-bottom: 1px solid var(--border);
 }
-.nav-inner { display: flex; align-items: center; gap: 28px; height: 64px; }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; letter-spacing: -.02em; }
+.nav-inner {
+  display: flex; align-items: center; gap: 20px;
+  height: var(--nav-h);
+  flex-wrap: nowrap;           /* 导航栏永不换行 */
+  white-space: nowrap;         /* 也不允许中文按字折行 */
+}
+/* 导航内的所有原子单元：一律不压缩。
+   之前的挤压是因为它们默认 flex-shrink:1，宽度不够时被压到比一个汉字还窄，
+   浏览器只好把「赛事信息」竖着排。 */
+.logo,
+.nav-links,
+.nav-links a,
+.nav-right,
+.nav-toggle,
+.nav-user,
+.nav-user-placeholder { flex: 0 0 auto; }
+
+.logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 1.08rem; letter-spacing: -.02em; }
 .logo .mark {
-  width: 34px; height: 34px; border-radius: 9px;
+  width: 32px; height: 32px; border-radius: 9px; flex: none;
   background: linear-gradient(135deg, var(--accent), #e0593f);
-  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: .95rem;
   box-shadow: 0 4px 12px rgba(194,60,42,.3);
 }
 .logo b { color: var(--accent); }
-.nav-links { display: flex; gap: 6px; margin-left: 8px; }
+
+.nav-links { display: flex; gap: 2px; margin-left: 4px; }
 .nav-links a {
-  padding: 8px 14px; border-radius: 10px; font-weight: 500; color: var(--text-2); font-size: .92rem;
-  transition: all .18s ease;
+  display: inline-flex; align-items: center; height: 34px;
+  padding: 0 11px; border-radius: 9px;
+  font-weight: 500; color: var(--text-2); font-size: .9rem;
+  transition: background .18s ease, color .18s ease;
 }
 .nav-links a:hover { background: var(--bg-subtle); color: var(--text); }
 .nav-links a.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
-.nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   padding: 9px 18px; border-radius: 11px; font-weight: 600; font-size: .9rem; cursor: pointer;
   border: 1px solid transparent; transition: all .18s ease;
+  white-space: nowrap;         /* 按钮文案绝不折行 */
+  flex: 0 0 auto;              /* 也绝不被兄弟元素压扁 */
+  max-width: 100%;
 }
 .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,.28); }
 .btn-primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
@@ -80,27 +107,71 @@ a { text-decoration: none; color: inherit; }
 
 /* ===== 导航栏登录态 ===== */
 /* 未确认身份时占位，避免「登录 → 用户名」的宽度跳动 */
-.nav-user-placeholder { display: inline-block; width: 96px; height: 20px; }
+.nav-user-placeholder { display: inline-block; width: 88px; height: 32px; }
 .nav-user {
-  display: inline-flex; align-items: center; gap: 7px;
-  max-width: 180px; padding: 7px 12px 7px 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  max-width: 150px; height: 34px; padding: 0 11px 0 9px;
   border-radius: 999px; background: var(--bg-subtle); border: 1px solid var(--border);
-  font-size: .88rem; font-weight: 600; color: var(--text);
+  font-size: .86rem; font-weight: 600; color: var(--text);
+  min-width: 0;                /* 允许内部名字缩略，但自身不被压缩 */
 }
 .nav-user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-role {
-  flex: none; padding: 1px 7px; border-radius: 999px;
-  background: var(--accent); color: #fff; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
+  flex: none; padding: 1px 6px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: .66rem; font-weight: 700; letter-spacing: .02em;
 }
 .footer-user { display: block; margin-bottom: 4px; color: rgba(255,255,255,.86); font-size: .85rem; }
+
+/* 窄屏汉堡按钮（桌面隐藏） */
+.nav-toggle {
+  display: none; width: 40px; height: 40px; padding: 0;
+  flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: #fff; border: 1px solid var(--border-strong); border-radius: 10px; cursor: pointer;
+}
+.nav-toggle span { display: block; width: 16px; height: 2px; border-radius: 2px; background: var(--text); }
+
+/* 窄屏抽屉菜单 */
+.nav-drawer {
+  border-top: 1px solid var(--border); background: #fff;
+  box-shadow: 0 18px 32px rgba(16,24,40,.1);
+}
+.nav-drawer-inner { display: flex; flex-direction: column; gap: 2px; padding: 10px 24px 16px; }
+.nav-drawer-link {
+  padding: 11px 12px; border-radius: 10px;
+  font-size: .95rem; font-weight: 600; color: var(--text); white-space: nowrap;
+}
+.nav-drawer-link:hover { background: var(--bg-subtle); }
+.nav-drawer-link.active { background: var(--brand-soft); color: var(--brand); }
+/* 抽屉里有充足横向空间，恢复管理员徽标（桌面窄屏时被隐藏过） */
+.nav-drawer .nav-role { display: inline-block; }
+.nav-drawer .nav-user { max-width: 100%; }
+.nav-drawer-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--bg-subtle);
+}
 
 /* AI 分析：未登录时的替代内容 */
 .ai-locked p { margin: 0 0 12px; font-size: .88rem; color: var(--text-2); line-height: 1.6; }
 
-@media (max-width: 720px) {
-  .nav-user { max-width: 96px; padding: 6px 10px; }
+/* 1120 以下收紧宽度预算，但依然不折行、不压缩 */
+@media (max-width: 1120px) {
+  .nav-inner { gap: 14px; }
+  .nav-links { margin-left: 0; }
+  .nav-links a { padding: 0 9px; font-size: .87rem; }
+  .logo { font-size: 1rem; gap: 8px; }
+  .logo .mark { width: 30px; height: 30px; font-size: .9rem; }
   .nav-role { display: none; }
-  .nav-user-placeholder { width: 60px; }
+}
+
+/* 920 以下切换到抽屉菜单（原实现直接 display:none 掉整排链接，手机上等于没有导航） */
+@media (max-width: 920px) {
+  .nav-links, .nav-right { display: none; }
+  .nav-toggle { display: inline-flex; margin-left: auto; }
+  .nav-inner { height: 60px; }
+}
+@media (max-width: 560px) {
+  .nav-drawer-inner { padding: 8px 16px 14px; }
+  .logo { font-size: .95rem; }
 }
 
 /* ===== Hero ===== */
@@ -118,12 +189,20 @@ a { text-decoration: none; color: inherit; }
 .hero-stats { margin-top: 46px; display: flex; gap: 36px; flex-wrap: wrap; }
 .hero-stats .s .n { font-size: 1.9rem; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
 .hero-stats .s .l { font-size: .85rem; color: var(--text-2); }
+/* Hero 两栏：卡片进内容列，不再用 absolute 贴 viewport 边缘
+   （原实现 position:absolute; right:0 的定位基准是全宽 .hero，
+    导致 1180 容器外的卡片顶到屏幕边被裁掉） */
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
+.hero-main { min-width: 0; }
 .hero-card {
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  width: 360px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg); padding: 22px; display: none;
+  min-width: 0;
 }
-@media (min-width: 1080px) { .hero-card { display: block; } }
+@media (min-width: 1080px) {
+  .hero-grid { grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: center; }
+  .hero-card { display: block; }
+}
 
 /* ===== Section ===== */
 .section { padding: 56px 0; }
@@ -534,7 +613,7 @@ a { text-decoration: none; color: inherit; }
   .filter-summary { margin-left: 0; width: 100%; justify-content: flex-end; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .feed { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
+  /* 导航链接的隐藏已统一在 Header 区块的 920 断点处理（那里会切到抽屉菜单） */
   .hero h1 { font-size: 2.2rem; }
 }
 
@@ -722,3 +801,141 @@ a { text-decoration: none; color: inherit; }
 .adm-row-5 { grid-template-columns: 1.4fr 1fr 1fr 1.2fr 1fr; }
 .adm-row-link { text-decoration: none; color: inherit; display: grid; cursor: pointer; }
 .adm-row-link:hover { background: var(--brand-soft); }
+
+/* ============================================================
+   安全边界层（Safe-boundary layer）
+   ------------------------------------------------------------
+   统一解决三类「内容顶破容器 / 被容器压扁」的问题：
+   1) 不可分割的控件（按钮、徽标、标签）必须不折行、不被压缩；
+   2) 卡片内距统一走 --card-pad，杜绝各页各写一套；
+   3) 弹性/网格行里的文本列必须 min-width:0，否则长名字会把兄弟元素挤走。
+   新增卡片时直接复用下面的类，不要再写内联样式。
+   ============================================================ */
+
+/* --- ① 控件不许折行、不许被压缩 --- */
+.chip,
+.p-tag,
+.p-score,
+.f-cat,
+.f-price,
+.f-del,
+.f-edit,
+.t-badge,
+.rank-badge,
+.grudge-tag,
+.adm-captain-tag,
+.adm-tab,
+.adm-link-btn,
+.f-reviews-head button,
+.life-tag,
+.hero-chip,
+.detail-score .n,
+.team-score,
+.rank .sc,
+.stats-item .v { white-space: nowrap; }
+
+.p-score,
+.f-cat,
+.f-price,
+.team-score,
+.rank .sc,
+.stats-item .v,
+.detail-avatar { flex: 0 0 auto; }
+
+/* --- ② 卡片内距统一 --- */
+.p-card,
+.t-card,
+.team-card,
+.side-card,
+.entry,
+.post,
+.food-form,
+.adm-create,
+.life-strip { padding: var(--card-pad); }
+.f-body { padding: var(--card-pad); }
+
+/* --- ③ 文本安全区：长内容换行而不外溢 --- */
+.p-name,
+.t-name,
+.f-name,
+.team-name,
+.entry h3,
+.entry p,
+.side-card h4,
+.post h4,
+.adm-name,
+.ai-text,
+.f-comment,
+.f-feature,
+.f-nearby,
+.kv .v,
+.detail-sub,
+.detail-head h1,
+.detail-head h2 { overflow-wrap: anywhere; }
+
+/* 单行信息一律截断，不换行 */
+.p-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 弹性/网格行里的文本列：允许收缩，避免把兄弟元素顶出去 */
+.p-head > *,
+.t-top > *,
+.f-top > *,
+.team-head > *,
+.match-card > *,
+.post > *,
+.kv > *,
+.p-foot > *,
+.f-foot > *,
+.f-meta > *,
+.detail-head > *,
+.sec-head > * { min-width: 0; }
+
+/* 卡片底栏：空间不足时换行，而不是挤压或重叠 */
+.p-foot,
+.f-foot,
+.f-top,
+.t-top,
+.f-reviews-head,
+.f-review-top,
+.f-review-actions,
+.sec-head,
+.adm-bar,
+.match-card { flex-wrap: wrap; row-gap: 8px; }
+
+/* 底栏里的次要操作保持右对齐（换行后依然成立） */
+.f-foot { justify-content: flex-end; }
+
+/* --- ④ 页面头部条（替代各页内联 flex） --- */
+.hero-bar {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.hero-bar-main { min-width: 0; flex: 1 1 260px; }
+.hero-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+
+/* --- ⑤ 表格类布局在窄屏改为横向滚动，不再把文字压成竖排 --- */
+.adm-row > * { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 720px) {
+  .adm-table { overflow-x: auto; }
+  .adm-row { min-width: 560px; }
+  .adm-tabs { flex-wrap: wrap; }
+  .adm-detail-head { flex-wrap: wrap; gap: 10px; }
+}
+
+/* --- ⑥ 极窄屏：卡片墙强制单列，避免 minmax(360px) 撑出横向滚动 ---
+   375px 时可用宽度只有 327px，minmax(360px,1fr) 会把列撑到 360 并溢出视口。 */
+@media (max-width: 560px) {
+  .food-grid,
+  .players-grid,
+  .tour-grid,
+  .team-grid,
+  .grid-4,
+  .stats-grid { grid-template-columns: minmax(0, 1fr); }
+  .hero-stats { gap: 22px 28px; }
+  .section { padding: 40px 0; }
+  .page-hero { padding: 32px 0 24px; }
+  .page-hero h1 { font-size: 1.7rem; }
+  .filter-bar { padding: 12px 14px; gap: 10px; }
+  .filter-field { flex-basis: 100%; }
+  .detail-score { margin-left: 0; text-align: left; }
+}
