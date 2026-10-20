@@ -1,6 +1,25 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, getPlayerById, pool } from '../../lib/db';
+import {
+  getAllPlayers,
+  addPlayer,
+  updatePlayer,
+  deletePlayer,
+  getPlayerById,
+  ensureAvatarColumns,
+  pool,
+} from '../../lib/db';
 import { denyIfImportNotAdmin } from '../../lib/auth';
+import listCache from '../../lib/list-cache';
+
+// ===== 列表结果的内存缓存 =====
+// 这个接口要跑「全员参赛记录」的重量级聚合，而群友页每次进入都会调一次。
+// 缓存 45s：够挡住刷新/来回跳页的重复查询，又不至于让人看不到刚刚的修改。
+// 任何写操作（POST/PUT/DELETE）以及头像同步都会主动 clear，所以不会有"改完不生效"的观感。
+const CACHE_SCOPE = 'playersList';
+
+const readListCache = (key) => listCache.get(CACHE_SCOPE, key);
+const writeListCache = (key, payload) => listCache.set(CACHE_SCOPE, key, payload);
+const clearListCache = () => listCache.clear(CACHE_SCOPE);
 
 // 一次查出所有人的参赛记录，避免按人循环查库（N+1）
 //
@@ -84,6 +103,18 @@ export default async function handler(req, res) {
     case 'GET':
       try {
         const { tournament_id } = req.query;
+        const cacheKey = tournament_id ? String(tournament_id) : 'all';
+
+        const cached = readListCache(cacheKey);
+        if (cached) {
+          res.setHeader('X-List-Cache', 'HIT');
+          return res.status(200).json({ success: true, players: cached });
+        }
+        res.setHeader('X-List-Cache', 'MISS');
+
+        // 头像列是自动补的，第一次请求时确保存在（幂等，失败也不阻断列表）
+        await ensureAvatarColumns();
+
         let players = await getAllPlayers(tournament_id);
         const recordsByPlayer = await getTeamRecordsByPlayer();
 
@@ -107,6 +138,10 @@ export default async function handler(req, res) {
             records,
             record_count: records.length,
             best_rank: ranks.length ? Math.min(...ranks) : null,
+            // 头像走本地代理 /api/avatar/{id}（服务端已缓存，避免直连 Steam）。
+            // 没同步到头像时给 null，前端回退成昵称首字色块。
+            avatar: player.avatar_url ? `/api/avatar/${player.id}` : null,
+            steam_name: player.steam_name || null,
             positions: player.positions ? player.positions.split(',').filter(p => p) : [],
             heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
             synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
@@ -119,6 +154,7 @@ export default async function handler(req, res) {
           };
         });
 
+        writeListCache(cacheKey, formattedPlayers);
         res.status(200).json({ success: true, players: formattedPlayers });
       } catch (error) {
         console.error('获取选手列表错误:', error);
@@ -131,6 +167,7 @@ export default async function handler(req, res) {
         if (denyIfImportNotAdmin(req, res)) return;
         const { tournament_id, ...playerData } = req.body;
         const newPlayer = await addPlayer(playerData, tournament_id);
+        clearListCache();
         res.status(201).json({ success: true, player: newPlayer });
       } catch (error) {
         console.error('创建选手错误:', error);
@@ -144,6 +181,7 @@ export default async function handler(req, res) {
 
         // 更新选手信息
         await updatePlayer(playerId, updates);
+        clearListCache();
 
         // 获取更新后的选手信息
         const updatedPlayer = await getPlayerById(playerId);
@@ -185,6 +223,7 @@ export default async function handler(req, res) {
       try {
         const { id } = req.body;
         await deletePlayer(id);
+        clearListCache();
         res.status(200).json({ success: true, message: '选手删除成功' });
       } catch (error) {
         console.error('删除选手错误:', error);

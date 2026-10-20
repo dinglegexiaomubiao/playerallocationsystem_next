@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import heroesList from '../lib/heroesData';
 import { HERO_ATTRS, heroAliases, heroAttr, filterHeroes } from '../lib/hero-filters.mjs';
+import HeroAvatar from './HeroAvatar';
 
 /**
  * 擅长英雄选择弹窗。
@@ -115,8 +116,13 @@ export default function HeroPicker({ open, value = [], onClose, onConfirm }) {
                   onClick={() => toggle(h.name)}
                   title={alias ? h.name + '（' + alias + '）' : h.name}
                 >
-                  <span className="hero-cell-name">{h.name}</span>
-                  <span className="hero-cell-alias">{alias || '—'}</span>
+                  {/* 弹窗里用 eager：126 张图配合磁盘缓存 1s 内就能全部就绪，
+                      用 lazy 反而会出现「打开弹窗一片空白、滚动才陆续出图」的观感 */}
+                  <HeroAvatar name={h.name} className="hero-cell-avatar" eager />
+                  <span className="hero-cell-text">
+                    <span className="hero-cell-name">{h.name}</span>
+                    <span className="hero-cell-alias">{alias || '—'}</span>
+                  </span>
                   {selected && <span className="hero-cell-order">{idx + 1}</span>}
                 </button>
               );
@@ -139,6 +145,7 @@ export default function HeroPicker({ open, value = [], onClose, onConfirm }) {
                 {draft.map((name, i) => (
                   <span className="hero-picked-chip" key={name}>
                     <b>{i + 1}</b>
+                    <HeroAvatar name={name} className="hero-picked-avatar" />
                     {name}
                     <button
                       type="button"

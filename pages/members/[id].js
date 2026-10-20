@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import useAIAnalysis from '../../hooks/useAIAnalysis';
 import useSession from '../../hooks/useSession';
+import Avatar from '../../components/Avatar';
+import HeroAvatar from '../../components/HeroAvatar';
 import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
 
 // 只到「日」，比赛时间不需要精确到分
@@ -132,7 +134,7 @@ export default function MemberDetail() {
             ← 返回群友列表
           </Link>
           <div className="detail-head">
-            <div className="detail-avatar">{(player.nickname || '?').slice(0, 1)}</div>
+            <Avatar className="detail-avatar" src={player.avatar} name={player.nickname} eager />
             <div>
               <h1 style={{ fontSize: '1.9rem' }}>{player.nickname || '未命名'}</h1>
               <div className="detail-sub">
@@ -184,6 +186,7 @@ export default function MemberDetail() {
                   {(player.heroes || []).length > 0 ? (
                     player.heroes.map((h, i) => (
                       <span className="hero-chip" key={i}>
+                        <HeroAvatar name={h} className="hero-chip-avatar" />
                         {h}
                       </span>
                     ))

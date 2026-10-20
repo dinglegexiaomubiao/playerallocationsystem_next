@@ -3,6 +3,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import ExcelIO from '../../components/ExcelIO';
 import useSession from '../../hooks/useSession';
+import Avatar from '../../components/Avatar';
+import AvatarSync from '../../components/AvatarSync';
+import HeroAvatar from '../../components/HeroAvatar';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 import { TIERS, tierOf } from '../../lib/tier.mjs';
 
@@ -271,6 +274,7 @@ export default function MembersPage() {
             <p>共 {players.length} 位群友 · 天梯分、擅长位置与英雄池一览</p>
           </div>
           <div className="hero-actions">
+            <AvatarSync isAdmin={isAdmin} onDone={reload} />
             <ExcelIO
               columns={PLAYER_COLUMNS}
               rows={players}
@@ -435,7 +439,7 @@ export default function MembersPage() {
               return (
                 <Link href={'/members/' + p.id} className="p-card" key={p.id}>
                   <div className="p-head">
-                    <div className="p-avatar">{(p.nickname || '?').slice(0, 1)}</div>
+                    <Avatar className="p-avatar" src={p.avatar} name={p.nickname} />
                     <div>
                       <div className="p-name">{p.nickname || '未命名'}</div>
                       <div className="p-id">
@@ -463,10 +467,11 @@ export default function MembersPage() {
                       <div className="lbl">擅长英雄</div>
                       {p.heroes.slice(0, 4).map((h, i) => (
                         <span className="h" key={i}>
+                          <HeroAvatar name={h} className="h-avatar" />
                           {h}
                         </span>
                       ))}
-                      {p.heroes.length > 4 && <span className="h">+{p.heroes.length - 4}</span>}
+                      {p.heroes.length > 4 && <span className="h h-plain">+{p.heroes.length - 4}</span>}
                     </div>
                   )}
                   {(p.synergy_players || []).length > 0 && (

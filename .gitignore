@@ -62,3 +62,6 @@ data/*.json
 .workbuddy/
 # 无头浏览器临时 profile（验证脚本用，跑完即删，禁止入库）
 _*_profile/
+
+# 图片缓存（英雄头像 / Steam 头像，首次访问自动回源落下，不入库）
+.cache/

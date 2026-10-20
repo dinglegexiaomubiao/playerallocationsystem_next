@@ -6,7 +6,8 @@
     "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "warm:heroes": "node scripts/warm-hero-icons.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
