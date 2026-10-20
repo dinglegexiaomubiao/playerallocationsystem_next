@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -138,80 +138,66 @@ export default function TournamentDetail() {
             <h1 style={{ fontSize: '1.9rem' }}>{t.name}</h1>
             <span className={`t-badge ${statusCls(t.status)}`}>{STATUS_LABEL[t.status] || '赛程'}</span>
           </div>
-          <p style={{ marginTop: 8 }}>{fmt(t.start_date)} ~ {fmt(t.end_date)}</p>
+          <p style={{ marginTop: 8 }}>
+            {fmt(t.start_date)} — {fmt(t.end_date)}
+            {teams.length > 0 && <> · {teams.length} 支队伍</>}
+            {attendeeCount > 0 && <> · {attendeeCount} 名选手</>}
+          </p>
         </div>
       </section>
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
-          {/* ===== 1. 赛事信息（收窄一半）===== */}
-          <div className="side-card" style={{ maxWidth: 560 }}>
-            <h4>赛事信息</h4>
-            <div className="kv">
-              <span className="k">状态</span>
-              <span className="v">{STATUS_LABEL[t.status] || '—'}</span>
-            </div>
-            <div className="kv">
-              <span className="k">时间</span>
-              <span className="v">{fmt(t.start_date)} ~ {fmt(t.end_date)}</span>
-            </div>
-            <div className="kv">
-              <span className="k">参赛人数</span>
-              <span className="v" title="报名名单与各队成员去重后的真实人数">
-                {attendeeCount} 人
-              </span>
-            </div>
-            <div className="kv">
-              <span className="k">参赛队伍</span>
-              <span className="v">{teams.length} 支</span>
-            </div>
-            {t.sponsor_info && (
-              <div className="kv">
-                <span className="k">赞助</span>
-                <span className="v">{t.sponsor_info}</span>
+          {/* ===== 1. 结论指标（冠军 / 亚军 / 季军 / 场次）===== */}
+          <div className="info-strip" style={{ maxWidth: 'none' }}>
+            {results.map((r) => (
+              <div className="info-cell" key={r.key}>
+                <span className="k">{r.label}</span>
+                <span className="v">{r.name}</span>
+              </div>
+            ))}
+            {results.length === 0 && isFinished && (
+              <div className="info-cell">
+                <span className="k">比赛结果</span>
+                <span className="v" style={{ color: 'var(--text-3)', fontWeight: 500 }}>名次待录入</span>
               </div>
             )}
+            <div className="info-cell">
+              <span className="k">总场次</span>
+              <span className="v">{matches.length || 0}</span>
+            </div>
             {t.champion_prize && (
-              <div className="kv">
+              <div className="info-cell">
                 <span className="k">冠军奖金</span>
                 <span className="v">{t.champion_prize}</span>
               </div>
             )}
             {t.runner_up_prize && (
-              <div className="kv">
+              <div className="info-cell">
                 <span className="k">亚军奖金</span>
                 <span className="v">{t.runner_up_prize}</span>
               </div>
             )}
-
-            {isFinished && (
-              <div className="result-box">
-                <div className="result-title">比赛结果</div>
-                {results.length > 0 ? (
-                  <div className="result-list">
-                    {results.map((r) => (
-                      <div className={`result-row ${r.key}`} key={r.key}>
-                        <span className="result-medal" aria-hidden="true">{r.medal}</span>
-                        <span className="result-label">{r.label}</span>
-                        <span className="result-name">{r.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="result-empty">本届名次尚未录入</div>
-                )}
+            {t.sponsor_info && (
+              <div className="info-cell">
+                <span className="k">赞助</span>
+                <span className="v" style={{ fontSize: '.9rem' }}>{t.sponsor_info}</span>
               </div>
             )}
-
-            <SignupButton
-              tournamentId={id}
-              locked={t.status === 'finished' || t.status === 'done'}
-            />
+            <div className="info-cell">
+              <span className="k">报名通道</span>
+              <span className="v" style={{ paddingTop: 2 }}>
+                <SignupButton
+                  tournamentId={id}
+                  locked={t.status === 'finished' || t.status === 'done'}
+                />
+              </span>
+            </div>
           </div>
 
-          {/* ===== 2. 赛程与对阵（含选手与数据）===== */}
+          {/* ===== 2. 赛程与对阵 ===== */}
           {matches.length > 0 && (
-            <div style={{ marginTop: 30 }}>
+            <div style={{ marginTop: 34 }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>赛程与对阵</h2>
               <div className="match-bracket">
                 {(rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }]).map((rd) => {
@@ -224,130 +210,76 @@ export default function TournamentDetail() {
                       <div className="match-round-title">{rd.name}</div>
 
                       {rdMatches.map((m) => {
-                        const hasDetail = (m.dota_players || []).length > 0;
+                        const ps = m.dota_players || [];
+                        const radiant = ps.filter((p) => p.is_radiant);
+                        const dire = ps.filter((p) => !p.is_radiant);
+                        const played = m.team_a_score !== null && m.team_b_score !== null;
                         const dur = m.dota_duration
                           ? `${Math.floor(m.dota_duration / 60)}:${String(m.dota_duration % 60).padStart(2, '0')}`
                           : null;
-                        const radiant = (m.dota_players || []).filter((p) => p.is_radiant);
-                        const dire = (m.dota_players || []).filter((p) => !p.is_radiant);
-                        const line = (p) => (
-                          <div
-                            key={p.account_id}
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: 'minmax(56px,1fr) minmax(52px,88px) 62px',
-                              gap: 6,
-                              alignItems: 'center',
-                              padding: '3px 0',
-                              borderBottom: '1px solid rgba(0,0,0,.04)',
-                              fontSize: 12.5,
-                            }}
-                          >
-                            <span
-                              style={{
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                fontWeight: p.is_standin ? 600 : 400,
-                                color: p.is_standin ? '#B9770E' : 'inherit',
-                              }}
-                              title={p.is_standin ? '替补上场' : p.nickname || ''}
-                            >
+                        const aLose = played && m.winner_name && m.winner_name !== m.team_a_name;
+                        const bLose = played && m.winner_name && m.winner_name !== m.team_b_name;
+
+                        const row = (p) => (
+                          <div className="duel-row" key={p.account_id}>
+                            <span className="duel-name" title={p.nickname || String(p.account_id)}>
                               {p.group_nickname || p.nickname || p.account_id}
-                              {p.is_standin && <span style={{ fontSize: 10, marginLeft: 3 }}>替</span>}
+                              {p.is_standin && <span className="st">替</span>}
                             </span>
-                            <span
-                              style={{
-                                color: 'var(--text-3, #888)',
-                                fontSize: 11.5,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {p.hero_name || '—'}
-                            </span>
-                            <span style={{ fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
-                              {p.kills}/{p.deaths}/{p.assists}
-                            </span>
+                            <span className="duel-hero">{p.hero_name || '—'}</span>
+                            <span className="duel-kda">{p.kills}/{p.deaths}/{p.assists}</span>
                           </div>
                         );
 
                         return (
-                          <div className={`match-card ${m.is_grudge ? 'grudge' : ''}`} key={m.id}>
-                            {/* 头部：轮次说明 + 比赛 ID + 时长 */}
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                gap: 8,
-                                fontSize: 11.5,
-                                color: 'var(--text-3, #999)',
-                                marginBottom: 8,
-                              }}
-                            >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {m.note || '对局'}
+                          <div className={`duel-card ${m.is_grudge ? 'grudge' : ''}`} key={m.id}>
+                            <div className="duel-head">
+                              <span className="duel-tag">
+                                {rd.name || '对阵'}
+                                {m.order_no ? ` · 第 ${m.order_no} 局` : ''}
                               </span>
-                              <span style={{ whiteSpace: 'nowrap' }}>
-                                {m.dota_match_id ? `match ${m.dota_match_id}` : ''}
-                                {dur ? ` · ${dur}` : ''}
+                              <span className="duel-meta">
+                                {dur ? `${dur} · ` : ''}
+                                {m.dota_match_id || ''}
                               </span>
                             </div>
 
-                            {/* 对阵与比分 */}
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 14,
-                                flexWrap: 'wrap',
-                              }}
-                            >
-                              <span style={{ fontWeight: 700, fontSize: 15 }}>{m.team_a_name || '待定'}</span>
-                              {m.team_a_score !== null && m.team_b_score !== null ? (
-                                <span className="match-score" style={{ fontSize: 18 }}>
+                            <div className="duel-board">
+                              <div className={`duel-team a ${aLose ? 'lose' : ''}`}>
+                                {m.team_a_name || '待定'}
+                              </div>
+                              {played ? (
+                                <div className="duel-score">
                                   {m.team_a_score} : {m.team_b_score}
-                                </span>
-                              ) : (
-                                <span className="match-pending">未开赛</span>
-                              )}
-                              <span style={{ fontWeight: 700, fontSize: 15 }}>{m.team_b_name || '待定'}</span>
-                            </div>
-
-                            <div style={{ textAlign: 'center', marginTop: 6, minHeight: 18 }}>
-                              {m.is_grudge && <span className="match-grudge-note">⚔ 恩怨局</span>}
-                              {m.winner_name && (
-                                <span className="match-winner" style={{ marginLeft: m.is_grudge ? 8 : 0 }}>
-                                  🏆 {m.winner_name} 胜
-                                </span>
-                              )}
-                            </div>
-
-                            {/* 双方选手与数据 */}
-                            {hasDetail && (
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: '1fr 1fr',
-                                  gap: 14,
-                                  marginTop: 10,
-                                  paddingTop: 8,
-                                  borderTop: '1px dashed rgba(0,0,0,.08)',
-                                }}
-                              >
-                                <div>
-                                  <div style={{ fontSize: 11, color: 'var(--text-3,#999)', marginBottom: 3 }}>
-                                    天辉 · {m.team_a_name || ''}
-                                  </div>
-                                  {radiant.map(line)}
                                 </div>
-                                <div>
-                                  <div style={{ fontSize: 11, color: 'var(--text-3,#999)', marginBottom: 3 }}>
-                                    夜魇 · {m.team_b_name || ''}
+                              ) : (
+                                <div className="duel-score pending">未开赛</div>
+                              )}
+                              <div className={`duel-team b ${bLose ? 'lose' : ''}`}>
+                                {m.team_b_name || '待定'}
+                              </div>
+                            </div>
+
+                            {(m.winner_name || m.is_grudge) && (
+                              <div className="duel-win">
+                                {m.is_grudge && <span className="grudge">⚔ 恩怨局</span>}
+                                {m.winner_name ? `🏆 ${m.winner_name} 胜` : ''}
+                              </div>
+                            )}
+
+                            {ps.length > 0 && (
+                              <div className="duel-rosters">
+                                <div className="duel-col radiant">
+                                  <div className="duel-col-head">
+                                    天辉 <b>{m.team_a_name || ''}</b>
                                   </div>
-                                  {dire.map(line)}
+                                  {radiant.map(row)}
+                                </div>
+                                <div className="duel-col dire">
+                                  <div className="duel-col-head">
+                                    夜魇 <b>{m.team_b_name || ''}</b>
+                                  </div>
+                                  {dire.map(row)}
                                 </div>
                               </div>
                             )}
@@ -361,8 +293,8 @@ export default function TournamentDetail() {
             </div>
           )}
 
-          {/* ===== 3. 参赛队伍（含位置 / 队长 / 交战记录）===== */}
-          <div style={{ marginTop: 26 }}>
+          {/* ===== 3. 参赛队伍（表格，阵容默认展开）===== */}
+          <div style={{ marginTop: 34 }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>
               参赛队伍（{teams.length}）
               {sortedTeams.some((x) => Number(x.rank) > 0) && (
@@ -372,12 +304,23 @@ export default function TournamentDetail() {
             {teams.length === 0 ? (
               <div className="empty">暂无队伍数据</div>
             ) : (
-              <div className="team-grid">
-                {sortedTeams.map((team) => {
+              <div className="team-table">
+                <div className="tt-head">
+                  <span>#</span>
+                  <span>队伍</span>
+                  <span>队长</span>
+                  <span style={{ textAlign: 'right' }}>总分</span>
+                  <span>交战</span>
+                </div>
+
+                {sortedTeams.map((team, idx) => {
                   const members = team.players || [];
                   const total = members.reduce((s, p) => s + (Number(p.score) || 0), 0);
+                  const rank = Number(team.rank) || 0;
 
-                  // 交战过的队伍：从赛程里反查该队参与过的对手
+                  const captain =
+                    members.find((p) => String(p.id) === String(team.captain_id)) || null;
+
                   const fought = [
                     ...new Set(
                       matches
@@ -393,95 +336,54 @@ export default function TournamentDetail() {
                     ),
                   ];
 
-                  // 队内仇人检测：任意方向命中即标记
-                  const idSet = new Set(members.map((p) => String(p.id)));
-                  const feuds = [];
-                  members.forEach((p) => {
-                    (p.enemies || []).forEach((eid) => {
-                      const e = String(eid);
-                      if (idSet.has(e) && e !== String(p.id)) {
-                        const pair = [p.nickname, members.find((m) => String(m.id) === e)?.nickname || e].sort();
-                        if (!feuds.some((f) => f[0] === pair[0] && f[1] === pair[1])) feuds.push(pair);
-                      }
-                    });
-                  });
-
                   return (
-                    <div className="team-card" key={team.id}>
-                      <div className="team-head">
-                        <div className="team-name">
-                          {Number(team.rank) > 0 && (
-                            <span
-                              className={
-                                'team-rank r' + (Number(team.rank) <= 3 ? Number(team.rank) : 'n')
-                              }
-                            >
-                              {rankLabel(team.rank)}
-                            </span>
+                    <Fragment key={team.id}>
+                      <div className="tt-row">
+                        <span className={`tt-rank ${rank > 0 && rank <= 3 ? 'r' + rank : ''}`}>
+                          {rank > 0 ? rank : idx + 1}
+                        </span>
+                        <span className="tt-team">{team.name}</span>
+                        <span className="tt-cap">
+                          {captain ? (
+                            <>
+                              {captain.group_nickname || captain.nickname}
+                              <span className="star">★</span>
+                            </>
+                          ) : (
+                            '—'
                           )}
-                          {team.name}
-                        </div>
-                        <div className="team-score">{total}</div>
+                        </span>
+                        <span className="tt-total">{total}</span>
+                        <span className="tt-fought" title={fought.join('、')}>
+                          {fought.length > 0 ? fought.join('、') : '—'}
+                        </span>
                       </div>
 
-                      {fought.length > 0 && (
-                        <div style={{ fontSize: 11.5, color: 'var(--text-3, #888)', marginBottom: 8 }}>
-                          交战：{fought.join('、')}
-                        </div>
-                      )}
-
-                      {feuds.length > 0 && (
-                        <div className="team-feuds">
-                          {feuds.map((f, i) => (
-                            <span className="feud-tag" key={i}>⚔ {f[0]} 和 {f[1]} 为仇人</span>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="team-players">
-                        {members.length > 0 ? (
-                          members.map((p) => {
+                      {members.length > 0 && (
+                        <div className="tt-roster">
+                          {members.map((p) => {
                             const isCap = String(p.id) === String(team.captain_id);
                             const posList = String(p.positions || '')
                               .split(',')
                               .map((s) => s.trim())
                               .filter(Boolean);
                             return (
-                              <Link key={p.id} href={'/members/' + p.id} className="team-player">
-                                <span className="tp-name">
-                                  {isCap && (
-                                    <span
-                                      title="队长"
-                                      style={{ color: '#E8A33D', marginRight: 4, fontSize: 12 }}
-                                    >
-                                      ★
-                                    </span>
-                                  )}
-                                  {p.group_nickname || p.nickname}
-                                </span>
-                                <span
-                                  className="tp-pos"
-                                  style={{
-                                    fontSize: 11,
-                                    color: 'var(--text-3, #999)',
-                                    flex: 1,
-                                    textAlign: 'left',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {posList.length > 0 ? posList.slice(0, 2).join('/') : '—'}
-                                </span>
-                                <span className="tp-score">{p.score || 0}</span>
+                              <Link
+                                key={p.id}
+                                href={'/members/' + p.id}
+                                className={`tt-member ${isCap ? 'cap' : ''}`}
+                                style={{ color: 'inherit', textDecoration: 'none' }}
+                              >
+                                {p.group_nickname || p.nickname}
+                                {posList.length > 0 && (
+                                  <span className="pos">{posList.slice(0, 2).join(' / ')}</span>
+                                )}
                               </Link>
                             );
-                          })
-                        ) : (
-                          <div style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无选手</div>
-                        )}
-                      </div>
-                    </div>
+                          })}
+                        </div>
+                      )}
+                    </Fragment>
                   );
                 })}
               </div>
@@ -489,7 +391,7 @@ export default function TournamentDetail() {
           </div>
 
           {/* ===== 4. 报名选手 ===== */}
-          <div style={{ marginTop: 26 }}>
+          <div style={{ marginTop: 34 }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>
               报名选手（{signups.length}）
             </h2>
