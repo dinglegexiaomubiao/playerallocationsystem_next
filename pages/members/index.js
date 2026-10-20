@@ -89,6 +89,9 @@ export default function MembersPage() {
         win_rate: Number(row['胜率']) || 0,
         championships: Number(row['冠军数']) || 0,
         synergy_players: splitList(row['默契选手']),
+        region: String(row['所处地区'] || '').trim() || null,
+        self_intro: String(row['自我评价'] || '').trim() || null,
+        enemies: splitList(row['仇人']),
       }))
       .filter((p) => p.nickname);
 

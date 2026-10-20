@@ -613,7 +613,7 @@ a { text-decoration: none; color: inherit; }
 .adm-tab {
   padding: 8px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
   background: #fff; color: var(--text-2); font-size: .88rem; font-weight: 500; cursor: pointer;
-  transition: all .15s ease;
+  transition: all .15s ease; text-decoration: none; display: inline-block;
 }
 .adm-tab:hover { border-color: var(--brand); color: var(--brand); }
 .adm-tab.active { background: var(--brand); border-color: var(--brand); color: #fff; }
@@ -649,3 +649,34 @@ a { text-decoration: none; color: inherit; }
 }
 .adm-detail-head { display: flex; align-items: center; }
 .adm-detail-head h1 { margin: 0; }
+
+/* 恩怨局标记 */
+.grudge-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: .75rem; font-weight: 700; white-space: nowrap;
+}
+
+/* 赛程/对阵流程图（公开页） */
+.match-bracket { display: flex; flex-direction: column; gap: 14px; }
+.match-round { margin-bottom: 4px; }
+.match-round-title { font-size: .85rem; font-weight: 700; color: var(--text-2); margin-bottom: 8px; }
+.match-card {
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
+  background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.match-card.grudge { border-color: var(--accent); background: #fdf2f2; }
+.match-team { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.match-team .vs { color: var(--text-3); font-weight: 400; }
+.match-score { font-weight: 800; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.match-winner { color: #1a7f37; font-weight: 700; font-size: .8rem; }
+.match-pending { color: var(--text-3); font-size: .8rem; }
+.match-grudge-note { color: var(--accent); font-weight: 700; font-size: .78rem; }
+
+/* 队伍卡片仇人标记 */
+.team-feuds { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0 2px; }
+.feud-tag {
+  display: inline-block; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+  font-size: .75rem; font-weight: 600;
+}

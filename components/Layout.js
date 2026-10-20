@@ -49,6 +49,11 @@ export default function Layout({ children }) {
                 {n.label}
               </Link>
             ))}
+            {ready && me && (
+              <Link href="/my-tournaments" className={isActive('/my-tournaments') ? 'active' : ''}>
+                我的赛事
+              </Link>
+            )}
           </nav>
           <div className="nav-right">
             {!ready ? (

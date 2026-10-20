@@ -118,8 +118,8 @@ export default function Admin({ denied }) {
           <div className="adm-bar">
             <div className="adm-tabs">
               <span className="adm-tab active">赛事管理</span>
-              <span className="adm-tab">群友管理</span>
-              <span className="adm-tab">美食管理</span>
+              <Link className="adm-tab" href="/members">群友管理</Link>
+              <Link className="adm-tab" href="/food">美食管理</Link>
             </div>
             <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
               ＋ 新建赛季

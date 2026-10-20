@@ -50,7 +50,7 @@ export default async function handler(req, res) {
            (name, start_date, end_date, status, created_at) 
            VALUES ($1, $2, $3, $4, $5) 
            RETURNING *`,
-          [name, start_date, end_date, 'planned', new Date().toISOString()]
+          [name, start_date, end_date, 'planning', new Date().toISOString()]
         );
         
         res.status(201).json({

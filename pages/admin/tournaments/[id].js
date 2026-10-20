@@ -26,6 +26,11 @@ export default function AdminTournament({ denied }) {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  // 赛程编排状态
+  const [rounds, setRounds] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [newRoundName, setNewRoundName] = useState('');
+  const [newMatch, setNewMatch] = useState({ round_id: '', team_a_id: '', team_b_id: '' });
 
   const load = () => {
     if (!id) return;
@@ -50,6 +55,101 @@ export default function AdminTournament({ denied }) {
   useEffect(() => {
     load();
   }, [id]);
+
+  // 加载赛程
+  const loadMatches = () => {
+    if (!id) return;
+    fetch('/api/tournaments/' + id + '/matches')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setRounds(d.rounds || []);
+          setMatches(d.matches || []);
+        }
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadMatches();
+  }, [id]);
+
+  const addRound = async () => {
+    if (!newRoundName.trim()) return;
+    const r = await fetch('/api/tournaments/' + id + '/matches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'round', name: newRoundName.trim(), order_no: rounds.length }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setNewRoundName('');
+      loadMatches();
+    } else {
+      setMsg(d.error || '新建阶段失败');
+    }
+  };
+
+  const addMatch = async () => {
+    if (!newMatch.team_a_id || !newMatch.team_b_id) {
+      setMsg('请选择对阵双方队伍');
+      return;
+    }
+    const r = await fetch('/api/tournaments/' + id + '/matches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        team_a_id: newMatch.team_a_id,
+        team_b_id: newMatch.team_b_id,
+        round_id: newMatch.round_id || null,
+        order_no: matches.length,
+      }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      setNewMatch({ round_id: '', team_a_id: '', team_b_id: '' });
+      loadMatches();
+    } else {
+      setMsg(d.error || '新建对阵失败');
+    }
+  };
+
+  const saveScore = async (matchId, field, value) => {
+    const body = { matchId, [field]: value };
+    // 录入比分后，若能判定胜者则一并写入
+    const r = await fetch('/api/tournaments/' + id + '/matches', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) setMsg(d.error || '保存失败');
+    else loadMatches();
+  };
+
+  const saveWinner = async (matchId, winnerTeamId) => {
+    const body = { matchId, winner_team_id: winnerTeamId, status: winnerTeamId ? 'finished' : 'scheduled' };
+    const r = await fetch('/api/tournaments/' + id + '/matches', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (!r.ok) setMsg(d.error || '保存失败');
+    else loadMatches();
+  };
+
+  const removeMatch = async (matchId) => {
+    if (!confirm('确定删除该场对阵？')) return;
+    const r = await fetch('/api/tournaments/' + id + '/matches', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchId }),
+    });
+    const d = await r.json();
+    if (!r.ok) setMsg(d.error || '删除失败');
+    else loadMatches();
+  };
 
   const saveInfo = async () => {
     setSaving(true);
@@ -253,8 +353,106 @@ export default function AdminTournament({ denied }) {
           )}
 
           {tab === 'matches' && (
-            <div className="empty" style={{ padding: '40px 0' }}>
-              赛程编排将在后续版本开放
+            <div>
+              <div className="side-card" style={{ marginBottom: 18 }}>
+                <h4>赛程编排</h4>
+                {teams.length === 0 && (
+                  <div className="empty" style={{ padding: '12px 0' }}>暂无队伍，请先在「队伍与队长」里生成队伍</div>
+                )}
+                {teams.length > 0 && (
+                  <>
+                    <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end' }}>
+                      <div className="form-field">
+                        <label>新阶段名</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input value={newRoundName} onChange={(e) => setNewRoundName(e.target.value)} placeholder="例如 淘汰赛 / 半决赛 / 决赛" />
+                          <button className="btn btn-primary" onClick={addRound}>＋ 阶段</button>
+                        </div>
+                      </div>
+                      <div className="form-field">
+                        <label>所属阶段</label>
+                        <select value={newMatch.round_id} onChange={(e) => setNewMatch({ ...newMatch, round_id: e.target.value })}>
+                          <option value="">— 不分组 —</option>
+                          {rounds.map((rd) => (
+                            <option key={rd.id} value={rd.id}>{rd.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row" style={{ marginBottom: 14, alignItems: 'flex-end' }}>
+                      <div className="form-field">
+                        <label>A 队</label>
+                        <select value={newMatch.team_a_id} onChange={(e) => setNewMatch({ ...newMatch, team_a_id: e.target.value })}>
+                          <option value="">选择队伍</option>
+                          {teams.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <label>B 队</label>
+                        <select value={newMatch.team_b_id} onChange={(e) => setNewMatch({ ...newMatch, team_b_id: e.target.value })}>
+                          <option value="">选择队伍</option>
+                          {teams.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-field">
+                        <button className="btn btn-primary" onClick={addMatch}>＋ 对阵</button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="adm-table">
+                <div className="adm-row adm-head">
+                  <div>阶段</div><div>对阵</div><div>比分</div><div>胜者</div><div>恩怨</div><div>操作</div>
+                </div>
+                {matches.map((m) => {
+                  const rd = rounds.find((r) => r.id === m.round_id);
+                  return (
+                    <div className="adm-row" key={m.id}>
+                      <div>{rd ? rd.name : '—'}</div>
+                      <div className="adm-name">
+                        {m.team_a_name || '?'} vs {m.team_b_name || '?'}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          value={m.team_a_score ?? ''}
+                          placeholder="—"
+                          style={{ width: 54 }}
+                          onChange={(e) => saveScore(m.id, 'team_a_score', e.target.value === '' ? null : Number(e.target.value))}
+                        />
+                        <span>:</span>
+                        <input
+                          type="number"
+                          value={m.team_b_score ?? ''}
+                          placeholder="—"
+                          style={{ width: 54 }}
+                          onChange={(e) => saveScore(m.id, 'team_b_score', e.target.value === '' ? null : Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <select value={m.winner_team_id || ''} onChange={(e) => saveWinner(m.id, e.target.value === '' ? null : e.target.value)}>
+                          <option value="">—</option>
+                          <option value={m.team_a_id}>{m.team_a_name}</option>
+                          <option value={m.team_b_id}>{m.team_b_name}</option>
+                        </select>
+                      </div>
+                      <div>
+                        {m.is_grudge ? <span className="grudge-tag">⚔ 恩怨局</span> : '—'}
+                      </div>
+                      <div>
+                        <button className="adm-link-btn" onClick={() => removeMatch(m.id)}>删除</button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {matches.length === 0 && <div className="empty">暂无对阵，请在上方编排</div>}
+              </div>
             </div>
           )}
         </div>

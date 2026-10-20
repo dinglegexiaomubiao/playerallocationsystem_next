@@ -54,6 +54,19 @@ export default async function handler(req, res) {
         team = inserted.rows[0];
       }
 
+      // 4. 队长本人也自动加入 team_players（幂等）
+      const alreadyMember = await client.query(
+        'SELECT id FROM public.team_players WHERE team_id = $1 AND player_id = $2 AND tournament_id = $3',
+        [team.id, playerId, id]
+      );
+      if (alreadyMember.rows.length === 0) {
+        await client.query(
+          `INSERT INTO public.team_players (team_id, player_id, tournament_id, created_at)
+           VALUES ($1, $2, $3, $4)`,
+          [team.id, playerId, id, new Date().toISOString()]
+        );
+      }
+
       await client.query('COMMIT');
       return res.status(200).json({ success: true, team });
     }
