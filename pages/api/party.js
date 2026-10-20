@@ -21,6 +21,58 @@ const num = (v) => {
 
 const MODE_KEYS = PARTY_MODES.map((m) => m.key);
 
+// ===== 时间解析 =====
+// datetime-local 的值是「用户本地墙钟」，不带时区。绝对不能直接 new Date(str)：
+// 那样用的是**服务器**时区。生产环境 Node 常常跑在 UTC，用户选 10-20 17:00 会被
+// 存成 17:00Z，浏览器 +08 一渲染就成了 10-21 01:00。
+//
+// 现在的约定：
+//   1. 新前端提交绝对瞬间（带 Z 或 ±hh:mm）+ tz_offset（浏览器 getTimezoneOffset，+08 为 -480）
+//   2. 老前端/curl 传来裸串时，用 tz_offset 还原；没给偏移就退回老的服务器本地解析，
+//      保证行为不比以前更糟
+const HAS_ZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+const NAIVE_RE = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/;
+
+function parseClientInstant(raw, offsetMin) {
+  const s = String(raw === null || raw === undefined ? '' : raw).trim();
+  if (!s) return null;
+
+  if (HAS_ZONE_RE.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const m = s.match(NAIVE_RE);
+  if (m) {
+    const off = Number(offsetMin);
+    if (Number.isFinite(off)) {
+      // 先把墙钟当作 UTC 拿名义值，再按客户端偏移还原真实瞬间
+      const wallAsUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
+      return new Date(wallAsUtc + off * 60000);
+    }
+  }
+
+  const d = new Date(s); // 老口径兜底
+  return isNaN(d.getTime()) ? null : d;
+}
+
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// 按「指定偏移下的墙钟」格式化。+08 时 off=-480，等价于把时刻 +8 小时后读 UTC 分量。
+function fmtWallClock(date, offsetMin) {
+  const off = Number(offsetMin);
+  const t = Number.isFinite(off) ? date.getTime() - off * 60000 : date.getTime();
+  const d = new Date(t);
+  if (Number.isFinite(off)) {
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())} ${pad2(
+      d.getUTCHours()
+    )}:${pad2(d.getUTCMinutes())}`;
+  }
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(
+    d.getMinutes()
+  )}`;
+}
+
 async function getMe(client, name) {
   const r = await client.query(
     `SELECT ps.player_id, pl.nickname, pl.group_nickname, pl.score, pl.positions, pl.game_id
@@ -77,7 +129,7 @@ function shapePost(r) {
     note: r.note,
     status: r.status || 'open',
     statusLabel: (PARTY_STATUS[r.status] || PARTY_STATUS.open).label,
-    created_at: r.created_at,
+    created_at: r.created_at_ts || r.created_at,
     creator: {
       player_id: r.player_id === null ? null : String(r.player_id),
       nickname: r.creator_nickname || r.creator_group_nickname || r.account_name || '群友',
@@ -97,7 +149,7 @@ function shapeSignup(r) {
     positions: toList(r.positions),
     eta: r.eta,
     note: r.note,
-    created_at: r.created_at,
+    created_at: r.created_at_ts || r.created_at,
   };
 }
 
@@ -117,9 +169,13 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const me = session ? await getMe(client, session.name) : { bound: false, playerId: null };
 
+      // created_at 是 timestamp without time zone，写入时走 CURRENT_TIMESTAMP，
+      // 落库的是「数据库会话时区」的墙钟（本库是 GMT）。直接读会被 node 当成本地时间，
+      // 显示就差 8 小时。这里额外算一个绝对时刻列，不去覆盖 p.* 里的同名列。
       const posts = await client.query(`
         SELECT p.*, pl.nickname AS creator_nickname, pl.group_nickname AS creator_group_nickname,
-               pl.score AS creator_score
+               pl.score AS creator_score,
+               (p.created_at AT TIME ZONE current_setting('TimeZone')) AS created_at_ts
           FROM public.party_posts p
           LEFT JOIN public.players pl ON pl.id = p.player_id
          ORDER BY (CASE WHEN p.status = 'open' THEN 0 ELSE 1 END), p.created_at DESC
@@ -129,9 +185,10 @@ export default async function handler(req, res) {
       let signups = { rows: [] };
       if (posts.rows.length > 0) {
         signups = await client.query(
-          `SELECT * FROM public.party_signups
-            WHERE post_id = ANY($1::bigint[])
-            ORDER BY created_at ASC`,
+          `SELECT s.*, (s.created_at AT TIME ZONE current_setting('TimeZone')) AS created_at_ts
+             FROM public.party_signups s
+            WHERE s.post_id = ANY($1::bigint[])
+            ORDER BY s.created_at ASC`,
           [posts.rows.map((p) => p.id)]
         );
       }
@@ -177,10 +234,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: '请填写需要几个人（1~20）' });
       }
 
-      // 开始时间：前端 datetime-local 传上来的是本地时间字符串，这里统一按 Date 解析后存 timestamptz
-      const startRaw = b.start_at;
-      const startDate = startRaw ? new Date(startRaw) : null;
-      if (!startDate || isNaN(startDate.getTime())) {
+      // 开始时间：前端已转成绝对瞬间；裸串按 tz_offset 还原（见 parseClientInstant 注释）
+      const tzOffset = num(b.tz_offset);
+      const startDate = parseClientInstant(b.start_at, tzOffset);
+      if (!startDate) {
         return res.status(400).json({ success: false, error: '请选择开黑开始时间' });
       }
 
@@ -189,13 +246,9 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: '请选择持续时间（15 分钟 ~ 24 小时）' });
       }
 
-      // play_time 是老字段，列表上仍可能被旧代码读取；用开始时间生成一个可读文本兜底
-      const pad = (n) => String(n).padStart(2, '0');
-      const playTime =
-        clip(b.play_time, 120) ||
-        `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())} ${pad(
-          startDate.getHours()
-        )}:${pad(startDate.getMinutes())}`;
+      // play_time 是老字段，列表上仍可能被旧代码读取；用开始时间生成一个可读文本兜底。
+      // 注意按「用户本地墙钟」生成，不能用服务器时区。
+      const playTime = clip(b.play_time, 120) || fmtWallClock(startDate, tzOffset);
 
       // 自己这边没填的，用选手资料兜底（前端「一键带入」也是这个口径）
       const myScore = num(b.my_score) ?? (me.score === null || me.score === undefined ? null : Number(me.score));

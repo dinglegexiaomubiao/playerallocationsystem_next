@@ -68,6 +68,14 @@ export default function PartyForm({ me, onCreated, onClose }) {
       setErr('请选择开黑开始时间');
       return;
     }
+    // datetime-local 给的是「用户本地墙钟」（如 2026-10-20T17:00），本身不带时区。
+    // 必须在浏览器里就转成绝对瞬间再提交——否则服务端用它自己的时区去解析，
+    // 一旦 Node 跑在 UTC（生产环境常见），17:00 会被当成 UTC，+08 一看就成了次日 01:00。
+    const startInstant = new Date(f.start_at);
+    if (isNaN(startInstant.getTime())) {
+      setErr('开黑开始时间格式不正确，请重新选择');
+      return;
+    }
     if (!(Number(f.need_players) >= 1 && Number(f.need_players) <= 20)) {
       setErr('请填写需要几个人（1~20）');
       return;
@@ -84,7 +92,9 @@ export default function PartyForm({ me, onCreated, onClose }) {
       want_rank: f.want_rank || null,
       want_positions: f.want_positions,
       need_players: Number(f.need_players),
-      start_at: f.start_at,
+      start_at: startInstant.toISOString(),
+      // 附上浏览器时区偏移（分钟），服务端用它把「发起时间」文本也写成本地墙钟
+      tz_offset: new Date().getTimezoneOffset(),
       duration_min: Number(f.duration_min),
       has_voice: f.has_voice,
       voice_app: f.has_voice ? f.voice_app || null : null,

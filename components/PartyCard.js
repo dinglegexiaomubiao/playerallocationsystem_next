@@ -433,7 +433,8 @@ export default function PartyCard({ post, me, onChanged }) {
               </button>
             </div>
             <div className="modal-hint">
-              发起人 {post.creator.nickname} · {post.play_time}
+              发起人 {post.creator.nickname} ·{' '}
+              {post.start_at ? fmtRange(post.start_at, post.duration_min) : post.play_time}
             </div>
             <div className="party-signup-body">
               {err && <div className="adm-error">{err}</div>}
