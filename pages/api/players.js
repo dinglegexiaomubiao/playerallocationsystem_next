@@ -1,5 +1,6 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { getAllPlayers, addPlayer, updatePlayer, deletePlayer, getPlayerById, pool } from '../../lib/db';
+import { denyIfImportNotAdmin } from '../../lib/auth';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
+        if (denyIfImportNotAdmin(req, res)) return;
         const { tournament_id, ...playerData } = req.body;
         const newPlayer = await addPlayer(playerData, tournament_id);
         res.status(201).json({ success: true, player: newPlayer });

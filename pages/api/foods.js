@@ -1,4 +1,5 @@
 import { pool } from '../../lib/db';
+import { denyIfImportNotAdmin } from '../../lib/auth';
 
 let tableReady = false;
 
@@ -83,6 +84,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, foods: list });
       }
       case 'POST': {
+        if (denyIfImportNotAdmin(req, res)) return;
         const body = req.body || {};
         if (!body.name || !String(body.name).trim()) {
           return res.status(400).json({ success: false, error: '店名不能为空' });

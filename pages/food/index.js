@@ -81,6 +81,8 @@ export default function FoodPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [openReviewId, setOpenReviewId] = useState(null);
   const [reviewForm, setReviewForm] = useState({ reviewer: '', content: '', rating: 5 });
+  // 当前登录身份；null 表示尚未确认（此时不渲染导入导出，避免闪一下再隐藏）
+  const [me, setMe] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -98,6 +100,10 @@ export default function FoodPage() {
 
   useEffect(() => {
     load();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setMe(d || { isAdmin: false }))
+      .catch(() => setMe({ isAdmin: false }));
   }, []);
 
   // 筛选项全部从真实数据里生成，并按出现次数降序排列（菜系多达 50+ 种，写死列表会漏）
@@ -297,7 +303,7 @@ export default function FoodPage() {
         if (!target) {
           const r = await fetch('/api/foods', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-excel-import': '1' },
             body: JSON.stringify(food),
           });
           const d = await r.json().catch(() => ({}));
@@ -316,7 +322,7 @@ export default function FoodPage() {
             if (seen.has(rk)) continue;
             const rr = await fetch('/api/food-reviews', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'x-excel-import': '1' },
               body: JSON.stringify({
                 food_id: target.id,
                 reviewer: String(rv.reviewer || '').slice(0, 50),
@@ -367,6 +373,7 @@ export default function FoodPage() {
               filename="群友美食.xlsx"
               templateName="群友美食_导入模板.xlsx"
               onImport={handleImportFoods}
+              canManage={!!(me && me.isAdmin)}
               countReviews={countReviews}
               importHint="已存在的店铺（店名+区位相同）不会重复创建，只补录其群友评价；同一格内换行分隔的多条评价会拆成多条记录。"
               checkDuplicate={(row, existing) => {

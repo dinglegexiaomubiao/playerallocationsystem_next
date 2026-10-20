@@ -22,6 +22,8 @@ export default function MembersPage() {
   const [q, setQ] = useState('');
   const [pos, setPos] = useState('全部');
   const [sort, setSort] = useState('score');
+  // 当前登录身份；null 表示尚未确认（此时不渲染导入导出，避免闪一下再隐藏）
+  const [me, setMe] = useState(null);
 
   const reload = () => {
     fetch('/api/players')
@@ -47,6 +49,13 @@ export default function MembersPage() {
     return () => {
       alive = false;
     };
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setMe(d || { isAdmin: false }))
+      .catch(() => setMe({ isAdmin: false }));
   }, []);
 
   // 选手 id -> 昵称，用于把「默契选手」里的 id 显示成昵称
@@ -101,7 +110,7 @@ export default function MembersPage() {
       try {
         const r = await fetch('/api/players', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-excel-import': '1' },
           body: JSON.stringify(p),
         });
         const d = await r.json().catch(() => ({}));
@@ -162,6 +171,7 @@ export default function MembersPage() {
               filename="群友信息.xlsx"
               templateName="群友信息_导入模板.xlsx"
               onImport={handleImport}
+              canManage={!!(me && me.isAdmin)}
               checkDuplicate={checkDuplicate}
             />
           </div>

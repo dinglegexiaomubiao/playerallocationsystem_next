@@ -2,11 +2,14 @@ import { useRef, useState } from 'react';
 import { exportRows, downloadTemplate, readRows } from '../lib/excel';
 
 /**
- * Excel 导入/导出/模板下载三件套。
+ * Excel 导入/导出/模板下载三件套（仅管理员可见）。
  *
  * 导入流程：选文件 → 预览（标红重复行）→ 确认 → 逐条提交（实时进度条）→ 结果汇总
  * onImport 签名：(rows, onProgress) => Promise<void>
  *   onProgress(done, total, { name, error })，每提交完一条调用一次
+ *
+ * canManage 为 false 时整个组件不渲染（默认 false，避免忘记传参时意外暴露）。
+ * 调用方需在导入请求上带 x-excel-import: 1 头，服务端据此校验管理员身份。
  */
 export default function ExcelIO({
   columns,
@@ -17,6 +20,7 @@ export default function ExcelIO({
   checkDuplicate,
   countReviews,
   importHint,
+  canManage = false,
 }) {
   const ref = useRef(null);
   const [busy, setBusy] = useState(false);
@@ -98,6 +102,9 @@ export default function ExcelIO({
 
   const pct = job ? Math.min(100, Math.round((job.done / Math.max(job.total, 1)) * 100)) : 0;
   const running = job && job.phase === 'running';
+
+  // 非管理员：整块不渲染（导入 / 导出 / 下载模板都不出现）
+  if (!canManage) return null;
 
   // 预览时统计随行附带的群友评价条数（如含换行分隔的多条）
   const reviewCount =

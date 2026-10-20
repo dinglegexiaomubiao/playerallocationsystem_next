@@ -1,4 +1,5 @@
 import { pool } from '../../lib/db';
+import { denyIfImportNotAdmin } from '../../lib/auth';
 
 function clampRating(v) {
   const n = parseInt(v, 10);
@@ -23,6 +24,7 @@ export default async function handler(req, res) {
 
     switch (req.method) {
       case 'POST': {
+        if (denyIfImportNotAdmin(req, res)) return;
         const body = req.body || {};
         if (!body.food_id) return res.status(400).json({ success: false, error: '缺少 food_id' });
         if (!body.content || !String(body.content).trim()) {

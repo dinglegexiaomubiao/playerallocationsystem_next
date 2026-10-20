@@ -1,4 +1,5 @@
 import { initDatabase, query } from '../../lib/db';
+import { setSessionCookie } from '../../lib/auth';
 import crypto from 'crypto';
 
 let dbInitialized = false;
@@ -82,6 +83,8 @@ export default async function handler(req, res) {
           'UPDATE public.play_score SET count = count + 1 WHERE name = $1 RETURNING count',
           [trimmedUsername]
         );
+        // 下发会话 cookie，供后续接口识别身份（含管理员判定）
+        setSessionCookie(res, trimmedUsername);
         return res.status(200).json({
           name: trimmedUsername,
           count: updated.rows[0].count,
@@ -97,6 +100,7 @@ export default async function handler(req, res) {
           'INSERT INTO public.play_score (name, count, password) VALUES ($1, $2, $3) RETURNING count',
           [trimmedUsername, 1, hashPasswordWithSalt(trimmedPassword)]
         );
+        setSessionCookie(res, trimmedUsername);
         return res.status(200).json({
           name: trimmedUsername,
           count: inserted.rows[0].count,
