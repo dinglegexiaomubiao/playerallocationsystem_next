@@ -211,6 +211,13 @@ export default function PartyCard({ post, me, onChanged }) {
         {post.expired && <span className="t-badge b-done pg-expired">已过期</span>}
       </div>
 
+      {/* 卡片名称：发起人自定义，不填则由后端生成「昵称喊你来开黑了」 */}
+      {post.title ? (
+        <h3 className="pg-title" title={post.title}>
+          {post.title}
+        </h3>
+      ) : null}
+
       <div className="pg-owner">
         <span className="pg-av" aria-hidden="true">
           {(post.creator.nickname || '?').slice(0, 1)}

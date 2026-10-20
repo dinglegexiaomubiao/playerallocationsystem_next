@@ -21,6 +21,10 @@ const num = (v) => {
 
 const MODE_KEYS = PARTY_MODES.map((m) => m.key);
 
+// 卡片名称兜底：不填就按「昵称 + 喊你来开黑了」生成。
+// 读老卡片（title 为 NULL）时也走这里，保证列表上永远不会出现空标题。
+const defaultTitle = (nickname) => `${nickname || '群友'}喊你来开黑了`;
+
 // ===== 时间解析 =====
 // datetime-local 的值是「用户本地墙钟」，不带时区。绝对不能直接 new Date(str)：
 // 那样用的是**服务器**时区。生产环境 Node 常常跑在 UTC，用户选 10-20 17:00 会被
@@ -107,6 +111,9 @@ function shapePost(r) {
 
   return {
     id: String(r.id),
+    // 老卡片没有 title，按发起人昵称现算一个，别让卡片顶上空一块
+    title:
+      r.title || defaultTitle(r.creator_nickname || r.creator_group_nickname || r.account_name),
     mode: r.mode,
     modeLabel: modeLabel(r.mode),
     game_id: r.game_id === null ? null : String(r.game_id),
@@ -265,17 +272,21 @@ export default async function handler(req, res) {
           .json({ success: false, error: '你已有 5 张招募中的卡片，先关掉一些再发' });
       }
 
+      // 卡片名称：可自定义，留空就用「昵称喊你来开黑了」
+      const title = clip(b.title, 80) || defaultTitle(me.nickname);
+
       const inserted = await client.query(
         `INSERT INTO public.party_posts
-           (player_id, account_name, mode, game_id, my_score, my_rank, my_positions,
+           (player_id, account_name, title, mode, game_id, my_score, my_rank, my_positions,
             want_score_min, want_score_max, want_rank, want_positions,
             play_time, need_players, start_at, duration_min,
             has_voice, voice_app, note, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'open')
-         RETURNING id`,
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'open')
+         RETURNING id, title`,
         [
           me.playerId,
           session.name,
+          title,
           mode,
           /^\d{1,20}$/.test(String(b.game_id || '').trim()) ? String(b.game_id).trim() : null,
           myScore,
@@ -295,7 +306,11 @@ export default async function handler(req, res) {
         ]
       );
 
-      return res.status(200).json({ success: true, id: String(inserted.rows[0].id) });
+      return res.status(200).json({
+        success: true,
+        id: String(inserted.rows[0].id),
+        title: inserted.rows[0].title,
+      });
     }
 
     res.setHeader('Allow', ['GET', 'POST']);

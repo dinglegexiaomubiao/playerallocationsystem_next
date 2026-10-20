@@ -50,6 +50,7 @@ export default function PartyPage() {
       if (openOnly && p.status !== 'open') return false;
       if (!kw) return true;
       const hay = [
+        p.title,
         p.creator.nickname,
         p.game_id,
         p.play_time,
@@ -83,7 +84,7 @@ export default function PartyPage() {
                 开黑<span className="hl">组队</span>
               </h1>
               <p>
-                共 {openCount} 张招募中的卡片 · 发一张卡片，队友报段位和上线时间，凑够 5 人就开
+                共 {openCount} 张招募中的卡片 · 发一张卡片，队友报段位和上线时间，凑够你定的人数就开
               </p>
             </div>
             <div className="hero-actions">
@@ -113,9 +114,9 @@ export default function PartyPage() {
             <PartyForm
               me={me}
               onClose={() => setShowForm(false)}
-              onCreated={() => {
+              onCreated={(id, title) => {
                 setShowForm(false);
-                setMsg('开黑卡片已发布');
+                setMsg(title ? `已发布「${title}」` : '开黑卡片已发布');
                 load();
               }}
             />
@@ -129,7 +130,7 @@ export default function PartyPage() {
                   type="search"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="昵称、SteamID、段位、时间、备注…"
+                  placeholder="卡片名称、昵称、SteamID、段位、时间、备注…"
                   className={q ? 'is-active' : ''}
                 />
                 {q && (

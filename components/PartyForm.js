@@ -22,6 +22,13 @@ const rankOf = (score) => {
   return Number.isFinite(n) ? tierOf(n).label : '';
 };
 
+// 卡片名称默认值：与服务端 defaultTitle() 保持同一口径。
+// 用户不填时后端也会这么生成，这里预填出来只是让人看得见、也知道能改。
+function defaultTitle(me) {
+  const nick = (me && (me.nickname || me.groupNickname)) || '';
+  return `${nick || '群友'}喊你来开黑了`;
+}
+
 /**
  * 新建开黑卡片。
  * 所有「我的…」字段默认用选手资料预填，也可点「一键带入」重新覆盖。
@@ -29,6 +36,7 @@ const rankOf = (score) => {
 export default function PartyForm({ me, onCreated, onClose }) {
   const [mode, setMode] = useState(PARTY_MODES[0].key);
   const [f, setF] = useState(() => ({
+    title: defaultTitle(me),
     game_id: (me && me.gameId) || '',
     my_score: me && me.score != null ? String(me.score) : '',
     my_rank: me && me.score != null ? rankOf(me.score) : '',
@@ -82,6 +90,8 @@ export default function PartyForm({ me, onCreated, onClose }) {
     }
     setBusy(true);
     const body = {
+      // 留空就让后端兜底成「昵称喊你来开黑了」
+      title: f.title.trim() || null,
       mode,
       game_id: f.game_id.trim(),
       my_score: f.my_score === '' ? null : Number(f.my_score),
@@ -103,7 +113,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
     try {
       // apiFetch 统一 15s 超时，超时提示「请求超时，请检查网络后重试」
       const d = await apiPost('/api/party', body);
-      if (d && d.success) onCreated && onCreated(d.id);
+      if (d && d.success) onCreated && onCreated(d.id, d.title);
       else setErr((d && d.error) || '发布失败，请稍后再试');
     } catch (error) {
       setErr(error.message);
@@ -163,7 +173,21 @@ export default function PartyForm({ me, onCreated, onClose }) {
 
       {err && <div className="adm-error">{err}</div>}
 
-      <div className="party-section-label">① 开黑模式</div>
+      <div className="party-section-label">① 开黑名称</div>
+      <div className="form-field" style={{ marginBottom: 14 }}>
+        <label>
+          卡片名称 <span className="field-note">（不填就默认「{defaultTitle(me)}」）</span>
+        </label>
+        <input
+          value={f.title}
+          onChange={(e) => set('title', e.target.value)}
+          maxLength={80}
+          placeholder={defaultTitle(me)}
+        />
+        <div className="party-hint">这句话会作为卡片标题显示在列表里，方便一眼看出是谁在喊人。</div>
+      </div>
+
+      <div className="party-section-label">② 开黑模式</div>
       <div className="party-modes">
         {PARTY_MODES.map((m) => (
           <button
@@ -178,7 +202,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
         ))}
       </div>
 
-      <div className="party-section-label">② 我的资料</div>
+      <div className="party-section-label">③ 我的资料</div>
       <div className="form-row" style={{ marginBottom: 14 }}>
         <div className="form-field">
           <label>我的 SteamID</label>
@@ -231,7 +255,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
         </div>
       </div>
 
-      <div className="party-section-label">③ 希望队友的水平</div>
+      <div className="party-section-label">④ 希望队友的水平</div>
       <div className="form-row" style={{ marginBottom: 14 }}>
         <div className="form-field">
           <label>队友段位</label>
@@ -279,7 +303,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
         </div>
       </div>
 
-      <div className="party-section-label">④ 人数、时间与语音</div>
+      <div className="party-section-label">⑤ 人数、时间与语音</div>
       <div className="form-field" style={{ marginBottom: 14 }}>
         <label>需要几个人（含你自己）</label>
         <div className="chips">

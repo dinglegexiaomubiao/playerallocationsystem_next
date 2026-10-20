@@ -1173,6 +1173,16 @@ a { text-decoration: none; color: inherit; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
 
+/* 卡片名称（发起人自定义，默认「昵称喊你来开黑了」） */
+.pg-title {
+  margin: -2px 0 0; font-size: 1.02rem; font-weight: 700; line-height: 1.45;
+  color: var(--text); letter-spacing: -.01em; word-break: break-word;
+  /* 标题最长 80 字，最多占两行，完整内容在 title 提示里 */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.party-card.is-closed .pg-title { color: var(--text-2); }
+
 /* 发起人 */
 .pg-owner {
   display: flex; align-items: center; gap: 10px;
