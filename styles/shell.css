@@ -1,0 +1,521 @@
+/* ============================================================
+   LaRoja · 深色外壳（导航 / 页脚 / 通用控件）
+   ------------------------------------------------------------
+   这一层只覆盖外观，不动布局骨架：导航宽度、抽屉、账号区逻辑
+   仍由 layout.css 决定。
+   视觉依据：深色社区风参考图 —— 图标块 + 双行标题、纯文字导航、
+   细边分隔，不用发光与玻璃拟态。
+   ============================================================ */
+
+body {
+  background: var(--bg-page);
+  color: var(--text);
+}
+
+/* ==================== 导航 ==================== */
+.site-nav {
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border);
+  /* 深色实底不需要模糊，按「不要玻璃拟态」去掉 */
+  backdrop-filter: none;
+}
+
+.nav-inner {
+  gap: 32px;
+}
+
+/* 品牌区：方形图标块 + 主标题 + 大写副标题 */
+.logo {
+  gap: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.logo .mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: var(--brand-solid, #8e3a35);
+  color: #f5efe7;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  box-shadow: none;
+}
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.12;
+  gap: 1px;
+}
+.logo-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text);
+}
+.logo-sub {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* 导航链接：纯文字，靠位置和颜色分层，不用胶囊底 */
+.nav-links {
+  gap: 24px;
+  margin-left: 8px;
+}
+.nav-links a {
+  position: relative;
+  height: 64px;
+  padding: 0;
+  border-radius: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  background: none;
+}
+.nav-links a:hover {
+  background: none;
+  color: var(--text-2);
+}
+.nav-links a.active {
+  background: none;
+  color: var(--text);
+  font-weight: 600;
+}
+.nav-links a.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--brand-solid, #8e3a35);
+}
+
+/* 账号区 */
+.nav-user {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.nav-role {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+}
+
+/* 抽屉 */
+.nav-drawer {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.nav-drawer-link {
+  color: var(--text-2);
+}
+.nav-drawer-link.active {
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+/* ==================== 按钮 ==================== */
+.btn {
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: none;
+}
+.btn-sm {
+  padding: 7px 13px;
+  font-size: 12.5px;
+}
+.btn-primary {
+  background: var(--brand-solid, #8e3a35);
+  color: #f7f2ec;
+  box-shadow: none;
+}
+.btn-primary:hover {
+  background: #6d2b27;
+  transform: none;
+  box-shadow: none;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+  border: 1px solid var(--border-strong);
+}
+.btn-ghost:hover {
+  border-color: var(--brand-solid, #8e3a35);
+  color: var(--brand);
+  background: transparent;
+}
+.btn-secondary {
+  background: var(--bg-subtle);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* ==================== 页脚 ==================== */
+.site-footer {
+  background: var(--bg-sunk, #12100c);
+  color: var(--text-3);
+  margin-top: 56px;
+  border-top: 1px solid var(--border);
+}
+.site-footer h5 {
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.site-footer a {
+  color: var(--text-3);
+  font-size: 12.5px;
+  padding: 4px 0;
+}
+.site-footer a:hover {
+  color: var(--text);
+}
+.site-footer .copy {
+  border-top-color: var(--border);
+  color: var(--text-3);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+.footer-user {
+  display: block;
+  color: var(--text-2);
+  font-size: 12.5px;
+  padding: 4px 0;
+}
+
+/* ==================== 登录 / 注册（不套 Layout） ==================== */
+.login-container {
+  background: var(--bg-page);
+}
+.login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+/* ==================== 反馈浮窗 ==================== */
+.fb-fab {
+  background: var(--brand-solid, #8e3a35);
+  color: #f7f2ec;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.fb-fab:hover {
+  background: #6d2b27;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  transform: none;
+}
+.fb-fab.is-open {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+/* ============================================================
+   通用数据列表（.lr-tbl）
+   ------------------------------------------------------------
+   列表型内容一律走「表头 + 发丝线行」，不套卡片。
+   赛事列表、以及后续需要同款排版的页面都复用这套。
+   ============================================================ */
+.lr-tbl {
+  border-top: 1px solid var(--border-strong);
+}
+.lr-thead,
+.lr-trow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px 196px 116px;
+  align-items: center;
+  gap: 18px;
+}
+.lr-thead {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.lr-trow {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft, rgba(240, 232, 220, 0.06));
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.12s ease;
+}
+.lr-trow:hover {
+  background: rgba(240, 232, 220, 0.018);
+  color: inherit;
+}
+.lr-cell-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.lr-name {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lr-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lr-status {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.lr-status.live {
+  color: var(--ok);
+}
+.lr-status.plan {
+  color: var(--gold);
+}
+.lr-status.done {
+  color: var(--text-3);
+}
+.lr-time {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.lr-champ {
+  font-size: 12.5px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lr-champ.has {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+@media (max-width: 820px) {
+  .lr-thead {
+    display: none;
+  }
+  .lr-trow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .lr-time {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ============================================================
+   页头与区块标题
+   ------------------------------------------------------------
+   子页面统一用「衬线大标题 + 一行说明」的报头，
+   不带装饰性渐变，和赛事详情页的报头保持同一套语言。
+   ============================================================ */
+.hl {
+  color: var(--brand);
+}
+.page-hero {
+  padding: 40px 0 26px;
+  background: none;
+}
+.page-hero h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.8rem, 2.6vw, 2.3rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+.page-hero p {
+  margin-top: 9px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.section {
+  padding: 40px 0;
+}
+.sec-head {
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+.sec-head h2 {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.sec-head .sub {
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+.sec-head a.more {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+.sec-head a.more:hover {
+  color: var(--brand);
+}
+
+/* 筛选栏：一条横排控件带，不套大盒子 */
+.toolbar {
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* 登录卡内的排版：标题走衬线，按钮去掉渐变与发光 */
+.login-header h1 {
+  font-family: var(--font-serif);
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.login-header p {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.login-button {
+  background: var(--brand-solid);
+  color: #f7f2ec;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+.login-button:hover:not(:disabled) {
+  background: var(--brand-solid-hover);
+  transform: none;
+  box-shadow: none;
+}
+.login-register-link a {
+  color: var(--brand);
+}
+
+/* ============================================================
+   面板去卡片化
+   ------------------------------------------------------------
+   .side-card 原先是一张张独立圆角卡，详情页会连叠四五个，
+   正是「每个区块都包进卡片」的典型。这里统一改成
+   「一条上边线 + 标题」的编辑式分区，和赛事页的 .t-block 同构。
+   ============================================================ */
+.side-card {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 16px 0 0;
+}
+.side-card h4 {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+/* 名次行与键值行改为发丝线分隔 */
+.rank {
+  border-bottom: 1px solid var(--line-soft, rgba(240, 232, 220, 0.06));
+}
+.rank .no {
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+}
+.rank .no.top {
+  background: var(--gold-soft);
+  color: var(--gold);
+  border: 1px solid rgba(176, 141, 87, 0.4);
+}
+.rank .sc {
+  font-family: var(--font-mono);
+  color: var(--brand);
+}
+
+/* 注册页：标题衬线，主按钮实底深红（原先用 --brand 当底色，配白字发粉） */
+.register-card {
+  border-radius: var(--radius-lg);
+}
+.register-header h1 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.register-section {
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+}
+.register-submit {
+  background: var(--brand-solid);
+  color: #f7f2ec;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: none;
+}
+.register-submit:hover:not(:disabled) {
+  background: var(--brand-solid-hover);
+  transform: none;
+}
+
+/* 两列表单：grid 子项默认 min-width:auto，长标签会把格子撑破、
+   和右边一列的文字叠在一起（注册页实测）。统一收口。 */
+.form-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.form-row > * {
+  min-width: 0;
+}
+.form-field,
+.form-group {
+  min-width: 0;
+}
+.form-field label,
+.form-group label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.field-note {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+/* 卡片里的条目标题统一走衬线，和表格里的队伍名、赛事名同一档 */
+.p-name,
+.f-name {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+/* 数值一律等宽 */
+.p-score,
+.f-price,
+.sc {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

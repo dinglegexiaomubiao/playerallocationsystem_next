@@ -105,7 +105,8 @@ export default function Layout({ children }) {
               刀
             </span>
             <span className="logo-text">
-              深圳LaRoja<b>Dota2社区</b>
+              <span className="logo-name">深圳LaRoja</span>
+              <span className="logo-sub">Dota2 Community</span>
             </span>
           </Link>
 
@@ -157,8 +158,12 @@ export default function Layout({ children }) {
         <div className="wrap">
           <div className="cols">
             <div>
-              <div className="logo" style={{ color: '#fff' }}>
-                <span className="mark">刀</span> 深圳LaRoja<b style={{ color: 'var(--accent)' }}>Dota2社区</b>
+              <div className="logo" style={{ color: 'var(--text)' }}>
+                <span className="mark">刀</span>
+                <span className="logo-text">
+                  <span className="logo-name">深圳LaRoja</span>
+                  <span className="logo-sub">Dota2 Community</span>
+                </span>
               </div>
               <p style={{ marginTop: 10, fontSize: '.85rem', maxWidth: 300 }}>
                 不止 Dota2：吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。

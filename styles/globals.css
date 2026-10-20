@@ -2,72 +2,75 @@
 
 /* ===== Design Tokens ===== */
 :root {
-  --color-primary: #3b8fd4;
-  --color-primary-light: #4da3e8;
-  --color-primary-dark: #2e7cc4;
-  --color-primary-bg: #e8f4fd;
-  --color-primary-bg-light: #f0f7fd;
-  --color-primary-border: #c8ddf0;
-  --color-primary-border-light: #d0e4f5;
+  /* 主色：低饱和深红。primary 用于实底，primary-light 用于文字/链接 */
+  --color-primary: #8e3a35;
+  --color-primary-light: #c9867c;
+  --color-primary-dark: #6d2b27;
+  --color-primary-bg: rgba(142, 58, 53, 0.14);
+  --color-primary-bg-light: rgba(142, 58, 53, 0.08);
+  --color-primary-border: rgba(142, 58, 53, 0.42);
+  --color-primary-border-light: rgba(142, 58, 53, 0.26);
 
-  --color-danger: #ef4444;
-  --color-danger-light: #f87171;
-  --color-danger-dark: #dc2626;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
+  /* 危险色：比品牌红更亮一档，避免和品牌色混淆 */
+  --color-danger: #d05044;
+  --color-danger-light: #e07a6f;
+  --color-danger-dark: #a83a31;
+  --color-danger-bg: rgba(208, 80, 68, 0.14);
+  --color-danger-border: rgba(208, 80, 68, 0.38);
 
-  --color-success: #16a34a;
-  --color-success-light: #22c55e;
-  --color-success-bg: #dcfce7;
+  --color-success: #93a87e;
+  --color-success-light: #a9bd95;
+  --color-success-bg: rgba(147, 168, 126, 0.14);
 
-  --color-warning: #d97706;
-  --color-warning-bg: #fef3c7;
-  --color-warning-border: #fde68a;
+  --color-warning: #d6b47b;
+  --color-warning-bg: rgba(176, 141, 87, 0.14);
+  --color-warning-border: rgba(176, 141, 87, 0.4);
 
-  --color-text: #1a365d;
-  --color-text-secondary: #5a7a9a;
-  --color-text-muted: #94a3b8;
-  --color-text-dark: #1a2332;
-  --color-text-body: #2d3748;
+  --color-text: #f0eae2;
+  --color-text-secondary: #ada298;
+  --color-text-muted: #7b716a;
+  --color-text-dark: #f0eae2;
+  --color-text-body: #ada298;
 
-  --color-bg: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-bg-hover: #f0f7fd;
-  --color-bg-overlay: rgba(15, 23, 42, 0.4);
-  --color-bg-page-start: #e8f4fd;
-  --color-bg-page-mid1: #d4eaf7;
-  --color-bg-page-mid2: #e0f0fa;
-  --color-bg-page-end: #ecf5fb;
+  --color-bg: #1e1915;
+  --color-bg-secondary: #221c17;
+  --color-bg-hover: rgba(240, 232, 220, 0.04);
+  --color-bg-overlay: rgba(10, 8, 6, 0.72);
+  --color-bg-page-start: #17130f;
+  --color-bg-page-mid1: #17130f;
+  --color-bg-page-mid2: #18140f;
+  --color-bg-page-end: #17130f;
 
-  --color-score-master: #e11d48;
-  --color-score-master-bg: #fce7f3;
-  --color-score-master-text: #be123c;
-  --color-score-diamond: #7c3aed;
-  --color-score-diamond-bg: #ede9fe;
-  --color-score-diamond-text: #6d28d9;
-  --color-score-platinum: #3b8fd4;
-  --color-score-platinum-bg: #e0f0fe;
-  --color-score-platinum-text: #1e5fa8;
-  --color-score-gold: #16a34a;
-  --color-score-gold-bg: #dcfce7;
-  --color-score-gold-text: #15803d;
-  --color-score-silver: #94a3b8;
-  --color-score-silver-bg: #f1f5f9;
-  --color-score-silver-text: #64748b;
+  /* 段位色：原先是一套蓝/紫/绿，与「不要紫蓝」冲突，统一收进暖色系 */
+  --color-score-master: #c9867c;
+  --color-score-master-bg: rgba(142, 58, 53, 0.16);
+  --color-score-master-text: #d99a90;
+  --color-score-diamond: #b08d57;
+  --color-score-diamond-bg: rgba(176, 141, 87, 0.14);
+  --color-score-diamond-text: #d6b47b;
+  --color-score-platinum: #9d9287;
+  --color-score-platinum-bg: rgba(157, 146, 135, 0.13);
+  --color-score-platinum-text: #c0b5a8;
+  --color-score-gold: #93a87e;
+  --color-score-gold-bg: rgba(147, 168, 126, 0.14);
+  --color-score-gold-text: #a9bd95;
+  --color-score-silver: #7b716a;
+  --color-score-silver-bg: rgba(123, 113, 106, 0.14);
+  --color-score-silver-text: #a49a92;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 14px;
-  --radius-3xl: 16px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
 
-  --shadow-sm: 0 1px 4px rgba(59, 130, 246, 0.04);
-  --shadow-md: 0 2px 8px rgba(59, 130, 246, 0.04);
-  --shadow-lg: 0 4px 16px rgba(59, 130, 246, 0.08);
-  --shadow-xl: 0 8px 32px rgba(59, 130, 246, 0.12);
-  --shadow-primary: 0 2px 8px rgba(59, 130, 246, 0.2);
-  --shadow-primary-hover: 0 4px 16px rgba(59, 130, 246, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.38);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-primary: 0 2px 8px rgba(142, 58, 53, 0.24);
+  --shadow-primary-hover: 0 4px 16px rgba(142, 58, 53, 0.34);
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
@@ -164,7 +167,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, #d0e8f7 100%);
+  background: var(--color-primary-bg);
   border-radius: var(--radius-xl);
   color: var(--color-primary);
   flex-shrink: 0;
@@ -247,13 +250,13 @@ body {
 }
 
 .btn-secondary {
-  background: #f0f4f8;
+  background: var(--bg-subtle);
   color: #4a5568;
   border: 1px solid var(--color-primary-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #e2e8f0;
+  background: var(--bg-subtle);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
@@ -379,7 +382,7 @@ body {
 
 .team-card.drag-over-full {
   border-color: var(--color-danger-light);
-  background: #fff5f5;
+  background: var(--accent-soft);
   opacity: 0.7;
 }
 
@@ -463,7 +466,7 @@ body {
 }
 
 .remove-team-btn:hover {
-  background: #fee2e2;
+  background: var(--accent-soft);
   color: var(--color-danger);
   border-color: var(--color-danger-light);
 }
@@ -487,7 +490,7 @@ body {
   font-size: 0.8rem;
   border: 1px solid #d1d9e6;
   border-radius: var(--radius-md);
-  background: #fff;
+  background: var(--bg-card);
   color: var(--color-text);
   transition: border-color var(--transition-fast);
 }
@@ -601,7 +604,7 @@ body {
 }
 
 .remove-player:hover {
-  background: #fee2e2;
+  background: var(--accent-soft);
   color: var(--color-danger);
   border-color: var(--color-danger-light);
 }
@@ -853,7 +856,7 @@ body {
 }
 
 .stats-toggle-btn:hover:not(:disabled) {
-  background: #dce8f5;
+  background: var(--bg-subtle);
   transform: translateY(-1px);
 }
 
@@ -950,7 +953,7 @@ body {
 }
 
 .hero-tag.small.more {
-  background: #e8f0f8;
+  background: var(--bg-subtle);
   color: var(--color-text-muted);
 }
 
@@ -1030,7 +1033,7 @@ body {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(to right, transparent, #b8d4f0, transparent);
+  background: linear-gradient(to right, transparent, var(--border-strong), transparent);
 }
 
 .divider-text {
@@ -1196,7 +1199,7 @@ body {
 }
 
 .modal-close:hover {
-  background: #e2e8f0;
+  background: var(--bg-subtle);
   color: var(--color-text-dark);
 }
 
@@ -1253,7 +1256,7 @@ body {
 }
 
 .modal-player-item.selected {
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, #d0e8f7 100%);
+  background: var(--color-primary-bg);
   border-color: var(--color-primary);
   outline-color: var(--color-primary);
 }
@@ -1298,7 +1301,7 @@ body {
   padding: 11px 14px;
   border: 1.5px solid var(--color-primary-border);
   border-radius: 10px;
-  background: #f8fafd;
+  background: var(--bg-card);
   color: var(--color-text-dark);
   font-size: 0.9rem;
   transition: all 0.2s ease;
@@ -1352,7 +1355,7 @@ body {
   align-items: center;
   padding: 4px 12px;
   border-radius: 20px;
-  background: #f0f4ff;
+  background: var(--brand-soft);
   color: var(--color-primary);
   width: fit-content;
 }
@@ -1387,7 +1390,7 @@ body {
 .position-checkboxes label:hover {
   border-color: var(--color-primary-light);
   color: var(--color-primary);
-  background: #f0f6ff;
+  background: var(--brand-soft);
 }
 
 .position-checkboxes label:has(input:checked) {
@@ -1417,7 +1420,7 @@ body {
   padding: 12px;
   border: 1.5px dashed var(--color-primary-border);
   border-radius: 10px;
-  background: #f8fafd;
+  background: var(--bg-card);
   align-items: flex-start;
   align-content: flex-start;
 }
@@ -1515,7 +1518,7 @@ body {
 }
 
 .form-actions .btn-secondary:hover {
-  background: #e8f0f8;
+  background: var(--bg-subtle);
   color: var(--color-text);
 }
 
@@ -1550,7 +1553,7 @@ body {
 }
 
 .hero-item.selected {
-  background: linear-gradient(135deg, var(--color-primary-bg) 0%, #d0e8f7 100%);
+  background: var(--color-primary-bg);
   border-color: var(--color-primary);
   outline-color: var(--color-primary);
 }
@@ -1764,7 +1767,7 @@ body {
 }
 
 .close-button:hover {
-  background-color: #e2e8f0;
+  background-color: var(--bg-subtle);
   color: var(--color-text-dark);
 }
 
@@ -2034,7 +2037,7 @@ body {
 
 /* ===== Skeleton Loading ===== */
 .skeleton {
-  background: linear-gradient(90deg, #e8f0f8 25%, #f0f4f8 50%, #e8f0f8 75%);
+  background: linear-gradient(90deg, var(--bg-subtle) 25%, var(--bg-subtle) 50%, var(--bg-subtle) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-sm);
@@ -2097,7 +2100,7 @@ body {
 }
 
 .debug-toggle-btn {
-  background: #f0f4f8;
+  background: var(--bg-subtle);
   color: var(--color-text-muted);
   border: 1px solid var(--color-primary-border-light);
   border-radius: 4px;
@@ -2107,7 +2110,7 @@ body {
   width: 100%;
 }
 
-.debug-toggle-btn:hover { background: #e2e8f0; }
+.debug-toggle-btn:hover { background: var(--bg-subtle); }
 
 .debug-info { margin-top: 10px; }
 
@@ -2118,7 +2121,7 @@ body {
 }
 
 .debug-info pre {
-  background: #f0f4f8;
+  background: var(--bg-subtle);
   color: var(--color-text-dark);
   padding: 10px;
   border-radius: var(--radius-sm);
@@ -2232,7 +2235,7 @@ body {
 }
 
 .close-message-board:hover {
-  background: #e2e8f0;
+  background: var(--bg-subtle);
   color: var(--color-text-dark);
 }
 
@@ -2365,7 +2368,7 @@ body {
 }
 
 .close-random-message:hover {
-  background: #e2e8f0;
+  background: var(--bg-subtle);
   color: var(--color-text-dark);
 }
 
@@ -2488,7 +2491,7 @@ body {
 .ai-analysis-btn {
   width: 100%;
   padding: 8px 12px;
-  background: linear-gradient(135deg, #f0f7fd 0%, #e8f4fd 100%);
+  background: linear-gradient(135deg, var(--bg-subtle) 0%, var(--brand-soft) 100%);
   color: var(--color-primary);
   border: 1px dashed var(--color-primary-border);
   border-radius: var(--radius-md);
@@ -2498,7 +2501,7 @@ body {
 }
 
 .ai-analysis-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #e8f4fd 0%, #d0e8f7 100%);
+  background: var(--brand-soft);
   border-style: solid;
   border-color: var(--color-primary-light);
   transform: translateY(-1px);
@@ -2644,12 +2647,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #b8d4f0;
+  background: var(--border-strong);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94c0e0;
+  background: var(--border-strong);
 }
 
 /* ===== Responsive ===== */

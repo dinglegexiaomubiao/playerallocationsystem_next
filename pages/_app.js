@@ -3,6 +3,9 @@ import { useRouter } from 'next/router';
 import '../styles/globals.css';
 import '../styles/main/index.css';
 import '../styles/layout.css';
+// 深色外壳与各页样式，必须排在 layout.css 之后才能覆盖旧外观
+import '../styles/shell.css';
+import '../styles/home.css';
 import '../styles/tournament-dark.css';
 import Layout from '../components/Layout';
 import FeedbackWidget from '../components/FeedbackWidget';

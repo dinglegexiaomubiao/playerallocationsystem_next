@@ -2,277 +2,210 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
-const ENTRIES = [
-  { ic: '🏆', cls: 'c-red', title: '赛事信息', desc: '历届内战赛程、对阵、排名与战报，一键复盘。', href: '/tournaments', go: '进入赛事 →' },
-  { ic: '👥', cls: 'c-blue', title: '群友信息', desc: '群友档案、天梯分、擅长英雄与 AI 战力分析。', href: '/members', go: '认识群友 →' },
-  { ic: '🍜', cls: 'c-gold', title: '群友美食', desc: '群友私藏美食地图，附推荐人、评分与吐槽。', href: '/food', go: '查看美食 →' },
-  { ic: '🎯', cls: 'c-green', title: '阵容分配', desc: '按赛事快速组队，自动检测默契与位置覆盖。', href: '/members/assign', go: '开始分配 →' },
-];
+/* 入口图标：细线、单色，只做导航提示，不当标题装饰 */
+const Ic = ({ d }) => (
+  <svg
+    width="21"
+    height="21"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d={d} />
+  </svg>
+);
 
-// 群内日常活动（纯展示，用户明确要求体现「不止 Dota2」）
-const ACTIVITIES = [
-  { ic: '🎮', label: 'Dota2 内战' },
-  { ic: '🍲', label: '吃饭' },
-  { ic: '🧗', label: '攀岩' },
-  { ic: '🏊', label: '游泳' },
-  { ic: '⛰️', label: '爬山' },
-  { ic: '🏀', label: '篮球' },
-  { ic: '🚴', label: '骑车' },
-];
+const ICONS = {
+  trophy: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3',
+  users:
+    'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87',
+  utensils: 'M6 3v8a3 3 0 0 0 6 0V3M9 11v10M18 3c-1.5 2-2 4-2 6a2 2 0 0 0 4 0c0-2-.5-4-2-6zM18 15v6',
+  card: 'M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 15c0-1.5-1.8-2.5-4-2.5S4 13.5 4 15',
+};
 
-const FALLBACK_POSTS = [
-  { av: '赛', tag: '赛事', tagCls: 'tag-tour', time: '赛事', title: '打开赛事信息，查看历届内战', desc: '赛程、对阵与战报都在这里。', href: '/tournaments' },
-  { av: '友', tag: '群友', tagCls: 'tag-member', time: '群友', title: '认识群里的高手与乐子人', desc: '天梯分、擅长位置与英雄池一览。', href: '/members' },
-  { av: '食', tag: '美食', tagCls: 'tag-food', time: '美食', title: '收藏群友私藏的美食地图', desc: '推荐、评分与一句话点评。', href: '/food' },
-];
+const STATUS_LABEL = {
+  planned: '筹备中',
+  planning: '筹备中',
+  active: '进行中',
+  ongoing: '进行中',
+  finished: '已结束',
+  done: '已结束',
+};
 
-const STATUS_LABEL = { planned: '筹备中', active: '进行中', finished: '已结束', done: '已结束' };
-
-function tier(score) {
-  if (score >= 5420) return '冠绝一世';
-  if (score >= 4620) return '超凡入圣';
-  if (score >= 3850) return '万古流芳';
-  if (score >= 3080) return '传奇';
-  if (score >= 2310) return '统帅';
-  return '中军以下';
-}
-
-function fmt(d) {
-  if (!d) return '—';
-  const dt = new Date(d);
-  if (isNaN(dt.getTime())) return String(d);
-  return `${dt.getMonth() + 1}/${dt.getDate()}`;
-}
+const fmtRange = (a, b) => {
+  const one = (v) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getMonth() + 1}.${d.getDate()}`;
+  };
+  const s = one(a);
+  const e = one(b);
+  return s && e ? `${s} — ${e}` : s || e || '时间待定';
+};
 
 export default function Home() {
-  const [stats, setStats] = useState([
-    { n: '—', l: '注册群友' },
-    { n: '—', l: '历史赛事' },
-    { n: '—', l: '美食推荐' },
-    { n: '—', l: '累计冠军' },
-  ]);
-  const [focus, setFocus] = useState(null);
-  const [posts, setPosts] = useState(FALLBACK_POSTS);
-  const [ranks, setRanks] = useState([]);
+  const [tours, setTours] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [foods, setFoods] = useState([]);
+  const [rooms, setRooms] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let alive = true;
     Promise.all([
-      fetch('/api/players').then((r) => r.json()).catch(() => ({ players: [] })),
       fetch('/api/tournaments').then((r) => r.json()).catch(() => ({ tournaments: [] })),
+      fetch('/api/players').then((r) => r.json()).catch(() => ({ players: [] })),
       fetch('/api/foods').then((r) => r.json()).catch(() => ({ foods: [] })),
-    ]).then(([pd, td, fd]) => {
+      fetch('/api/party').then((r) => r.json()).catch(() => ({ posts: [] })),
+    ]).then(([td, pd, fd, rd]) => {
       if (!alive) return;
-      const players = pd.players || [];
-      const tours = td.tournaments || [];
-      const foods = fd.foods || [];
-
-      const champs = players.reduce((s, x) => s + (Number(x.championships) || 0), 0);
-      setStats([
-        { n: players.length, l: '注册群友' },
-        { n: tours.length, l: '历史赛事' },
-        { n: foods.length, l: '美食推荐' },
-        { n: champs, l: '累计冠军' },
-      ]);
-
-      const focusT = tours.find((x) => x.status === 'active') || tours[0] || null;
-      setFocus(focusT);
-
-      const top = players
-        .slice()
-        .sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0))
-        .slice(0, 5);
-      setRanks(top);
-
-      const np = [];
-      if (focusT) {
-        np.push({
-          av: '赛',
-          tag: '赛事',
-          tagCls: 'tag-tour',
-          time: '最新赛事',
-          title: focusT.name || '赛事',
-          desc: `${STATUS_LABEL[focusT.status] || '赛程'} · ${fmt(focusT.start_date)} ~ ${fmt(focusT.end_date)}`,
-          href: '/tournaments',
-        });
-      }
-      if (top[0]) {
-        np.push({
-          av: '友',
-          tag: '群友',
-          tagCls: 'tag-member',
-          time: '天梯榜首',
-          title: `${top[0].nickname || '群友'} 领跑天梯`,
-          desc: `当前 ${top[0].score || 0} 分 · ${tier(Number(top[0].score) || 0)}`,
-          href: '/members',
-        });
-      }
-      if (foods[0]) {
-        np.push({
-          av: '食',
-          tag: '美食',
-          tagCls: 'tag-food',
-          time: '最新推荐',
-          title: `${foods[0].name || '美食'} 获得 ${foods[0].rating || 5} 星`,
-          desc: `${foods[0].comment || '群友推荐'}${foods[0].recommender ? ' — ' + foods[0].recommender : ''}`,
-          href: '/food',
-        });
-      }
-      setPosts(np.length ? np : FALLBACK_POSTS);
+      const ts = td.tournaments || [];
+      // 最近的排前面：有起止时间按开始时间，没有的沉底
+      ts.sort((a, b) => {
+        const ta = a.start_date ? new Date(a.start_date).getTime() : 0;
+        const tb = b.start_date ? new Date(b.start_date).getTime() : 0;
+        return tb - ta;
+      });
+      setTours(ts);
+      setPlayers(pd.players || []);
+      setFoods(fd.foods || []);
+      setRooms((rd.posts || []).filter((p) => !p.expired).length);
+      setLoaded(true);
     });
     return () => {
       alive = false;
     };
   }, []);
 
+  const recent = tours.slice(0, 3);
+  const hot = tours.find((t) => t.status === 'active' || t.status === 'ongoing');
+
+  /* 入口卡：只放真实存在的板块，指标也取真实条数 */
+  const ENTRIES = [
+    {
+      icon: ICONS.trophy,
+      title: '社区内战',
+      meta: loaded ? `${tours.length} 届赛事 · 赛程 / 报名 / 战绩` : '赛程 / 报名 / 战绩',
+      go: '查看赛事',
+      href: '/tournaments',
+    },
+    {
+      icon: ICONS.users,
+      title: '组队开黑',
+      meta: loaded ? `${rooms} 个房间开放中 · 找队友 / 组队大厅` : '找队友 / 组队大厅',
+      go: '立即组队',
+      href: '/party',
+    },
+    {
+      icon: ICONS.utensils,
+      title: '群友食堂',
+      meta: loaded ? `${foods.length} 条推荐 · 探店 / 评分 / 吐槽` : '探店 / 评分 / 吐槽',
+      go: '发现美食',
+      href: '/food',
+    },
+    {
+      icon: ICONS.card,
+      title: '群友信息',
+      meta: loaded ? `${players.length} 位群友 · 天梯分 / 位置 / 英雄池` : '天梯分 / 位置 / 英雄池',
+      go: '认识群友',
+      href: '/members',
+    },
+  ];
+
   return (
     <>
       <Head>
         <title>深圳LaRoja Dota2社区 · 社区首页</title>
-        <meta name="description" content="深圳 LaRoja 社区：不止 Dota2，吃饭、攀岩、游泳、爬山、篮球、骑车日常都在组织。本页信息均由群友提供。" />
+        <meta
+          name="description"
+          content="深圳 LaRoja 社区：Dota2 内战、开黑组队、群友档案与美食推荐。本页信息均由群友提供。"
+        />
       </Head>
 
-      {/* ===== Hero ===== */}
-      <section className="hero">
-        <div className="wrap hero-grid">
-          <div className="hero-main">
-            <h1>
-              一群人的<span className="hl">刀塔</span>江湖
-              <br />
-              不止游戏，还有饭局与山野湖海
-            </h1>
-            <p>
-              深圳 LaRoja 社区：Dota2 内战、吃饭、攀岩、游泳、爬山、篮球、骑车，日常都在组织。
-              本页信息均由群友提供。
-            </p>
-            <div className="hero-cta">
-              <Link href="/tournaments" className="btn btn-primary">
-                浏览最新赛事 →
-              </Link>
-              <Link href="/members" className="btn btn-ghost">
-                认识群友
-              </Link>
-            </div>
-            <div className="hero-stats">
-              {stats.map((s) => (
-                <div className="s" key={s.l}>
-                  <div className="n">{s.n}</div>
-                  <div className="l">{s.l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="hero-card">
-            <div style={{ fontSize: '.78rem', color: 'var(--text-3)', fontWeight: 600 }}>本周焦点赛事</div>
-            {focus ? (
-              <>
-                <div style={{ fontWeight: 800, fontSize: '1.1rem', margin: '8px 0 4px' }}>{focus.name}</div>
-                <div style={{ fontSize: '.85rem', color: 'var(--text-2)' }}>
-                  {STATUS_LABEL[focus.status] || '赛程'} · {fmt(focus.start_date)} ~ {fmt(focus.end_date)}
-                </div>
-                <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ background: 'var(--accent-soft)', color: 'var(--accent)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {STATUS_LABEL[focus.status] || '赛事'}
-                  </span>
-                  <Link href="/tournaments" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', padding: '4px 10px', borderRadius: 8, fontSize: '.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    查看详情
-                  </Link>
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: '.85rem', color: 'var(--text-2)', marginTop: 8 }}>暂无赛事数据</div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== 群内日常 ===== */}
-      <section className="section" style={{ paddingBottom: 0 }}>
+      <div className="home">
         <div className="wrap">
-          <div className="life-strip">
-            <div className="life-head">
-              <h2>群内日常</h2>
-              <div className="sub">不止 Dota2，这些活动我们日常都在组织</div>
+          {/* ==================== Hero ==================== */}
+          <section className="home-hero">
+            <div className="home-hero-eyebrow">
+              <span className="home-chip">{hot ? '正在进行' : '今晚开黑'}</span>
+              <span className="home-live">
+                {loaded
+                  ? rooms > 0
+                    ? '社区活跃中'
+                    : '暂无开黑房间'
+                  : '加载中'}
+              </span>
             </div>
-            <div className="life-tags">
-              {ACTIVITIES.map((a) => (
-                <span className="life-tag" key={a.label}>
-                  <span className="life-ic">{a.ic}</span>
-                  {a.label}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="life-note">网页信息均由群友提供，仅供群内交流使用。</div>
-        </div>
-      </section>
 
-      {/* ===== 板块入口 ===== */}
-      <section className="section">
-        <div className="wrap">
-          <div className="sec-head">
-            <div>
-              <h2>探索社区</h2>
-              <div className="sub">四大板块，覆盖从赛场到饭桌的全部乐趣</div>
+            <h1 className="home-title">今晚谁来守高地？</h1>
+            <p className="home-lede">比赛、开黑、闲聊和美食，群友的快乐据点。</p>
+
+            <div className="home-shot">
+              {/* 群友自备的 Dota 地图截图，纯氛围图，不带外链标签 */}
+              <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
             </div>
-          </div>
-          <div className="grid-4">
+
+            <div className="home-hero-foot">
+              <span className="home-rooms">
+                {loaded ? (
+                  rooms > 0 ? (
+                    <>
+                      <b>{rooms}</b> 个房间正在招募队友
+                    </>
+                  ) : (
+                    '现在还没有开黑房间，来开第一个'
+                  )
+                ) : (
+                  '正在读取开黑房间…'
+                )}
+              </span>
+              <Link href="/party" className="home-cta">
+                寻找队友 →
+              </Link>
+            </div>
+          </section>
+
+          {/* ==================== 2×2 入口 ==================== */}
+          <div className="home-grid">
             {ENTRIES.map((e) => (
-              <Link key={e.title} href={e.href} className="entry">
-                <div className={`ic ${e.cls}`}>{e.ic}</div>
+              <Link key={e.title} href={e.href} className="home-entry">
+                <span className="home-entry-ic">
+                  <Ic d={e.icon} />
+                </span>
                 <h3>{e.title}</h3>
-                <p>{e.desc}</p>
-                <div className="go">{e.go}</div>
+                <p className="home-entry-meta">{e.meta}</p>
+                <span className="home-entry-go">{e.go} →</span>
               </Link>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ===== 社区动态 ===== */}
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="sec-head">
-            <div>
-              <h2>社区动态</h2>
-              <div className="sub">来自赛事、群友与美食的最新消息</div>
-            </div>
-          </div>
-          <div className="feed">
-            <div className="feed-main">
-              {posts.map((p) => (
-                <Link className="post" href={p.href || '#'} key={p.title} style={{ cursor: 'pointer' }}>
-                  <div className="av">{p.av}</div>
-                  <div>
-                    <div className="meta">
-                      <span className={`tag ${p.tagCls}`}>{p.tag}</span> {p.time}
-                    </div>
-                    <h4>{p.title}</h4>
-                    <p>{p.desc}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            <div className="side-card">
-              <h4>🏅 群友天梯榜</h4>
-              {ranks.length === 0 && <div style={{ fontSize: '.85rem', color: 'var(--text-3)' }}>暂无数据</div>}
-              {ranks.map((r, i) => (
-                <div className="rank" key={r.id || i}>
-                  <span className={`no ${i < 3 ? 'top' : ''}`}>{i + 1}</span>
-                  <span className="nm">{r.nickname || '群友'}</span>
-                  <span className="sc">{r.score || 0}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: 14 }}>
-                <Link href="/members" style={{ color: 'var(--brand)', fontWeight: 600, fontSize: '.85rem' }}>
-                  完整榜单 →
-                </Link>
+          {/* ==================== 近期赛事 ==================== */}
+          {recent.length > 0 && (
+            <section className="home-recent">
+              <div className="home-sec-head">
+                <h2>近期赛事</h2>
+                <Link href="/tournaments">全部 {tours.length} 届 →</Link>
               </div>
-            </div>
-          </div>
+              {recent.map((t) => {
+                const label = STATUS_LABEL[t.status] || '赛程';
+                const live = t.status === 'active' || t.status === 'ongoing';
+                return (
+                  <Link key={t.id} href={`/tournaments/${t.id}`} className="home-trow">
+                    <span className="home-trow-name">{t.name || '未命名赛事'}</span>
+                    <span className={`home-trow-status ${live ? 'live' : 'done'}`}>{label}</span>
+                    <span className="home-trow-date">{fmtRange(t.start_date, t.end_date)}</span>
+                  </Link>
+                );
+              })}
+            </section>
+          )}
         </div>
-      </section>
+      </div>
     </>
   );
 }

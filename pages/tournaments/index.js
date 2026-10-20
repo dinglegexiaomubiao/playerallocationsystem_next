@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import useSession from '../../hooks/useSession';
 import MyTournamentTable from '../../components/MyTournamentTable';
-import { mergeMyTournaments, statusLabel } from '../../lib/tournament-format.mjs';
+import { mergeMyTournaments } from '../../lib/tournament-format.mjs';
 
 const STATUS = {
   planned: { cls: 'b-planned', label: '筹备中' },
@@ -136,40 +136,38 @@ export default function TournamentsPage() {
           {error && <div className="empty">加载失败：{error}</div>}
           {!loading && !error && list.length === 0 && <div className="empty">还没有赛事记录</div>}
 
-          <div className="tour-grid">
-            {list.map((t) => {
-              const s = STATUS[t.status] || STATUS.planned;
-              return (
-                <Link href={'/tournaments/' + t.id} className="t-card" key={t.id}>
-                  <div className="t-top">
-                    <div className="t-name">{t.name || '未命名赛事'}</div>
-                    <span className={`t-badge ${s.cls}`}>{s.label || statusLabel(t.status)}</span>
-                  </div>
-                  <div className="t-meta">
-                    <div>
-                      <span className="k">时间：</span>
-                      {fmt(t.start_date)} ~ {fmt(t.end_date)}
-                    </div>
-                    {t.sponsor_info && (
-                      <div>
-                        <span className="k">赞助：</span>
-                        {t.sponsor_info}
-                      </div>
-                    )}
-                    {(t.champion_prize || t.runner_up_prize) && (
-                      <div>
-                        <span className="k">奖金：</span>
-                        冠军 {t.champion_prize || '—'} / 亚军 {t.runner_up_prize || '—'}
-                      </div>
-                    )}
-                    <div>
-                      <span className="k">查看详情 →</span>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          {!loading && !error && list.length > 0 && (
+            <div className="lr-tbl">
+              <div className="lr-thead">
+                <span>赛事</span>
+                <span>状态</span>
+                <span>时间</span>
+                <span>冠军</span>
+              </div>
+              {list.map((t) => {
+                const s = STATUS[t.status] || STATUS.planned;
+                const live = t.status === 'active';
+                const champ = t.champion_team_name || '';
+                return (
+                  <Link href={'/tournaments/' + t.id} className="lr-trow" key={t.id}>
+                    <span className="lr-cell-main">
+                      <span className="lr-name">{t.name || '未命名赛事'}</span>
+                      {t.sponsor_info && <span className="lr-sub">{t.sponsor_info}</span>}
+                    </span>
+                    <span className={`lr-status ${live ? 'live' : t.status === 'planned' ? 'plan' : 'done'}`}>
+                      {s.label}
+                    </span>
+                    <span className="lr-time">
+                      {t.start_date || t.end_date
+                        ? `${fmt(t.start_date)} — ${fmt(t.end_date)}`
+                        : '时间待定'}
+                    </span>
+                    <span className={`lr-champ ${champ ? 'has' : ''}`}>{champ || '—'}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
     </>
