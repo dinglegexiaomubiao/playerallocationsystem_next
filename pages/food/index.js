@@ -6,6 +6,18 @@ import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
 const CUISINES = ['全部', '烧烤', '火锅', '川菜', '湘菜', '粤菜', '江浙', '日料', '韩餐', '西餐', '小吃', '甜点', '夜宵', '其他'];
 const FORM_CUISINES = CUISINES.filter((c) => c !== '全部');
 
+// 美团人均价格区间（元）。min/max 为 null 表示该侧不设限
+const PRICE_RANGES = [
+  { value: 'all', label: '不限', min: null, max: null },
+  { value: '0-50', label: '¥50 以下', min: null, max: 50 },
+  { value: '50-100', label: '¥50-100', min: 50, max: 100 },
+  { value: '100-200', label: '¥100-200', min: 100, max: 200 },
+  { value: '200-500', label: '¥200-500', min: 200, max: 500 },
+  { value: '500+', label: '¥500 以上', min: 500, max: null },
+];
+
+const EMPTY_FILTERS = { cuisine: '全部', area: '全部', recommender: '全部', price: 'all' };
+
 // 兼容不同来源表格的表头写法：
 // 原始群友表用「美团人均价格」「饭后附近娱乐活动（备注）」「群友饭后评价」，
 // 站内模板用「美团人均」「附近娱乐」「群友饭后评价」，两种都要能认。
@@ -65,7 +77,7 @@ export default function FoodPage() {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [cat, setCat] = useState('全部');
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -91,10 +103,56 @@ export default function FoodPage() {
     load();
   }, []);
 
+  // 筛选项全部从真实数据里生成，并按出现次数降序排列（菜系多达 50+ 种，写死列表会漏）
+  const facets = useMemo(() => {
+    const build = (field) => {
+      const m = new Map();
+      foods.forEach((f) => {
+        const v = String(f[field] === null || f[field] === undefined ? '' : f[field]).trim();
+        if (v) m.set(v, (m.get(v) || 0) + 1);
+      });
+      return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+    };
+    return { cuisine: build('cuisine'), area: build('area'), recommender: build('recommender') };
+  }, [foods]);
+
+  // 各价格区间命中数（只统计有标价的店）
+  const priceFacets = useMemo(
+    () =>
+      PRICE_RANGES.map((r) => ({
+        ...r,
+        count: foods.filter((f) => {
+          const v = f.avg_price;
+          if (v === null || v === undefined) return false;
+          if (r.min !== null && v < r.min) return false;
+          if (r.max !== null && v >= r.max) return false;
+          return true;
+        }).length,
+      })),
+    [foods]
+  );
+
   const filtered = useMemo(() => {
-    if (cat === '全部') return foods;
-    return foods.filter((f) => f.cuisine === cat);
-  }, [foods, cat]);
+    const price = PRICE_RANGES.find((r) => r.value === filters.price);
+    return foods.filter((f) => {
+      if (filters.cuisine !== '全部' && String(f.cuisine || '').trim() !== filters.cuisine) return false;
+      if (filters.area !== '全部' && String(f.area || '').trim() !== filters.area) return false;
+      if (filters.recommender !== '全部' && String(f.recommender || '').trim() !== filters.recommender) return false;
+      if (price && price.value !== 'all') {
+        const v = f.avg_price;
+        if (v === null || v === undefined) return false;
+        if (price.min !== null && v < price.min) return false;
+        if (price.max !== null && v >= price.max) return false;
+      }
+      return true;
+    });
+  }, [foods, filters]);
+
+  const activeCount =
+    (filters.cuisine !== '全部' ? 1 : 0) +
+    (filters.area !== '全部' ? 1 : 0) +
+    (filters.recommender !== '全部' ? 1 : 0) +
+    (filters.price !== 'all' ? 1 : 0);
 
   const startCreate = () => {
     setForm(EMPTY_FORM);
@@ -408,17 +466,100 @@ export default function FoodPage() {
             </form>
           )}
 
-          <div className="chips" style={{ marginBottom: 22 }}>
-            {CUISINES.map((c) => (
-              <button key={c} className={`chip ${cat === c ? 'active' : ''}`} onClick={() => setCat(c)}>
-                {c}
-              </button>
-            ))}
+          <div className="filter-bar">
+            <div className="filter-field">
+              <label>菜系</label>
+              <select
+                className={filters.cuisine !== '全部' ? 'is-active' : ''}
+                value={filters.cuisine}
+                onChange={(e) => setFilters({ ...filters, cuisine: e.target.value })}
+              >
+                <option value="全部">全部菜系（{foods.length}）</option>
+                {facets.cuisine.map(([k, n]) => (
+                  <option key={k} value={k}>
+                    {k}（{n}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>区位</label>
+              <select
+                className={filters.area !== '全部' ? 'is-active' : ''}
+                value={filters.area}
+                onChange={(e) => setFilters({ ...filters, area: e.target.value })}
+              >
+                <option value="全部">全部区位（{foods.length}）</option>
+                {facets.area.map(([k, n]) => (
+                  <option key={k} value={k}>
+                    {k}（{n}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>推荐人</label>
+              <select
+                className={filters.recommender !== '全部' ? 'is-active' : ''}
+                value={filters.recommender}
+                onChange={(e) => setFilters({ ...filters, recommender: e.target.value })}
+              >
+                <option value="全部">全部推荐人（{foods.length}）</option>
+                {facets.recommender.map(([k, n]) => (
+                  <option key={k} value={k}>
+                    {k}（{n}）
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>美团人均</label>
+              <select
+                className={filters.price !== 'all' ? 'is-active' : ''}
+                value={filters.price}
+                onChange={(e) => setFilters({ ...filters, price: e.target.value })}
+              >
+                {priceFacets.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.value === 'all' ? `不限（${r.count} 家有标价）` : `${r.label}（${r.count}）`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-summary">
+              <span>
+                筛出 <b>{filtered.length}</b> / {foods.length} 家
+              </span>
+              {activeCount > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setFilters(EMPTY_FILTERS)}>
+                  重置
+                </button>
+              )}
+            </div>
           </div>
 
           {loading && <div className="empty">加载中…</div>}
           {error && <div className="empty">加载失败：{error}</div>}
-          {!loading && !error && filtered.length === 0 && <div className="empty">还没有美食，点「＋ 新增美食」添加吧～</div>}
+          {!loading && !error && filtered.length === 0 && (
+            activeCount > 0 ? (
+              <div className="empty">
+                没有符合条件的美食
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginLeft: 10 }}
+                  onClick={() => setFilters(EMPTY_FILTERS)}
+                >
+                  清除筛选
+                </button>
+              </div>
+            ) : (
+              <div className="empty">还没有美食，点「＋ 新增美食」添加吧～</div>
+            )
+          )}
 
           <div className="food-grid">
             {filtered.map((f) => (

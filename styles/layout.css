@@ -180,6 +180,35 @@ a { text-decoration: none; color: inherit; }
 .chip:hover { border-color: var(--brand); color: var(--brand); }
 .chip.active { background: var(--brand); color: #fff; border-color: var(--brand); }
 
+/* ===== 美食筛选栏 ===== */
+.filter-bar {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 22px;
+  box-shadow: var(--shadow-sm);
+}
+.filter-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 138px; min-width: 0; }
+.filter-field > label {
+  font-size: .74rem; font-weight: 700; color: var(--text-3); letter-spacing: .02em;
+}
+.filter-field select {
+  width: 100%; padding: 9px 10px; font-size: .85rem; font-family: inherit;
+  color: var(--text); background: #fff; cursor: pointer; border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong); transition: all .15s ease;
+}
+.filter-field select:hover { border-color: var(--brand); }
+.filter-field select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.filter-field select.is-active {
+  border-color: var(--brand); background: var(--brand-soft);
+  color: var(--brand-dark); font-weight: 600;
+}
+.filter-summary {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+  padding-bottom: 1px; font-size: .85rem; color: var(--text-2); white-space: nowrap;
+}
+.filter-summary b { color: var(--brand); font-size: 1.05rem; font-weight: 800; }
+.btn-sm { padding: 7px 13px; font-size: .8rem; border-radius: 9px; }
+
 /* ===== 玩家卡片墙 ===== */
 .players-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
 .p-card {
@@ -431,6 +460,8 @@ a { text-decoration: none; color: inherit; }
 
 @media (max-width: 920px) {
   .ip-meta .cur { border-left: none; padding-left: 0; }
+  .filter-field { flex-basis: calc(50% - 6px); }
+  .filter-summary { margin-left: 0; width: 100%; justify-content: flex-end; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .feed { grid-template-columns: 1fr; }
   .nav-links { display: none; }
