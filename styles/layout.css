@@ -1925,3 +1925,41 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .duel-board { gap: 34px; padding: 16px 24px 8px; }
 .duel-team { font-size: 1.06rem; }
 .duel-score { font-size: 1.7rem; padding: 0 10px; }
+
+/* ===== 队伍表格 v2：列宽收敛 + 阵容行分隔 ===== */
+.tt-head, .tt-row {
+  grid-template-columns: 44px minmax(96px, 168px) 132px 84px minmax(0, 1fr);
+  gap: 14px; padding: 10px 18px;
+}
+.tt-head { font-size: .68rem; }
+.tt-row { font-size: .87rem; }
+.tt-rank { color: #c2c7cf; font-weight: 700; }
+.tt-rank.r1 { color: #b8860b; }
+.tt-rank.r2 { color: #7a8794; }
+.tt-rank.r3 { color: #a9704a; }
+.tt-team { font-weight: 700; font-size: .9rem; }
+.tt-cap { font-size: .82rem; color: var(--text-2); }
+.tt-total { font-size: .92rem; }
+.tt-fought { font-size: .75rem; }
+
+.tt-roster {
+  padding: 0 18px 12px 76px;
+  gap: 0; flex-wrap: wrap;
+  font-size: .79rem; line-height: 1.9;
+  align-items: baseline;
+}
+.tt-member {
+  display: inline-flex; align-items: baseline; gap: 3px;
+  color: var(--text-1, #1f2328); white-space: nowrap;
+}
+.tt-member + .tt-member::before {
+  content: '·'; color: #d4d8de; margin: 0 7px; font-weight: 700;
+}
+.tt-member .pos {
+  font-size: .7rem; color: var(--text-3);
+  padding-left: 1px; letter-spacing: -.01em;
+}
+.tt-member.cap { font-weight: 700; }
+.tt-member.cap .pos { font-weight: 400; }
+.tt-member, .tt-member:hover { text-decoration: none; }
+.tt-member:hover { color: var(--brand); }

@@ -320,7 +320,9 @@ export default function TournamentDetail() {
 
                   // 接口的 members 元素只有 player_id 没有 id，比对要用 player_id；
                   // 队长昵称接口已直接给出（captain_nickname），不必再反查
-                  const captainName = team.captain_nickname || null;
+                  const capMember = members.find((p) => String(p.player_id) === String(team.captain_id)) || null;
+                  const captainName =
+                    team.captain_nickname || (capMember && (capMember.group_nickname || capMember.nickname)) || null;
 
                   const fought = [
                     ...new Set(
@@ -373,7 +375,6 @@ export default function TournamentDetail() {
                                 key={p.id}
                                 href={'/members/' + p.player_id}
                                 className={`tt-member ${isCap ? 'cap' : ''}`}
-                                style={{ color: 'inherit', textDecoration: 'none' }}
                               >
                                 {p.group_nickname || p.nickname}
                                 {posList.length > 0 && (
