@@ -1,4 +1,4 @@
-import { initDatabase, query } from '../../lib/db';
+import { initDatabase, query, addPlayer, getPlayerByGameId, bindAccountToPlayer } from '../../lib/db';
 import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { getClientIp, getLock, recordFail, resetFail, formatRetry } from '../../lib/rate-limit';
 import crypto from 'crypto';
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { username, password } = req.body;
+    const { username, password, profile } = req.body;
 
     if (!username) {
       return res.status(400).json({ error: '用户名不能为空' });
@@ -131,12 +131,38 @@ export default async function handler(req, res) {
           'INSERT INTO public.play_score (name, count, password) VALUES ($1, $2, $3) RETURNING count',
           [trimmedUsername, 1, hashPasswordWithSalt(trimmedPassword)]
         );
+
+        // 注册时如果带了选手资料（profile），则创建/复用选手并绑定账号
+        let playerId = null;
+        if (profile && profile.game_id) {
+          const existing = await getPlayerByGameId(profile.game_id);
+          if (existing) {
+            playerId = existing.id;
+          } else {
+            const newPlayer = await addPlayer({
+              nickname: profile.nickname || trimmedUsername,
+              game_id: profile.game_id,
+              group_nickname: profile.group_nickname || null,
+              score: profile.score || null,
+              positions: profile.positions || [],
+              heroes: profile.heroes || [],
+              region: profile.region || null,
+              self_intro: profile.self_intro || null,
+              enemies: profile.enemies || [],
+              synergy_players: profile.synergy_players || [],
+            });
+            playerId = newPlayer.id;
+          }
+          await bindAccountToPlayer(trimmedUsername, playerId);
+        }
+
         clearFail();
         setSessionCookie(res, trimmedUsername);
         return res.status(200).json({
           name: trimmedUsername,
           count: inserted.rows[0].count,
           message: '注册并登录成功',
+          playerId,
           isAdmin: isAdminName(trimmedUsername)
         });
       }

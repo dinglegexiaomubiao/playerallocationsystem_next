@@ -22,6 +22,9 @@ export default async function handler(req, res) {
           positions: player.positions ? player.positions.split(',').filter(p => p) : [],
           heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
           synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
+          enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
+          region: player.region || '',
+          self_intro: player.self_intro || '',
           created_at: player.created_at || "",
           updated_at: player.updated_at || "",
           position_priority: {}

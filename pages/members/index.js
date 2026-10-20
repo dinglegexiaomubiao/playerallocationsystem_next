@@ -183,7 +183,10 @@ export default function MembersPage() {
                     <div className="p-avatar">{(p.nickname || '?').slice(0, 1)}</div>
                     <div>
                       <div className="p-name">{p.nickname || '未命名'}</div>
-                      <div className="p-id">steamID {p.game_id || '—'}</div>
+                      <div className="p-id">
+                        steamID {p.game_id || '—'}
+                        {p.region ? ' · ' + p.region : ''}
+                      </div>
                     </div>
                     <div className={`p-score ${t.cls}`} title={t.label}>
                       {p.score || 0}
@@ -221,6 +224,19 @@ export default function MembersPage() {
                       ))}
                       {p.synergy_players.length > 3 && (
                         <span className="h h-synergy">+{p.synergy_players.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+                  {(p.enemies || []).length > 0 && (
+                    <div className="p-heroes p-enemies">
+                      <div className="lbl">仇人</div>
+                      {p.enemies.slice(0, 3).map((sid, i) => (
+                        <span className="h h-enemy" key={i}>
+                          {nameMap.get(String(sid)) || sid}
+                        </span>
+                      ))}
+                      {p.enemies.length > 3 && (
+                        <span className="h h-enemy">+{p.enemies.length - 3}</span>
                       )}
                     </div>
                   )}

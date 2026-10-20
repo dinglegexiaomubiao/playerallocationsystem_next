@@ -2433,6 +2433,14 @@ body {
 
 .login-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.login-register-link {
+  text-align: center;
+  font-size: .9rem;
+  color: var(--color-text-secondary, #6b7280);
+}
+.login-register-link a { color: var(--color-primary, #2563eb); font-weight: 500; text-decoration: none; }
+.login-register-link a:hover { text-decoration: underline; }
+
 /* ===== Team Select Modal ===== */
 .team-select-item {
   padding: 16px;

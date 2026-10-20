@@ -57,6 +57,20 @@ export default function MemberDetail() {
     return m;
   }, [players]);
 
+  // 反向查询：谁把当前选手标记为仇人（「被 xxx 视为仇人」）
+  const enemiesOf = useMemo(() => {
+    if (!player) return [];
+    const curId = String(player.id);
+    const result = [];
+    players.forEach((p) => {
+      const list = p.enemies || [];
+      if (list.some((eid) => String(eid) === curId)) {
+        result.push(p.nickname || p.group_nickname || String(p.id));
+      }
+    });
+    return result;
+  }, [player, players]);
+
   const handleAI = async () => {
     if (!player) return;
     let s = stats;
@@ -128,6 +142,10 @@ export default function MemberDetail() {
               <div className="side-card">
                 <h4>基本信息</h4>
                 <div className="kv">
+                  <span className="k">所处地区</span>
+                  <span className="v">{player.region || '未填写'}</span>
+                </div>
+                <div className="kv">
                   <span className="k">擅长位置</span>
                   <span className="v">{(player.positions || []).join(' / ') || '未填写'}</span>
                 </div>
@@ -139,6 +157,12 @@ export default function MemberDetail() {
                   <span className="k">冠军数</span>
                   <span className="v">{player.championships || 0} 个</span>
                 </div>
+                {player.self_intro && (
+                  <div className="kv" style={{ alignItems: 'flex-start' }}>
+                    <span className="k">自我评价</span>
+                    <span className="v">{player.self_intro}</span>
+                  </div>
+                )}
               </div>
 
               <div className="side-card" style={{ marginTop: 18 }}>
@@ -169,6 +193,26 @@ export default function MemberDetail() {
                     <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>
                   )}
                 </div>
+              </div>
+
+              <div className="side-card" style={{ marginTop: 18 }}>
+                <h4>仇人</h4>
+                <div className="hero-chips">
+                  {(player.enemies || []).length > 0 ? (
+                    player.enemies.map((sid, i) => (
+                      <Link className="hero-chip hero-chip-enemy" href={'/members/' + sid} key={i}>
+                        {nameMap.get(String(sid)) || sid}
+                      </Link>
+                    ))
+                  ) : (
+                    <span style={{ color: 'var(--text-3)', fontSize: '.85rem' }}>暂无</span>
+                  )}
+                </div>
+                {enemiesOf.length > 0 && (
+                  <div className="enemy-passive" style={{ marginTop: 10 }}>
+                    被 {enemiesOf.join('、')} 视为仇人
+                  </div>
+                )}
               </div>
             </div>
 

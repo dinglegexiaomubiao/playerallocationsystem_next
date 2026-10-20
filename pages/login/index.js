@@ -118,6 +118,15 @@ export default function Login() {
             >
               {loading ? '登录中...' : '登录'}
             </button>
+
+            <div className="login-register-link">
+              还没有账号？
+              <a
+                href={'/register' + (typeof router.query.from === 'string' && router.query.from.startsWith('/') ? '?from=' + encodeURIComponent(router.query.from) : '')}
+              >
+                填写选手资料注册
+              </a>
+            </div>
           </form>
         </div>
       </div>
