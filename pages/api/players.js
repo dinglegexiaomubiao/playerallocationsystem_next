@@ -8,7 +8,7 @@ import {
   ensureAvatarColumns,
   pool,
 } from '../../lib/db';
-import { denyIfImportNotAdmin } from '../../lib/auth';
+import { denyIfNotAdmin } from '../../lib/auth';
 import listCache from '../../lib/list-cache';
 
 // ===== 列表结果的内存缓存 =====
@@ -35,15 +35,29 @@ async function getTeamRecordsByPlayer() {
     list.push(rec);
   };
 
-  const members = await pool.query(
-    `SELECT tp.player_id, tp.position,
-            tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
-            t.id AS tournament_id, t.name AS tournament_name,
-            t.status AS tournament_status, t.start_date, t.end_date
-       FROM public.team_players tp
-       JOIN public.teams tm ON tm.id = tp.team_id
-       JOIN public.tournaments t ON t.id = tm.tournament_id`
-  );
+  // 两次查询互不依赖，并行发出。跨区域部署下每次往返都要 200ms 量级，
+  // 串行等待是这个接口慢的主因（参见 vercel.json 的 region 说明）。
+  const [members, captains] = await Promise.all([
+    pool.query(
+      `SELECT tp.player_id, tp.position,
+              tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
+              t.id AS tournament_id, t.name AS tournament_name,
+              t.status AS tournament_status, t.start_date, t.end_date
+         FROM public.team_players tp
+         JOIN public.teams tm ON tm.id = tp.team_id
+         JOIN public.tournaments t ON t.id = tm.tournament_id`
+    ),
+    pool.query(
+      `SELECT tm.captain_id AS player_id,
+              tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
+              t.id AS tournament_id, t.name AS tournament_name,
+              t.status AS tournament_status, t.start_date, t.end_date
+         FROM public.teams tm
+         JOIN public.tournaments t ON t.id = tm.tournament_id
+        WHERE tm.captain_id IS NOT NULL`
+    ),
+  ]);
+
   for (const r of members.rows) {
     push(r.player_id, {
       team_id: String(r.team_id),
@@ -59,15 +73,6 @@ async function getTeamRecordsByPlayer() {
     });
   }
 
-  const captains = await pool.query(
-    `SELECT tm.captain_id AS player_id,
-            tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
-            t.id AS tournament_id, t.name AS tournament_name,
-            t.status AS tournament_status, t.start_date, t.end_date
-       FROM public.teams tm
-       JOIN public.tournaments t ON t.id = tm.tournament_id
-      WHERE tm.captain_id IS NOT NULL`
-  );
   for (const r of captains.rows) {
     push(r.player_id, {
       team_id: String(r.team_id),
@@ -112,11 +117,15 @@ export default async function handler(req, res) {
         }
         res.setHeader('X-List-Cache', 'MISS');
 
-        // 头像列是自动补的，第一次请求时确保存在（幂等，失败也不阻断列表）
-        await ensureAvatarColumns();
-
-        let players = await getAllPlayers(tournament_id);
-        const recordsByPlayer = await getTeamRecordsByPlayer();
+        // 三件事互不依赖，并行发出 —— 避免三次串行的跨区域往返：
+        //   1. 头像列自动补齐（幂等，失败也不阻断列表）
+        //   2. 选手列表
+        //   3. 全员参赛记录聚合
+        const [, players, recordsByPlayer] = await Promise.all([
+          ensureAvatarColumns(),
+          getAllPlayers(tournament_id),
+          getTeamRecordsByPlayer(),
+        ]);
 
         // 格式化选手数据
         const formattedPlayers = players.map(player => {
@@ -167,7 +176,10 @@ export default async function handler(req, res) {
 
     case 'POST':
       try {
-        if (denyIfImportNotAdmin(req, res)) return;
+        // 选手写操作一律限管理员。UI 入口只有两个：/main（页面服务端已限管理员）
+        // 与 Excel 批量导入（members 页，管理员功能）。
+        // 此前这里只校验 x-excel-import 头，不带该头的 POST / PUT / DELETE 完全对外开放。
+        if (denyIfNotAdmin(req, res, '仅管理员可新增选手')) return;
         const { tournament_id, ...playerData } = req.body;
         const newPlayer = await addPlayer(playerData, tournament_id);
         clearListCache();
@@ -180,6 +192,7 @@ export default async function handler(req, res) {
 
     case 'PUT':
       try {
+        if (denyIfNotAdmin(req, res, '仅管理员可修改选手资料')) return;
         const { playerId, player: updates, tournament_id } = req.body;
 
         // 更新选手信息
@@ -224,6 +237,7 @@ export default async function handler(req, res) {
 
     case 'DELETE':
       try {
+        if (denyIfNotAdmin(req, res, '仅管理员可删除选手')) return;
         const { id } = req.body;
         await deletePlayer(id);
         clearListCache();

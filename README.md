@@ -1,394 +1,231 @@
 # 深圳LaRoja Dota2社区
 
-一个基于 Next.js 构建的社区网站，记录深圳 LaRoja 群友的 Dota2 赛事与日常活动。群内不止有 Dota2，还有吃饭、攀岩、游泳、爬山、篮球、骑车等日常组织。
+一个给群内自用的社区站点。把散在微信群里的信息收成能查、能看、能报名的东西：谁在打、谁强、什么时候开黑、打完去哪吃。
 
 > 网页信息均由群友提供，仅供群内交流使用。
 
-## 功能特性
+线上跑在 Vercel，数据库用 Neon PostgreSQL（新加坡区域）。
 
-### 👤 选手管理
-- **新增选手**：完整的选手信息录入表单
-- **信息完善**：昵称、游戏ID、群昵称、天梯分数、擅长位置、英雄池等
-- **英雄选择**：支持搜索英雄名称和别称，可视化选择
-- **默契关系**：可选择多个默契选手，支持搜索和关联匹配
-- **实时预览**：天梯分数颜色等级实时显示
+---
 
-### 🏆 队伍管理
-- 动态添加/删除队伍
-- 每个队伍最多包含5名选手（符合规范）
-- 每个队伍显示实时天梯分数统计
-- 羁绊关系自动检测和标识
-- 队伍卡片响应式布局
+## 功能板块
 
-### 👥 选手分配
-- **点击入队**：选手卡片上的「➕ 入队」按钮，点击后选择目标队伍加入
-- **队伍添加选手**：点击队伍底部的"+ 添加选手"按钮，从弹窗中选择选手
-- **移除功能**：鼠标悬停在队伍中的选手卡片上，点击"×"按钮一键移除回到未分配池
-- **实时更新**：队伍分数和羁绊状态动态刷新
+| 板块 | 路由 | 做什么 |
+|---|---|---|
+| 首页 | `/` | 四个统计数字、本周焦点赛事、板块入口、天梯榜 |
+| 开黑组队 | `/party` | 发招募卡片（模式/段位要求/时间/语音），别人报名；替代群里刷屏 |
+| 赛事信息 | `/tournaments` | 历届赛事、赛程对阵、比分、名次、报名选手与队伍 |
+| 群友信息 | `/members` | 档案卡片、六维筛选、比赛履历、AI 战力分析 |
+| 群友美食 | `/food` | 101 家店、菜系/区位/人均筛选、饭后评价 |
+| 个人信息 | `/profile` | 改自己资料（含默契队友 / 仇人标注）、汇总我的赛事 |
+| 阵容分配 | `/main` | 群内比赛的分队工具，管理员专用 |
+| 管理后台 | `/admin` | 赛事 CRUD、报名名单、队伍与队长、赛程结果、整包 Excel 导入 |
+| 售后工单 | `/admin/support` | 群友反馈 + 前端自动报错，统一处理 |
 
-### 🔍 搜索筛选
-- 支持选手昵称、游戏ID、群昵称搜索
-- 擅长位置筛选（优势路、中单、劣势路、半辅助、纯辅助、全才）
-- 擅长英雄名称搜索
-- 羁绊选手关联显示
+---
 
-### 📊 数据展示
-- 选手详细信息卡片：
-  - 昵称、游戏ID、群昵称
-  - 天梯分数（颜色等级标识）
-  - 擅长位置标签
-  - 擅长英雄列表（在卡片底部显示）
-  - 最近胜率
-  - 冠军数量
-  - 默契选手列表（在卡片底部显示）
+## 技术栈
 
-### 💾 数据管理
-- 重置分配功能
-- 保存配置到JSON文件
-- 导入已有配置
-- 自动保存时间戳
+- **Next.js 16**（Pages Router）+ React 18：页面与 API 同仓
+- **PostgreSQL / Neon**：通过 `pg` 连接池访问，非 ORM
+- **@anthropic-ai/sdk**：AI 分析，可指向任何兼容 Anthropic 协议的服务
+- **xlsx**：Excel 批量导入导出
+- **nodemailer**：新工单邮件提醒（可选）
 
-### 🤖 AI 分析
-- **选手分析**：基于 OpenDota 战绩，从英雄池、BP 配合、针对策略、数据特征四个维度分析
-- **队伍分析**：从阵容完整度、英雄池体系、BP 建议、对手针对四个维度分析
-- **双重缓存**：服务端内存缓存 + 前端 localStorage 缓存，避免重复请求
+---
 
-## 技术架构
+## 目录结构
 
-### 前端框架
-- **Next.js 16**：React 框架，支持服务端渲染
-- **React 18.2.0**：用于构建用户界面
-- **CSS3**：自定义样式和动画效果
-
-### 项目结构
 ```
-├── pages/                  # Next.js 页面路由
-│   ├── index.js            # 入口页面（重定向到 /main）
-│   ├── _app.js             # 全局应用组件
-│   ├── login/index.js      # 登录页面
-│   ├── main/index.js       # 主页面（核心交互页面）
-│   └── api/                # API 路由
-│       ├── players.js      # 选手的增删改查
-│       ├── teams.js        # 队伍的增删改查
-│       ├── team-players.js # 选手与队伍的关联关系
-│       ├── tournaments.js  # 赛季管理
-│       ├── tournaments/[id].js # 单个赛季的详情/修改/删除
-│       ├── player-stats.js # 从 OpenDota 获取玩家战绩（带缓存）
-│       ├── ai-analysis.js  # AI 选手/队伍分析（Claude，带缓存）
-│       ├── messages.js     # 留言板（带速率限制）
-│       ├── login.js        # 登录（带加盐 SHA256 密码校验）
-│       ├── database-update.js # 数据库结构更新
-│       ├── database-check.js  # 数据库结构检查
-│       └── user.js         # 用户信息
-├── components/             # React 组件
-│   ├── PlayerCard.js       # 选手卡片组件
-│   ├── TeamCard.js         # 队伍卡片组件
-│   ├── TournamentSelector.js    # 赛季选择器
-│   └── EditTournamentResults.js # 编辑赛季结果
-├── hooks/                  # 自定义 React Hooks（核心逻辑拆分）
-│   ├── useMessages.js      # 留言板逻辑
-│   ├── useTournaments.js   # 赛季切换与数据加载
-│   ├── usePlayerManagement.js # 选手增删改查
-│   ├── useTeamManagement.js   # 队伍与分配逻辑
-│   └── useAIAnalysis.js    # AI 分析逻辑（带 localStorage 缓存）
-├── lib/                    # 工具库
-│   ├── db.js               # 数据库连接与操作
-│   ├── db-update.js        # 数据库结构更新脚本
-│   ├── heroMapping.js      # 英雄ID映射表
-│   └── heroesData.js       # 英雄名称/别称数据（供搜索）
-├── styles/                 # 样式文件
-│   ├── main/
-│   │   └── index.css       # 主页面样式
-│   └── globals.css         # 全局样式
-├── check-db-structure.js   # 数据库结构检查工具
-├── migrate_teams_table.js  # 队伍表迁移脚本
-├── database_structure_check_standard.sql # 标准数据库结构 SQL
-├── .env.local              # 本地环境变量（数据库连接等）
-├── package.json
-└── README.md
+├── pages/                     页面路由
+│   ├── api/                   30 个接口（鉴权见下方「权限模型」）
+│   ├── admin/                 管理后台（index / support / tournaments/[id]）
+│   ├── members/               群友列表、详情、阵容分配（重定向到 /main）
+│   ├── tournaments/           赛事列表、详情
+│   ├── party/                 开黑组队
+│   └── food/                  群友美食
+├── components/                20 个展示组件
+├── hooks/                     6 个状态钩子
+│   └── useSession.js          统一登录态（window 事件广播，跨组件同步）
+├── lib/                       工具与数据层
+│   ├── db.js                  建表 + 查询 + 幂等迁移（约 1000 行）
+│   ├── auth.js                会话与四档鉴权守卫
+│   ├── password.js            加盐 SHA256
+│   ├── image-cache.js         图片三层缓存（内存/磁盘/回源）
+│   ├── list-cache.js          列表接口的进程内 TTL 缓存
+│   ├── rate-limit.js          登录失败限流
+│   ├── excel.js               Excel 列定义与解析
+│   └── notify.js              SMTP / Webhook 通知
+├── scripts/                   维护脚本（env.js 统一读环境变量）
+├── styles/                    globals / layout / main
+├── docs/                      页面截图与对外导览（showcase.md）
+├── add-performance-indexes.sql 性能索引（幂等，可重复执行）
+├── vercel.json                函数区域配置
+└── .env.local.example         环境变量模板
 ```
 
-## 代码逻辑结构（给初学者的说明）
+---
 
-### 为什么要拆成 Hooks？
-之前 `main/index.js` 一个文件写了将近 1900 行代码，所有的状态、请求、事件处理都堆在一起，改一个小功能很容易影响到别的地方。后来我们把核心逻辑拆成了 4 个自定义 Hook：
+## 快速开始
 
-| Hook | 负责什么 | 初学者理解 |
-|------|---------|-----------|
-| `useTournaments` | 赛季数据 | 管理「第几届比赛」，切换赛季时加载对应的队伍和选手 |
-| `usePlayerManagement` | 选手数据 | 管理选手的增删改查、表单状态、英雄/默契选手选择 |
-| `useTeamManagement` | 队伍与分配 | 管理队伍的增删、选手入队/离队、导入导出 |
-| `useMessages` | 留言板 | 管理留言列表、发表留言、点赞、随机弹幕 |
-| `useAIAnalysis` | AI 分析 | 调用 AI 分析选手/队伍，带 localStorage 缓存 |
-
-**关键设计**：`teams` 和 `unassignedPlayers` 这两个最重要的状态统一放在 `main/index.js` 里，Hooks 通过参数接收 `setTeams` 和 `setUnassignedPlayers`，这样就不会出现"A 改了数据，B 不知道"的情况。
-
-### API 路由说明
-```
-/api/players          → 选手的增删改查
-/api/teams            → 队伍的增删改查
-/api/team-players     → 选手与队伍的关联关系
-/api/tournaments      → 赛季管理（列表、创建）
-/api/tournaments/[id] → 单个赛季的详情/修改/删除
-/api/player-stats     → 从 OpenDota 获取玩家战绩（带缓存）
-/api/ai-analysis      → AI 选手/队伍分析（带缓存）
-/api/messages         → 留言板（带速率限制）
-/api/login            → 登录（仅校验已有账号，带加盐 SHA256 密码校验 + 失败限流）
-/api/register         → 注册（全站唯一建号入口，账号名不区分大小写查重）
-/api/database-update  → 数据库结构更新
-/api/database-check   → 数据库结构检查
-/api/user             → 用户信息
-```
-
-## 使用方法
-
-### 1. 安装依赖
 ```bash
 npm install
+cp .env.local.example .env.local   # 填入 DATABASE_URL 等真实值
+npm run dev                        # http://localhost:3000
 ```
 
-### 2. 配置环境变量
-在项目根目录创建 `.env.local` 文件，填入你的数据库连接地址：
-```
-DATABASE_URL=postgresql://用户名:密码@主机地址/数据库名?sslmode=require
-```
-> 注意：不要把 `.env.local` 提交到 Git！它已经在 `.gitignore` 里被忽略了。
+生产构建：
 
-### 3. 开发模式运行
-```bash
-npm run dev
-```
-在浏览器中打开 http://localhost:3000 查看应用
-
-### 4. 构建生产版本
 ```bash
 npm run build
-```
-
-### 5. 启动生产服务器
-```bash
 npm start
 ```
 
-## 功能操作说明
+---
 
-### 登录
-- 输入登录账号和密码
-- **不存在自动注册**：账号不存在时登录会失败，必须走 `/register` 的完整注册流程
-- 连续失败 5 次（同一 IP 或同一账号，10 分钟窗口）会临时锁定，返回 429
-- 存量账号若无密码，不能靠首次登录自行设置（那等于谁都能接管），需管理员重置
+## 环境变量
 
-### 注册
-- 填写：登录账号、密码、Steam 账号、群昵称
-- 登录账号与密码不对外展示，仅用于把登录身份和选手资料关联
-- 账号名查重**不区分大小写**，避免注册 `DOM` 之类的变体冒充管理员 `dom`
-- Steam 账号已绑定其他账号时拒绝重复注册
-- 注册成功后自动登录并跳转「个人信息」页完善其余资料
+完整清单与逐项说明见 `.env.local.example`。
 
-### 新增选手
-- 点击"+ 新增选手"按钮打开录入表单
-- 填写基本信息：昵称、游戏ID、群昵称
-- 设置天梯分数（实时显示颜色等级）
-- 选择擅长位置（可多选）
-- 点击"选择英雄"从英雄列表中选择擅长英雄
-- 点击"添加默契选手"选择相关选手
-- 设置胜率和冠军数量
-- 点击"创建选手"完成添加
+| 变量 | 必填 | 说明 |
+|---|---|---|
+| `DATABASE_URL` | 是 | Neon 连接串，用 **Pooled connection**（主机名带 `-pooler`） |
+| `AUTH_SECRET` | 建议 | 会话签名密钥。不填则用 `DATABASE_URL` 派生，**换库会导致所有人掉登录** |
+| `ADMIN_NAMES` | 是 | 管理员账号，逗号分隔，大小写不敏感。缺省只有 `dom` |
+| `ANTHROPIC_API_KEY` | 否 | 不配则 AI 分析返回 500，其余功能正常 |
+| `ANTHROPIC_BASE_URL` | 否 | 走兼容协议的中转时填写 |
+| `SUPPORT_SMTP_*` / `SUPPORT_MAIL_*` | 否 | 工单邮件提醒，不配只是不发信 |
+| `SUPPORT_WEBHOOK_URL` | 否 | 用 webhook 代替 SMTP 通知 |
 
-### 添加队伍
-- 点击"+ 添加队伍"按钮创建新队伍
-- 系统会自动分配队伍ID
-- 每个队伍最多可容纳5名选手
+> 连接串含密码，只能放在 `.env.local` 或部署平台的环境变量里。**不要写回代码。**
 
-### 分配选手
-**方法一：点击入队**
-- 在未分配选手池中找到目标选手
-- 点击选手卡片上的「➕ 入队」按钮
-- 在弹出的队伍列表中选择目标队伍
-- 已满 5 人的队伍会显示红色并无法点击
+---
 
-**方法二：从队伍添加**
-- 点击队伍底部的"+ 添加选手"按钮
-- 在弹出对话框中搜索或浏览选手
-- 点击选手卡片完成分配
+## 权限模型
 
-### 删除队伍
-- 点击队伍底部的"删除队伍"按钮
-- 队伍中的所有选手将自动返回到未分配选手池
-- 队伍将从系统中移除
+`lib/auth.js` 提供四档守卫，接口按破坏性选档：
 
-### 移除选手
-- 将鼠标悬停在队伍中的选手卡片上
-- 点击右上角的"×"按钮
-- 选手将自动返回未分配选手池
+| 守卫 | 拦住谁 | 用在 |
+|---|---|---|
+| 无 | — | 公开读：赛事、群友、美食、开黑列表、图片 |
+| `denyIfNotLoggedIn` | 匿名 | 报名、发开黑卡、AI 分析、改自己资料 |
+| `denyIfNotAdmin` | 非管理员 | 选手增删改、删除队伍、赛事 CRUD、赛程、选队长、整包导入 |
+| `isAdmin`（页面级） | 非管理员 | `/admin/*`、`/main` 的 `getServerSideProps` |
 
-### 搜索筛选
-- 在搜索框输入关键词（支持昵称、ID、位置、英雄）
-- 勾选位置标签进行筛选
-- 系统实时显示匹配结果
+登录态是 HMAC 签名的 httpOnly cookie，30 天有效。登录失败按 IP + 账号双维度计数，10 分钟内 5 次即锁定。
 
-### 数据管理
-- **重置分配**：清空所有队伍分配，选手回到未分配池
-- **保存配置**：导出当前分配状态为JSON文件
-- **导入数据**：加载之前保存的配置文件
+---
 
-## 部署说明
+## 数据模型
 
-### 部署到 Vercel (推荐)
-1. 将代码推送到 GitHub/GitLab
-2. 在 Vercel 中导入项目
-3. Vercel 会自动检测 Next.js 项目并配置部署
+16 张表，分五组：
 
-### 部署到其他 Node.js 服务器
-1. 构建项目：`npm run build`
-2. 启动生产服务器：`npm start`
-3. 配置反向代理将请求转发到 3000 端口
+**账号与选手**
+- `play_score` — 登录账号（密码加盐 SHA256），`player_id` 关联选手
+- `players` — 选手全局资料（昵称、SteamID、天梯分、英雄池、默契队友、仇人）
 
-### 使用宝塔面板部署
-1. 在宝塔中创建 Node.js 项目
-2. 上传代码或通过 Git 拉取
-3. 安装依赖：`npm install`
-4. 构建项目：`npm run build`
-5. 启动服务：`npm start`
-6. 配置反向代理
+**赛事**
+- `tournaments` — 赛事主体，7 态状态机（planning / ongoing / elimination / semifinal / final / finished / postponed）
+- `tournament_players` — **赛事内快照**：同一选手在不同赛事可有不同分数/位置/英雄，`is_captain` 也限定在赛事内
+- `tournament_rounds` — 轮次/阶段
+- `matches` — 对阵与比分
+- `tournament_teams` — 赛事 ↔ 队伍关联
 
-## 数据结构
+**队伍**
+- `teams` — 队伍，`captain_id` 指向队长
+- `team_players` — 队员关系，带队内担任位置
+- `player_tournament_participations` — 参赛记录
 
-### 选手数据格式
-```json
-{
-  "id": "1",
-  "nickname": "选手昵称",
-  "game_id": "游戏ID",
-  "group_nickname": "群昵称",
-  "score": 15000,
-  "positions": ["优势路", "中单"],
-  "heroes": ["英雄名称1", "英雄名称2"],
-  "win_rate": 50,
-  "championships": 3,
-  "synergy_players": ["默契选手1", "默契选手2"],
-  "recent_win_rate": 55,
-  "most_played_heroes": [{"name": "影魔", "matches": 100, "winRate": 55}],
-  "highest_win_rate_heroes": [{"name": "敌法师", "matches": 50, "winRate": 70}],
-  "created_at": "2025-01-01T00:00:00.000+08:00",
-  "updated_at": "2025-01-01T00:00:00.000+08:00"
-}
+**社区内容**
+- `party_posts` / `party_signups` — 开黑卡片与报名
+- `foods` / `food_reviews` — 美食与饭后评价
+- `messages` — 留言板
+
+**运维**
+- `support_reports` — 反馈与自动报错工单
+
+核心链路：
+
+```
+play_score ──1:1── players ──报名──▶ tournament_players ──▶ tournaments
+                                                              │
+                                          teams ──team_players─┤
+                                                              │
+                                        tournament_rounds ──▶ matches
 ```
 
-### 队伍数据格式
+> `players` 里存的是「默认资料」，报名时复制成 `tournament_players` 快照。之后改全局资料不影响已报名的赛事，这是刻意的设计。
+
+---
+
+## 部署
+
+### Vercel（当前方式）
+
+`vercel.json` 已把函数区域固定为 `sin1`（新加坡），与 Neon 库同区域：
+
 ```json
-{
-  "id": 1,
-  "name": "队伍1",
-  "tournament_id": 1,
-  "players": [选手对象数组],
-  "created_at": "2025-11-13T17:40:42.810172+08:00",
-  "updated_at": "2025-11-13T17:40:42.810172+08:00"
-}
+{ "regions": ["sin1"] }
 ```
 
-## 视觉设计
+**这一项对响应速度影响最大。** Vercel 函数默认在 `iad1`（华盛顿），跨太平洋到新加坡单次往返约 220ms；一个接口若有几次串行查询，光网络等待就上秒。改动区域前请先确认 Neon 实例的实际区域（连接串主机名里的 `ap-southeast-1` 即新加坡），两边必须对齐。
 
-### 配色方案
-- **主色调**：深色电竞风格主题
-- **强调色**：蓝色渐变用于重要操作
-- **次要色**：灰色用于次要信息
-- **警告色**：红色用于删除操作
+部署后到 Neon SQL Editor 执行一次：
 
-### 响应式设计
-- 桌面端：最多4列队伍布局
-- 平板端：2列队伍布局  
-- 手机端：单列布局
-- 自适应卡片大小
+```sql
+-- 或整段粘贴 add-performance-indexes.sql 的内容执行
+```
 
-### 交互反馈
-- 悬停效果和过渡动画
-- 按钮点击反馈
-- 模态框背景模糊
+### 其他 Node 服务器
 
-## 踩坑记录（初学者必看）
+```bash
+npm run build && npm start   # 默认 3000 端口，前面挂反向代理
+```
 
-### 1. 数据库密码不要硬编码！
-**问题**：最初数据库连接字符串直接写在代码文件里（`lib/db.js`、`tournaments.js` 等），一旦代码公开，数据库就会被攻击。
-**解决**：把连接串放到 `.env.local` 的 `DATABASE_URL` 中，代码里用 `process.env.DATABASE_URL` 读取。
+---
 
-### 2. 大文件一定要拆分
-**问题**：`main/index.js` 一开始写了 1900 行，状态太多，改一个地方很容易崩。
-**解决**：把逻辑按功能拆成 `useMessages`、`useTournaments`、`usePlayerManagement`、`useTeamManagement` 四个 Hook。页面组件只负责"拼积木"。
+## 维护脚本
 
-### 3. 状态不要各管各的
-**问题**：拆分 Hooks 后，每个 Hook 自己维护 `teams` 和 `unassignedPlayers`，然后用 `useEffect` 同步，结果导致刚加载的数据被空数组覆盖，页面一片空白。
-**解决**：把 `teams` 和 `unassignedPlayers` 提到页面组件里作为"唯一真相源"，Hooks 通过参数接收 setter 去修改它。
+三个一次性脚本，连接串统一从 `.env.local` 或 `DATABASE_URL` 读取：
 
-### 4. 前端操作失败要回滚
-**问题**：以前点击「添加选手到队伍」后，即使 API 请求失败了，前端也已经显示了成功，刷新页面才发现没变。
-**解决**：采用 Optimistic UI 思想——先改前端给用户看，API 失败时把之前的状态恢复回去，并弹出提示。
+```bash
+node import-players.js           # 默认 DRY-RUN，只打印将要做什么
+node import-players.js --commit  # 真正写库
+node import-teams.js --commit
+node migrate_teams_table.js
+```
 
-### 5. SQL 拼接字段名会导致注入
-**问题**：`tournaments` 的 PUT API 里动态拼接了 SQL 字段名，虽然值用了参数化查询，但字段名本身没有保护。
-**解决**：加了一个「字段白名单」，只允许更新预先定义好的字段，非法字段直接拒绝。
+---
 
-### 6. 调用外网 API 要加缓存和超时
-**问题**：点击查看 OpenDota 详细数据时，每次都要请求美国服务器，很慢且容易被限流。
-**解决**：加了 30 分钟内存缓存 + 8 秒超时控制，重复点击直接从缓存返回。
+## 已知约束
 
-### 7. Git 远程仓库地址变了怎么办
-**问题**：推代码时提示 `Repository not found`，原来是 GitHub 用户名从 `dinglegexiaomobiao` 改成了 `dinglegexiaomubiao`。
-**解决**：用 `git remote set-url origin 新地址` 更新远程地址后再推送。
+1. **进程内缓存不适合多实例**。`list-cache`、`rate-limit`、AI 分析缓存、图片内存缓存都在单个 Node 进程里。Vercel 每个函数实例各持一份，命中率有限、限流也不跨实例。当前规模可接受，量大了要换 Redis。
+2. **AI 分析模型名与端点需匹配**。`/api/ai-analysis` 里写的是 Anthropic 的模型名，若把 `ANTHROPIC_BASE_URL` 指向 DeepSeek 等中转，模型名要一并改。
+3. **多值字段是逗号分隔字符串**（`positions` / `heroes` / `synergy_players` / `enemies`）。可读性好，但不可索引、不可 JOIN。当前几十人规模无压力。
+4. **赛事状态由管理员手动切换**，系统不自动判定晋级。
+5. **图片缓存盘**写在 `.cache/`（已 gitignore）。只读文件系统下会自动降级为纯内存缓存，不阻断请求。
 
-## 安全与性能优化清单
-
-- [x] 数据库凭据迁移到环境变量
-- [x] SQL 注入漏洞修复（字段白名单）
-- [x] 登录增加密码校验（加盐 SHA256）
-- [x] 留言板增加 Rate Limiting（防刷）
-- [x] 留言板增加输入长度限制
-- [x] OpenDota API 增加 30 分钟缓存和 8 秒超时
-- [x] 删除赛季时级联清理关联数据
-- [x] 前端操作失败自动回滚状态
-- [x] 修复 React key 警告
-- [x] 修复 SSR Hydration Mismatch（随机背景色闪烁）
-
-## 浏览器兼容性
-
-- Chrome 80+
-- Firefox 75+
-- Safari 13+
-- Edge 80+
+---
 
 ## 更新日志
 
+### v2.4.0 (2026-10-20)
+
+- **性能**：`vercel.json` 固定函数区域为 `sin1`，与 Neon 同区域；`/api/players` 的三次串行查询改并行；补充 18 个性能索引
+- **安全**：`/api/players` 的 POST / PUT / DELETE 补上管理员校验（此前只校验 Excel 导入头，写操作实际对外开放）；三个维护脚本的硬编码连接串改为读环境变量，新增 `scripts/env.js`
+- **体验**：导航「管理后台」统一指向 `/admin`，原 `/main` 从后台页签进入
+- **工程**：补齐 `.env.local.example`、`vercel.json`；README 重写
+
 ### v2.3.0 (2026-08-14)
-- **AI 分析**：新增选手/队伍 AI 分析功能，基于 OpenDota 战绩从英雄池、BP、针对等维度生成分析
-- **安全加固**：登录密码改为加盐 SHA256 存储（旧密码登录后自动升级）
-- **健壮性**：addTeam 改用数据库序列自增，消除并发撞 ID 隐患
-- **清理**：删除 v1 纯 HTML 时代的 index.html、script.js 残留文件
 
-### v2.2.0 (2025-06-08)
-- **安全修复**：移除 `lib/db.js` 中硬编码的数据库连接字符串 fallback，彻底消除凭据泄漏风险
-- **功能修复**：位置筛选复选框现已可用，勾选后可筛选指定位置的选手
-- **功能完善**：新增/编辑选手表单中的天梯分数增加了实时等级颜色预览
-- **文档更新**：修正 UI 中过时的「拖拽」提示文字，改为按钮入队说明
-- **文档更新**：更新项目结构、数据格式、API 路由文档，补充遗漏的文件和字段
+- 新增选手 / 队伍 AI 分析（基于 OpenDota 战绩）
+- 登录密码改为加盐 SHA256（旧密码登录后自动升级）
+- `addTeam` 改用数据库序列自增，消除并发撞 ID
 
-### v2.1.0 (2025-04-14)
-- **安全加固**：数据库密码迁移到环境变量，修复 SQL 注入，登录增加密码验证
-- **架构重构**：将 `main/index.js` 拆分为 4 个自定义 Hooks，代码可维护性大幅提升
-- **交互优化**：移除拖拽分配，改为选手卡片上的「➕ 入队」按钮 + 队伍选择弹窗
-- **性能优化**：OpenDota API 增加缓存和超时，留言板增加限流
-- **稳定性**：所有 API 操作增加失败回滚，修复删除赛季级联问题
-- **数据修复**：清理英雄映射表中的重复和空值
+更早的版本记录见 `git log`。
 
-### v2.0.0 (2025-11-16)
-- 从纯 HTML/CSS/JS 重构为 Next.js 应用
-- 实现完整的 React 组件化架构
-- 添加服务端渲染支持
-- 完善状态管理逻辑
-- 优化用户体验和界面交互
+---
 
-### v1.0.0 (2025-11-14)
-- 初始版本发布
-- 实现基础队伍管理功能
-- 支持选手拖拽分配
-- 添加搜索筛选功能
-- 实现数据导入导出
+## 浏览器兼容
+
+Chrome 80+ / Firefox 75+ / Safari 13+ / Edge 80+

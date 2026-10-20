@@ -72,7 +72,7 @@ export default function Layout({ children }) {
         <span className="nav-user-name">{name}</span>
       </span>
       {isAdmin && (
-        <Link href="/main" className="btn btn-sm btn-primary">
+        <Link href="/admin" className="btn btn-sm btn-primary">
           管理后台
         </Link>
       )}

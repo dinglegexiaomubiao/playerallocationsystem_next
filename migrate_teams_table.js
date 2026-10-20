@@ -1,8 +1,9 @@
 const { Pool } = require('pg');
+const { requireDatabaseUrl } = require('./scripts/env');
 
-// 创建数据库连接池
+// 连接串从 .env.local / 环境变量读取，不写死在代码里（历史泄漏点，勿回退）
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_Nt7YOz4wIJcT@ep-withered-recipe-a1wny5so-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require',
+  connectionString: requireDatabaseUrl(),
   ssl: {
     rejectUnauthorized: false
   }

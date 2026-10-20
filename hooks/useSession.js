@@ -32,7 +32,10 @@ export default function useSession() {
       const d = await r.json();
       setMe(d && d.loggedIn ? d : null);
     } catch {
-      setMe(null);
+      // 网络抖动、切页瞬间请求被打断时，不要把人踢成未登录状态。
+      // 这里曾经写成 setMe(null)，导致每次切页面只要请求失败一次，
+      // 页脚和导航的账号区就会「登录态 → 登录/注册 → 登录态」闪一下。
+      // session 有 30 天有效期，失败时保持上一次的结果是更安全的选择。
     } finally {
       setReady(true);
     }

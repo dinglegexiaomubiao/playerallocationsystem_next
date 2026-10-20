@@ -37,13 +37,22 @@
 
 .site-root {
   min-height: 100vh;
+  /* 用纵向 flex 让页脚始终贴着视口底部：
+     内容不足一屏时页脚不会被拉到半空，内容变高时也不会突然跳位 */
+  display: flex;
+  flex-direction: column;
   background: var(--bg-page);
   color: var(--text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   line-height: 1.6;
 }
-.site-main { display: block; }
+.site-main {
+  display: block;
+  /* flex:1 撑满剩余空间，内容不足一屏时页脚自然贴底；
+     不要额外设 min-height，否则加上页脚高度会撑出多余的滚动条 */
+  flex: 1 0 auto;
+}
 a { text-decoration: none; color: inherit; }
 .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
 

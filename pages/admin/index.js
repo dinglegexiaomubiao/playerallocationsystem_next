@@ -317,6 +317,8 @@ export default function Admin({ denied }) {
               <span className="adm-tab active">赛事管理</span>
               <Link className="adm-tab" href="/members">群友管理</Link>
               <Link className="adm-tab" href="/food">美食管理</Link>
+              <Link className="adm-tab" href="/main">阵容分配</Link>
+              <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
             </div>
             <div className="adm-bar-actions">
               {/* 赛事信息导入 / 导出 / 模板下载：非管理员整块不渲染 */}
