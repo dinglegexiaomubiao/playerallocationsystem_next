@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 import useSession from '../hooks/useSession';
+import { footerAccountItems } from '../lib/nav-items.mjs';
 
 const NAV = [
   { href: '/', label: '首页' },
@@ -109,29 +110,35 @@ export default function Layout({ children }) {
             <div>
               <h5>账号</h5>
               {/* ready 之前不渲染，避免已登录用户先看到「登录 / 注册」再跳变 */}
-              {!ready ? null : me ? (
-                <>
-                  <span className="footer-user">
-                    {name}
-                    {isAdmin ? '（管理员）' : ''}
-                  </span>
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleLogout();
-                    }}
-                  >
-                    登出
-                  </a>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">登录</Link>
-                  <Link href="/login">注册</Link>
-                  <Link href="/login">管理后台</Link>
-                </>
-              )}
+              {ready &&
+                footerAccountItems(me).map((item) => {
+                  if (item.type === 'user') {
+                    return (
+                      <span className="footer-user" key={item.key}>
+                        {item.label}
+                      </span>
+                    );
+                  }
+                  if (item.type === 'action') {
+                    return (
+                      <a
+                        href="#"
+                        key={item.key}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleLogout();
+                        }}
+                      >
+                        {item.label}
+                      </a>
+                    );
+                  }
+                  return (
+                    <Link href={item.href} key={item.key}>
+                      {item.label}
+                    </Link>
+                  );
+                })}
             </div>
           </div>
           <div className="copy">
