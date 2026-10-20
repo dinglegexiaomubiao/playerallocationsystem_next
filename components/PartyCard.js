@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { TIERS, tierOf } from '../lib/tier.mjs';
 import { POSITIONS, TIME_PRESETS, PARTY_STATUS } from '../lib/options.mjs';
+import { apiPost, apiDelete, apiFetch } from '../lib/api-client.mjs';
 
 const toggle = (list, v) =>
   list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
@@ -11,6 +12,22 @@ const rankOf = (score) => {
   const n = Number(score);
   return Number.isFinite(n) ? tierOf(n).label : '';
 };
+
+// 开黑时间段：10-20 20:00 ~ 23:00（跨天会带上日期）
+function fmtRange(startAt, durationMin) {
+  if (!startAt) return '';
+  const d = new Date(startAt);
+  if (isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  const head = `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (!durationMin) return head;
+  const e = new Date(d.getTime() + Number(durationMin) * 60 * 1000);
+  const sameDay = e.getDate() === d.getDate() && e.getMonth() === d.getMonth();
+  const tail = sameDay
+    ? `${p(e.getHours())}:${p(e.getMinutes())}`
+    : `${p(e.getMonth() + 1)}-${p(e.getDate())} ${p(e.getHours())}:${p(e.getMinutes())}`;
+  return `${head} ~ ${tail}`;
+}
 
 const fmtDay = (v) => {
   if (!v) return '';
@@ -58,6 +75,42 @@ export default function PartyCard({ post, me, onChanged }) {
     note: '',
   });
 
+  // 记录当前正在进行的操作，好在对应按钮上显示 loading 文案
+  const [busyAction, setBusyAction] = useState('');
+
+  // 复制 SteamID：优先走 clipboard API，不支持时退回 textarea + execCommand
+  const [copied, setCopied] = useState(false);
+  const copySid = async () => {
+    const text = post.game_id ? String(post.game_id) : '';
+    if (!text) return;
+    const done = () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        done();
+        return;
+      }
+    } catch (e) {
+      // 继续走降级方案
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      done();
+    } catch (e) {
+      // 复制失败就不给反馈，用户还能手动选中
+    }
+    document.body.removeChild(ta);
+  };
+
   const st = PARTY_STATUS[post.status] || PARTY_STATUS.open;
   const isMine = post.isMine;
   const full = post.status !== 'open';
@@ -86,57 +139,65 @@ export default function PartyCard({ post, me, onChanged }) {
   const doJoin = async () => {
     setErr('');
     setBusy(true);
-    const r = await fetch('/api/party/' + post.id + '/join', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await apiPost('/api/party/' + post.id + '/join', {
         score: form.score === '' ? null : Number(form.score),
         rank: form.rank || null,
         positions: form.positions,
         eta: form.eta.trim() || null,
         note: form.note.trim() || null,
-      }),
-    });
-    const d = await r.json().catch(() => ({}));
-    setBusy(false);
-    if (r.ok && d.success) {
+      });
       setSigning(false);
       setForm({ score: '', rank: '', positions: [], eta: '', note: '' });
       onChanged && onChanged();
-    } else {
-      setErr(d.error || '报名失败，请稍后再试');
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
     }
   };
 
   const doCancelJoin = async () => {
     setBusy(true);
     setErr('');
-    const r = await fetch('/api/party/' + post.id + '/join', { method: 'DELETE' });
-    setBusy(false);
-    if (r.ok) {
+    try {
+      await apiDelete('/api/party/' + post.id + '/join');
       onChanged && onChanged();
-    } else {
-      const d = await r.json().catch(() => ({}));
-      setErr(d.error || '取消失败');
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
     }
   };
 
   const patchStatus = async (status) => {
     setBusy(true);
-    const r = await fetch('/api/party/' + post.id, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
-    });
-    setBusy(false);
-    if (r.ok) onChanged && onChanged();
+    setBusyAction(status === 'open' ? 'reopen' : 'close');
+    setErr('');
+    try {
+      await apiFetch('/api/party/' + post.id, { method: 'PATCH', body: { status } });
+      onChanged && onChanged();
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
+      setBusyAction('');
+    }
   };
 
   const removePost = async () => {
     setBusy(true);
-    const r = await fetch('/api/party/' + post.id, { method: 'DELETE' });
-    setBusy(false);
-    if (r.ok) onChanged && onChanged();
+    setBusyAction('delete');
+    setErr('');
+    try {
+      await apiDelete('/api/party/' + post.id);
+      onChanged && onChanged();
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
+      setBusyAction('');
+    }
   };
 
   return (
@@ -144,9 +205,10 @@ export default function PartyCard({ post, me, onChanged }) {
       <div className="pg-top">
         <span className={'pg-mode pg-mode-' + post.mode}>{post.modeLabel}</span>
         <span className={'t-badge ' + st.cls}>{st.label}</span>
-        <span className="pg-time" title="开黑时间">
-          {post.play_time}
+        <span className="pg-time" title={post.start_at ? '开黑时间（开始 ~ 结束）' : '开黑时间'}>
+          {post.start_at ? fmtRange(post.start_at, post.duration_min) : post.play_time}
         </span>
+        {post.expired && <span className="t-badge b-done pg-expired">已过期</span>}
       </div>
 
       <div className="pg-owner">
@@ -162,7 +224,25 @@ export default function PartyCard({ post, me, onChanged }) {
             <span className="pg-owner-name">{post.creator.nickname}</span>
           )}
           <div className="pg-owner-sub">
-            {post.game_id ? 'SteamID ' + post.game_id : '未填 SteamID'}
+            {post.game_id ? (
+              <>
+                {/* 完整显示，不省略：这是给人复制去加好友用的 */}
+                <span className="pg-sid" title={'SteamID ' + post.game_id}>
+                  {post.game_id}
+                </span>
+                <button
+                  type="button"
+                  className={'pg-copy' + (copied ? ' is-done' : '')}
+                  onClick={copySid}
+                  aria-label="复制 SteamID"
+                  title="复制 SteamID"
+                >
+                  {copied ? '已复制' : '复制'}
+                </button>
+              </>
+            ) : (
+              <span className="pg-sid-none">未填 SteamID</span>
+            )}
           </div>
         </div>
         <ScoreBadge score={post.creator.score} />
@@ -210,7 +290,12 @@ export default function PartyCard({ post, me, onChanged }) {
       {post.signups.length > 0 && (
         <div className="pg-signups">
           <div className="pg-signups-head">
-            已报名 <b>{post.signups.length}</b> 人
+            已报名 <b>{post.signups.length}</b>
+            {post.need_players ? (
+              <span className="pg-need">
+                {' '}/ 需要 {post.need_players} 人
+              </span>
+            ) : null}
           </div>
           {post.signups.map((s) => (
             <div className="pg-signup" key={s.id}>
@@ -254,7 +339,14 @@ export default function PartyCard({ post, me, onChanged }) {
                   onClick={() => patchStatus('closed')}
                   disabled={busy}
                 >
-                  关闭招募
+                  {busyAction === 'close' ? (
+                    <>
+                      <span className="spinner" aria-hidden="true" />
+                      关闭中…
+                    </>
+                  ) : (
+                    '关闭招募'
+                  )}
                 </button>
               ) : (
                 <button
@@ -263,7 +355,14 @@ export default function PartyCard({ post, me, onChanged }) {
                   onClick={() => patchStatus('open')}
                   disabled={busy}
                 >
-                  重新招募
+                  {busyAction === 'reopen' ? (
+                    <>
+                      <span className="spinner" aria-hidden="true" />
+                      开启中…
+                    </>
+                  ) : (
+                    '重新招募'
+                  )}
                 </button>
               )}
               <button
@@ -272,7 +371,14 @@ export default function PartyCard({ post, me, onChanged }) {
                 onClick={removePost}
                 disabled={busy}
               >
-                删除卡片
+                {busyAction === 'delete' ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    删除中…
+                  </>
+                ) : (
+                  '删除卡片'
+                )}
               </button>
             </div>
           </>
@@ -285,7 +391,14 @@ export default function PartyCard({ post, me, onChanged }) {
               onClick={doCancelJoin}
               disabled={busy}
             >
-              取消报名
+              {busy ? (
+                <>
+                  <span className="spinner" aria-hidden="true" />
+                  取消中…
+                </>
+              ) : (
+                '取消报名'
+              )}
             </button>
           </>
         ) : (
@@ -435,7 +548,14 @@ export default function PartyCard({ post, me, onChanged }) {
                 取消
               </button>
               <button type="button" className="btn btn-primary" onClick={doJoin} disabled={busy}>
-                {busy ? '提交中…' : '确认报名'}
+                {busy ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    提交中…
+                  </>
+                ) : (
+                  '确认报名'
+                )}
               </button>
             </div>
           </div>

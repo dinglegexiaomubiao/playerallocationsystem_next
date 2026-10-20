@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import SignupButton from '../../components/SignupButton';
 
 const STATUS_LABEL = {
   planning: '筹办中',
@@ -124,7 +125,51 @@ export default function TournamentDetail() {
                 <span className="v">{t.runner_up_prize}</span>
               </div>
             )}
+            {/* 只要没到「已完赛」就允许报名/取消报名 */}
+            <SignupButton
+              tournamentId={id}
+              locked={t.status === 'finished' || t.status === 'done'}
+            />
           </div>
+
+          {matches.length > 0 && (
+            <div style={{ marginTop: 30 }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>赛程与对阵</h2>
+              <div className="match-bracket">
+                {(rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }]).map((rd) => {
+                  const rdMatches = matches.filter((m) =>
+                    rd.id ? String(m.round_id) === String(rd.id) : !m.round_id
+                  );
+                  if (rdMatches.length === 0) return null;
+                  return (
+                    <div className="match-round" key={rd.id || 'ungrouped'}>
+                      <div className="match-round-title">{rd.name}</div>
+                      {rdMatches.map((m) => (
+                        <div className={`match-card ${m.is_grudge ? 'grudge' : ''}`} key={m.id}>
+                          <div className="match-team">
+                            <span>{m.team_a_name || '待定'}</span>
+                            <span className="vs">vs</span>
+                            <span>{m.team_b_name || '待定'}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {m.is_grudge && <span className="match-grudge-note">⚔ 恩怨局</span>}
+                            {m.team_a_score !== null && m.team_b_score !== null ? (
+                              <>
+                                <span className="match-score">{m.team_a_score} : {m.team_b_score}</span>
+                                {m.winner_name && <span className="match-winner">🏆 {m.winner_name} 胜</span>}
+                              </>
+                            ) : (
+                              <span className="match-pending">未开赛</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div style={{ marginTop: 26 }}>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>参赛队伍（{teams.length}）</h2>
@@ -179,44 +224,6 @@ export default function TournamentDetail() {
             )}
           </div>
 
-          {matches.length > 0 && (
-            <div style={{ marginTop: 30 }}>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: 14 }}>赛程与对阵</h2>
-              <div className="match-bracket">
-                {(rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }]).map((rd) => {
-                  const rdMatches = matches.filter((m) =>
-                    rd.id ? String(m.round_id) === String(rd.id) : !m.round_id
-                  );
-                  if (rdMatches.length === 0) return null;
-                  return (
-                    <div className="match-round" key={rd.id || 'ungrouped'}>
-                      <div className="match-round-title">{rd.name}</div>
-                      {rdMatches.map((m) => (
-                        <div className={`match-card ${m.is_grudge ? 'grudge' : ''}`} key={m.id}>
-                          <div className="match-team">
-                            <span>{m.team_a_name || '待定'}</span>
-                            <span className="vs">vs</span>
-                            <span>{m.team_b_name || '待定'}</span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            {m.is_grudge && <span className="match-grudge-note">⚔ 恩怨局</span>}
-                            {m.team_a_score !== null && m.team_b_score !== null ? (
-                              <>
-                                <span className="match-score">{m.team_a_score} : {m.team_b_score}</span>
-                                {m.winner_name && <span className="match-winner">🏆 {m.winner_name} 胜</span>}
-                              </>
-                            ) : (
-                              <span className="match-pending">未开赛</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </section>
     </>

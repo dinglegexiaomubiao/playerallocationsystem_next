@@ -102,7 +102,7 @@ export default function HeroPicker({ open, value = [], onClose, onConfirm }) {
         </div>
 
         <div className="hero-modal-body">
-          <div className="hero-grid">
+          <div className="hero-picker-grid">
             {list.map((h) => {
               const idx = draft.indexOf(h.name);
               const selected = idx >= 0;

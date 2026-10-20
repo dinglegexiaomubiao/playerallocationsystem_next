@@ -1,10 +1,20 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { TIERS, tierOf } from '../lib/tier.mjs';
-import { POSITIONS, PARTY_MODES, VOICE_APPS, TIME_PRESETS } from '../lib/options.mjs';
+import { POSITIONS, PARTY_MODES, VOICE_APPS, DURATION_OPTIONS, NEED_PLAYER_OPTIONS } from '../lib/options.mjs';
+import { apiPost } from '../lib/api-client.mjs';
 
 const toggle = (list, v) =>
   list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+
+// datetime-local 需要一个不带时区的本地时间字符串；默认给「下一个整点」
+function defaultStartAt() {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 const rankOf = (score) => {
   if (score === '' || score === null || score === undefined) return '';
@@ -27,7 +37,9 @@ export default function PartyForm({ me, onCreated, onClose }) {
     want_score_max: '',
     want_rank: '',
     want_positions: [],
-    play_time: '',
+    need_players: 5,
+    start_at: defaultStartAt(),
+    duration_min: 120,
     has_voice: true,
     voice_app: '',
     note: '',
@@ -52,8 +64,12 @@ export default function PartyForm({ me, onCreated, onClose }) {
 
   const submit = async () => {
     setErr('');
-    if (!f.play_time.trim()) {
-      setErr('请填写开黑时间');
+    if (!f.start_at) {
+      setErr('请选择开黑开始时间');
+      return;
+    }
+    if (!(Number(f.need_players) >= 1 && Number(f.need_players) <= 20)) {
+      setErr('请填写需要几个人（1~20）');
       return;
     }
     setBusy(true);
@@ -67,22 +83,22 @@ export default function PartyForm({ me, onCreated, onClose }) {
       want_score_max: f.want_score_max === '' ? null : Number(f.want_score_max),
       want_rank: f.want_rank || null,
       want_positions: f.want_positions,
-      play_time: f.play_time.trim(),
+      need_players: Number(f.need_players),
+      start_at: f.start_at,
+      duration_min: Number(f.duration_min),
       has_voice: f.has_voice,
       voice_app: f.has_voice ? f.voice_app || null : null,
       note: f.note.trim() || null,
     };
-    const r = await fetch('/api/party', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(() => ({}));
-    setBusy(false);
-    if (r.ok && d.success) {
-      onCreated && onCreated(d.id);
-    } else {
-      setErr(d.error || '发布失败，请稍后再试');
+    try {
+      // apiFetch 统一 15s 超时，超时提示「请求超时，请检查网络后重试」
+      const d = await apiPost('/api/party', body);
+      if (d && d.success) onCreated && onCreated(d.id);
+      else setErr((d && d.error) || '发布失败，请稍后再试');
+    } catch (error) {
+      setErr(error.message);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -253,27 +269,54 @@ export default function PartyForm({ me, onCreated, onClose }) {
         </div>
       </div>
 
-      <div className="party-section-label">④ 时间与语音</div>
+      <div className="party-section-label">④ 人数、时间与语音</div>
       <div className="form-field" style={{ marginBottom: 14 }}>
-        <label>开黑时间</label>
-        <input
-          value={f.play_time}
-          onChange={(e) => set('play_time', e.target.value)}
-          placeholder="如：今晚 20:00 后"
-        />
-        <div className="chips" style={{ marginTop: 8 }}>
-          {TIME_PRESETS.map((t) => (
+        <label>需要几个人（含你自己）</label>
+        <div className="chips">
+          {NEED_PLAYER_OPTIONS.map((n) => (
             <button
-              key={t}
+              key={n}
               type="button"
-              className={'chip' + (f.play_time === t ? ' active' : '')}
-              onClick={() => set('play_time', t)}
+              className={'chip' + (Number(f.need_players) === n ? ' active' : '')}
+              onClick={() => set('need_players', n)}
             >
-              {t}
+              {n} 人
             </button>
           ))}
         </div>
+        <div className="party-need-row">
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={f.need_players}
+            onChange={(e) => set('need_players', e.target.value)}
+            aria-label="需要几个人"
+          />
+          <span>人 · 可直接输入 1~20（对黑一般填 10）</span>
+        </div>
       </div>
+      <div className="form-row" style={{ marginBottom: 8 }}>
+        <div className="form-field">
+          <label>开始时间</label>
+          <input
+            type="datetime-local"
+            value={f.start_at}
+            onChange={(e) => set('start_at', e.target.value)}
+          />
+        </div>
+        <div className="form-field">
+          <label>持续多久</label>
+          <select value={f.duration_min} onChange={(e) => set('duration_min', e.target.value)}>
+            {DURATION_OPTIONS.map((o) => (
+              <option key={o.min} value={o.min}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="party-hint">超过「开始时间 + 持续时间」后，卡片会自动标记为已过期。</div>
       <div className="form-row" style={{ marginBottom: 14 }}>
         <div className="form-field">
           <label>是否有语音</label>
@@ -314,7 +357,14 @@ export default function PartyForm({ me, onCreated, onClose }) {
 
       <div className="party-form-foot">
         <button type="button" className="btn btn-primary" onClick={submit} disabled={busy}>
-          {busy ? '发布中…' : '发布开黑卡片'}
+          {busy ? (
+            <>
+              <span className="spinner" aria-hidden="true" />
+              发布中…
+            </>
+          ) : (
+            '发布开黑卡片'
+          )}
         </button>
         <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
           取消

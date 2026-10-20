@@ -1,4 +1,5 @@
 // 赛事报名 / 退赛接口
+// GET：查当前账号在本赛事的报名状态（未登录也返回 200，只是 loggedIn=false）
 // POST：报名（自动通过，生成赛事选手快照）
 // DELETE：退赛
 import { pool } from '../../../../lib/db';
@@ -7,6 +8,40 @@ import { getSession, denyIfNotLoggedIn } from '../../../../lib/auth';
 export default async function handler(req, res) {
   const { id } = req.query;
   if (!id) return res.status(400).json({ success: false, error: '缺少赛季ID' });
+
+  // GET 要能被匿名调用（页面只是想知道「我报名了没」），所以不能走统一的登录闸门
+  if (req.method === 'GET') {
+    const session = getSession(req);
+    if (!session || !session.name) {
+      return res.status(200).json({ success: true, loggedIn: false, signedUp: false, signup: null });
+    }
+    const client = await pool.connect();
+    try {
+      const acct = await client.query('SELECT player_id FROM public.play_score WHERE name = $1', [session.name]);
+      const playerId = acct.rows[0]?.player_id;
+      if (!playerId) {
+        return res.status(200).json({ success: true, loggedIn: true, bound: false, signedUp: false, signup: null });
+      }
+      const row = await client.query(
+        'SELECT * FROM public.tournament_players WHERE player_id = $1 AND tournament_id = $2',
+        [playerId, id]
+      );
+      return res.status(200).json({
+        success: true,
+        loggedIn: true,
+        bound: true,
+        playerId: String(playerId),
+        signedUp: row.rows.length > 0,
+        isCaptain: row.rows.length > 0 ? Boolean(row.rows[0].is_captain) : false,
+        signup: row.rows[0] || null,
+      });
+    } catch (error) {
+      console.error('查询报名状态失败:', error);
+      return res.status(500).json({ success: false, error: '查询报名状态失败' });
+    } finally {
+      client.release();
+    }
+  }
 
   if (denyIfNotLoggedIn(req, res)) return;
 
@@ -84,7 +119,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: '已退赛' });
     }
 
-    res.setHeader('Allow', ['POST', 'DELETE']);
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).json({ error: `方法 ${req.method} 不被允许` });
   } catch (error) {
     console.error('报名操作错误:', error);

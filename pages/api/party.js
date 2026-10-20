@@ -43,6 +43,16 @@ async function getMe(client, name) {
 }
 
 function shapePost(r) {
+  // 过期判定：以「开始时间 + 持续时间」为准，老卡片没这两个字段就不过期
+  const startAt = r.start_at ? new Date(r.start_at) : null;
+  const durationMin = r.duration_min === null || r.duration_min === undefined ? null : Number(r.duration_min);
+  let endAt = null;
+  let expired = false;
+  if (startAt && !isNaN(startAt.getTime()) && durationMin) {
+    endAt = new Date(startAt.getTime() + durationMin * 60 * 1000);
+    expired = endAt.getTime() < Date.now();
+  }
+
   return {
     id: String(r.id),
     mode: r.mode,
@@ -56,6 +66,12 @@ function shapePost(r) {
     want_rank: r.want_rank,
     want_positions: toList(r.want_positions),
     play_time: r.play_time,
+    // 新字段：需要几人 / 开始时间 / 持续时长 / 结束时间 / 是否过期
+    need_players: r.need_players === null || r.need_players === undefined ? null : Number(r.need_players),
+    start_at: startAt && !isNaN(startAt.getTime()) ? startAt.toISOString() : null,
+    duration_min: durationMin,
+    end_at: endAt ? endAt.toISOString() : null,
+    expired,
     has_voice: r.has_voice !== false,
     voice_app: r.voice_app,
     note: r.note,
@@ -154,8 +170,32 @@ export default async function handler(req, res) {
       if (!MODE_KEYS.includes(mode)) {
         return res.status(400).json({ success: false, error: '请选择开黑模式' });
       }
-      const playTime = clip(b.play_time, 120);
-      if (!playTime) return res.status(400).json({ success: false, error: '请填写开黑时间' });
+
+      // 人数：不再是写死的 5 人，由发起人自己定（对黑通常 10 人）
+      const needPlayers = num(b.need_players);
+      if (needPlayers === null || needPlayers < 1 || needPlayers > 20) {
+        return res.status(400).json({ success: false, error: '请填写需要几个人（1~20）' });
+      }
+
+      // 开始时间：前端 datetime-local 传上来的是本地时间字符串，这里统一按 Date 解析后存 timestamptz
+      const startRaw = b.start_at;
+      const startDate = startRaw ? new Date(startRaw) : null;
+      if (!startDate || isNaN(startDate.getTime())) {
+        return res.status(400).json({ success: false, error: '请选择开黑开始时间' });
+      }
+
+      const durationMin = num(b.duration_min);
+      if (durationMin === null || durationMin < 15 || durationMin > 1440) {
+        return res.status(400).json({ success: false, error: '请选择持续时间（15 分钟 ~ 24 小时）' });
+      }
+
+      // play_time 是老字段，列表上仍可能被旧代码读取；用开始时间生成一个可读文本兜底
+      const pad = (n) => String(n).padStart(2, '0');
+      const playTime =
+        clip(b.play_time, 120) ||
+        `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())} ${pad(
+          startDate.getHours()
+        )}:${pad(startDate.getMinutes())}`;
 
       // 自己这边没填的，用选手资料兜底（前端「一键带入」也是这个口径）
       const myScore = num(b.my_score) ?? (me.score === null || me.score === undefined ? null : Number(me.score));
@@ -176,8 +216,9 @@ export default async function handler(req, res) {
         `INSERT INTO public.party_posts
            (player_id, account_name, mode, game_id, my_score, my_rank, my_positions,
             want_score_min, want_score_max, want_rank, want_positions,
-            play_time, has_voice, voice_app, note, status)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'open')
+            play_time, need_players, start_at, duration_min,
+            has_voice, voice_app, note, status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'open')
          RETURNING id`,
         [
           me.playerId,
@@ -192,6 +233,9 @@ export default async function handler(req, res) {
           clip(b.want_rank, 30),
           toList(b.want_positions).join(','),
           playTime,
+          needPlayers,
+          startDate.toISOString(),
+          durationMin,
           b.has_voice === false ? false : true,
           clip(b.voice_app, 50),
           clip(b.note, 500),

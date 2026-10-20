@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import useSession from '../../hooks/useSession';
 import { getSession, isAdmin } from '../../lib/auth';
+import { apiDelete, apiGet, apiPost } from '../../lib/api-client.mjs';
 
 // 7 态状态机
 const STATUS_LIST = [
@@ -32,17 +33,20 @@ export default function Admin({ denied }) {
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', start_date: '', end_date: '', sponsor_info: '', champion_prize: '' });
+  // 与云端交互的瞬时状态：creating 管新建，deletingId 管具体哪一行在删
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const load = () => {
     setLoading(true);
-    fetch('/api/tournaments')
-      .then((r) => r.json())
+    setError('');
+    apiGet('/api/tournaments')
       .then((d) => {
-        setTournaments(d.tournaments || []);
+        setTournaments(d?.tournaments || []);
         setLoading(false);
       })
-      .catch(() => {
-        setError('加载失败');
+      .catch((e) => {
+        setError(e.message || '加载失败');
         setLoading(false);
       });
   };
@@ -54,24 +58,45 @@ export default function Admin({ denied }) {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!createForm.name.trim()) return;
-    const r = await fetch('/api/tournaments', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    setCreating(true);
+    setError('');
+    try {
+      await apiPost('/api/tournaments', {
         name: createForm.name.trim(),
         start_date: createForm.start_date || null,
         end_date: createForm.end_date || null,
         sponsor_info: createForm.sponsor_info || null,
         champion_prize: createForm.champion_prize || null,
-      }),
-    });
-    const d = await r.json();
-    if (r.ok) {
+      });
       setShowCreate(false);
       setCreateForm({ name: '', start_date: '', end_date: '', sponsor_info: '', champion_prize: '' });
       load();
-    } else {
-      setError(d.error || d.message || '创建失败');
+    } catch (err) {
+      setError(err.message || '创建失败');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // 删除赛季：会连带清掉该赛事下的队伍、报名、赛程（后端事务），所以要二次确认。
+  // 确认框里把「连带删除」讲清楚，避免误点后追不回来。
+  const handleDelete = async (t) => {
+    const ok = window.confirm(
+      `确定删除赛季「${t.name}」吗？\n\n` +
+        '该操作会一并删除这个赛季下的所有报名记录、队伍与成员关系、赛程对阵，且不可撤销。'
+    );
+    if (!ok) return;
+
+    setDeletingId(t.id);
+    setError('');
+    try {
+      await apiDelete('/api/tournaments/' + t.id);
+      setTournaments((prev) => prev.filter((x) => String(x.id) !== String(t.id)));
+    } catch (err) {
+      // 超时 / 断网 / 权限不足 都由 api-client 转成了可读文案
+      setError(`删除「${t.name}」失败：${err.message}`);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -157,7 +182,9 @@ export default function Admin({ denied }) {
                     <input value={createForm.champion_prize} onChange={(e) => setCreateForm({ ...createForm, champion_prize: e.target.value })} placeholder="例如 ¥500" />
                   </div>
                 </div>
-                <button type="submit" className="btn btn-primary">创建</button>
+                <button type="submit" className="btn btn-primary" disabled={creating}>
+                  {creating ? <><span className="spinner" />创建中…</> : '创建'}
+                </button>
               </form>
             </div>
           )}
@@ -181,6 +208,19 @@ export default function Admin({ denied }) {
                 </div>
                 <div>
                   <Link className="adm-link" href={'/admin/tournaments/' + t.id}>管理</Link>
+                  <button
+                    type="button"
+                    className="adm-link-btn adm-danger-btn"
+                    onClick={() => handleDelete(t)}
+                    disabled={deletingId !== null}
+                    title="删除赛季（连同报名、队伍、赛程一起删除）"
+                  >
+                    {String(deletingId) === String(t.id) ? (
+                      <><span className="spinner" />删除中…</>
+                    ) : (
+                      '删除'
+                    )}
+                  </button>
                 </div>
               </div>
             ))}

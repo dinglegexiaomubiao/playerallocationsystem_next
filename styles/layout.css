@@ -1275,7 +1275,10 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .hero-modal-search { flex: 1 1 260px; min-width: 0; }
 .hero-modal-attrs { flex: 0 0 auto; }
 .hero-modal-body { padding: 16px 22px; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
-.hero-grid {
+/* ⚠ 英雄选择弹窗的网格。历史上这里也叫 .hero-grid，和首页的两栏 .hero-grid 重名，
+   后者被这条 repeat(auto-fill) 覆盖，导致首页标题被挤进 142px 的窄列、每字一行。
+   现已改名 .hero-picker-grid，两处互不影响。 */
+.hero-picker-grid {
   /* 从 118px 放宽到 142px：加了 36px 头像后，118px 会把「半人马战行者」这类长名字截死 */
   display: grid; grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); gap: 8px;
 }
@@ -1342,7 +1345,7 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .hero-modal-actions { display: flex; gap: 10px; flex: 0 0 auto; }
 
 @media (max-width: 560px) {
-  .hero-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+  .hero-picker-grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
   .hero-modal-foot { align-items: flex-start; }
   .hero-modal-actions { width: 100%; }
   .hero-modal-actions .btn { flex: 1 1 auto; }
@@ -1390,3 +1393,146 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
   display: inline-flex; align-items: center; justify-content: center;
   font-size: .55rem; font-weight: 800; color: var(--text-3); background: var(--bg-subtle);
 }
+
+/* ===== 开黑卡片：SteamID 完整显示 + 复制 / 过期标记 / 人数需求 ===== */
+.pg-owner-sub {
+  display: flex; align-items: center; gap: 6px;
+  /* 取消原来的 ellipsis：SteamID 要完整显示，方便直接选区或点复制 */
+  overflow: visible; text-overflow: clip; white-space: nowrap;
+}
+.pg-sid {
+  font-variant-numeric: tabular-nums; letter-spacing: .2px; color: var(--text-2);
+  user-select: all;
+}
+.pg-sid-none { color: var(--text-3); }
+.pg-copy {
+  border: 1px solid var(--border); background: #fff; border-radius: 6px;
+  font-size: .68rem; line-height: 1.6; padding: 0 6px; cursor: pointer;
+  color: var(--text-2); font-family: inherit; flex: 0 0 auto;
+  transition: color .14s ease, border-color .14s ease;
+}
+.pg-copy:hover { color: var(--brand); border-color: var(--brand); }
+.pg-copy.is-done { color: var(--brand); border-color: var(--brand); }
+.pg-expired { margin-left: 6px; }
+.pg-need { color: var(--text-3); font-weight: 500; }
+
+/* 建卡表单：人数直填行 */
+.party-need-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.party-need-row input { width: 88px; }
+.party-need-row span { font-size: .78rem; color: var(--text-3); }
+.party-hint { font-size: .78rem; color: var(--text-3); margin-bottom: 14px; }
+
+/* ===== 通用：加载中与提示 ===== */
+.spinner {
+  display: inline-block; width: 12px; height: 12px; flex: 0 0 12px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: spin .7s linear infinite; margin-right: 6px; vertical-align: -1px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn:disabled { opacity: .62; cursor: not-allowed; }
+
+/* 赛事报名区 */
+.signup-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--bg-subtle); }
+.signup-badge { font-size: .82rem; font-weight: 700; color: var(--brand); background: var(--brand-soft); padding: 4px 10px; border-radius: 8px; }
+.signup-hint, .signup-locked { font-size: .78rem; color: var(--text-3); }
+.signup-note { font-size: .78rem; }
+.signup-note.is-error { color: var(--accent); }
+.signup-note.is-ok { color: var(--brand); }
+
+/* ============================================================
+   管理后台 · 草稿编辑模式
+   ------------------------------------------------------------
+   编辑一律只改本地 draft，点「保存修改」才真正写库。
+   所以需要：未保存提示条、脏字段高亮、按区块的保存/放弃按钮。
+   ============================================================ */
+
+/* 危险操作（删除赛季 / 删除队伍）——用强调色，和「管理」链接区分开 */
+.adm-danger-btn { color: var(--accent); margin-left: 6px; }
+.adm-danger-btn:hover { color: var(--accent); }
+.adm-danger-btn:disabled { opacity: .55; cursor: not-allowed; text-decoration: none; }
+
+/* 行内操作区：左「管理」右「删除」 */
+.adm-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+/* 顶部未保存提示条：吸顶，滚动时始终能看到「有改动没保存」 */
+.adm-savebar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 18px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-card);
+}
+.adm-savebar.is-dirty { border-color: #f0c36d; background: #fffbf0; }
+.adm-savebar-text { font-size: .86rem; color: var(--text-2); }
+.adm-dirty-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px;
+  background: #fdf3d0; color: #8a6d00; font-size: .78rem; font-weight: 700;
+}
+.adm-dirty-badge.is-clean { background: var(--green-soft); color: #1a7f37; }
+.adm-savebar-spacer { margin-left: auto; }
+
+/* 草稿里有改动的字段/行：淡黄底 + 左侧竖条，让人一眼看到改了什么 */
+.adm-dirty-field { background: #fffbf0; box-shadow: inset 2px 0 0 #f0c36d; }
+.adm-row.adm-dirty-row { background: #fffdf7; }
+.adm-row.is-removed { opacity: .5; text-decoration: line-through; }
+
+/* 表格内联编辑控件：比表单控件更紧凑 */
+.adm-input {
+  width: 100%; padding: 6px 8px; font-size: .86rem; font-family: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: #fff; color: var(--text);
+}
+.adm-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.adm-input-sm { width: 78px; }
+
+/* 各表的列宽（列数与 .adm-head 的表头数必须一致） */
+.adm-row-signup { grid-template-columns: 1.3fr .7fr 1fr .9fr .8fr .9fr; }
+.adm-row-member { grid-template-columns: 1.6fr 1fr .9fr .7fr; }
+.adm-row-match { grid-template-columns: .8fr 1.4fr .9fr 1fr .6fr .6fr; }
+
+/* 队伍卡片头部：队名 + 名次 + 删除 一行排开 */
+.adm-team-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adm-team-head .adm-input { max-width: 240px; }
+.adm-team-rank { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.adm-team-rank label { font-size: .82rem; color: var(--text-2); white-space: nowrap; }
+.adm-team-rank select { width: 118px; }
+
+/* 「加入名单 / 添加队员 / 新建对阵」这类补充行 */
+.adm-add-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);
+}
+.adm-add-row select { min-width: 200px; flex: 0 1 260px; }
+.adm-add-row .adm-hint { margin: 0; }
+
+/* 区块小标题 + 计数 */
+.adm-block-title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: .92rem; font-weight: 700; color: var(--text); margin-bottom: 10px;
+}
+.adm-count { font-size: .78rem; font-weight: 600; color: var(--text-3); }
+.adm-hint { font-size: .78rem; color: var(--text-3); line-height: 1.6; }
+.adm-empty-inline { padding: 14px 0; font-size: .86rem; color: var(--text-3); }
+
+@media (max-width: 900px) {
+  .adm-row-signup { min-width: 720px; }
+  .adm-row-match { min-width: 700px; }
+  .adm-row-member { min-width: 520px; }
+  .adm-team-head .adm-input { max-width: 100%; }
+  .adm-team-rank { margin-left: 0; width: 100%; }
+}
+
+/* 管理后台里的原生 select 也要跟 .adm-input 同一套观感（否则一页里两种控件风格） */
+.adm-table select,
+.adm-add-row select,
+.adm-team-rank select {
+  padding: 6px 8px; font-size: .86rem; font-family: inherit; color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: #fff;
+  max-width: 100%;
+}
+.adm-table select:focus,
+.adm-add-row select:focus,
+.adm-team-rank select:focus {
+  outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.adm-add-row select:disabled { background: var(--bg-subtle); color: var(--text-3); }
