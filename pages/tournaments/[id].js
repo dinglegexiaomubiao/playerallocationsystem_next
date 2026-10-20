@@ -318,8 +318,9 @@ export default function TournamentDetail() {
                   const total = members.reduce((s, p) => s + (Number(p.score) || 0), 0);
                   const rank = Number(team.rank) || 0;
 
-                  const captain =
-                    members.find((p) => String(p.id) === String(team.captain_id)) || null;
+                  // 接口的 members 元素只有 player_id 没有 id，比对要用 player_id；
+                  // 队长昵称接口已直接给出（captain_nickname），不必再反查
+                  const captainName = team.captain_nickname || null;
 
                   const fought = [
                     ...new Set(
@@ -344,9 +345,9 @@ export default function TournamentDetail() {
                         </span>
                         <span className="tt-team">{team.name}</span>
                         <span className="tt-cap">
-                          {captain ? (
+                          {captainName ? (
                             <>
-                              {captain.group_nickname || captain.nickname}
+                              {captainName}
                               <span className="star">★</span>
                             </>
                           ) : (
@@ -362,7 +363,7 @@ export default function TournamentDetail() {
                       {members.length > 0 && (
                         <div className="tt-roster">
                           {members.map((p) => {
-                            const isCap = String(p.id) === String(team.captain_id);
+                            const isCap = String(p.player_id) === String(team.captain_id);
                             const posList = String(p.positions || '')
                               .split(',')
                               .map((s) => s.trim())
@@ -370,7 +371,7 @@ export default function TournamentDetail() {
                             return (
                               <Link
                                 key={p.id}
-                                href={'/members/' + p.id}
+                                href={'/members/' + p.player_id}
                                 className={`tt-member ${isCap ? 'cap' : ''}`}
                                 style={{ color: 'inherit', textDecoration: 'none' }}
                               >
