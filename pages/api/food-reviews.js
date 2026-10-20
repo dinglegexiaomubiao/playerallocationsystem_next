@@ -1,5 +1,5 @@
 import { pool } from '../../lib/db';
-import { denyIfImportNotAdmin } from '../../lib/auth';
+import { denyIfImportNotAdmin, isAdmin } from '../../lib/auth';
 
 function clampRating(v) {
   const n = parseInt(v, 10);
@@ -43,6 +43,9 @@ export default async function handler(req, res) {
         return res.status(201).json({ success: true, review: row.rows[0] });
       }
       case 'DELETE': {
+        if (!isAdmin(req)) {
+          return res.status(403).json({ success: false, error: '仅管理员可删除评价' });
+        }
         const body = req.body || {};
         if (!body.id) return res.status(400).json({ success: false, error: '缺少 id' });
         await client.query('DELETE FROM public.food_reviews WHERE id = $1', [body.id]);

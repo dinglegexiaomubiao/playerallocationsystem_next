@@ -1,5 +1,5 @@
 import { pool } from '../../lib/db';
-import { denyIfImportNotAdmin } from '../../lib/auth';
+import { denyIfImportNotAdmin, isAdmin } from '../../lib/auth';
 
 let tableReady = false;
 
@@ -107,6 +107,9 @@ export default async function handler(req, res) {
         return res.status(201).json({ success: true, food: { ...row.rows[0], reviews: [] } });
       }
       case 'PUT': {
+        if (!isAdmin(req)) {
+          return res.status(403).json({ success: false, error: '仅管理员可编辑美食' });
+        }
         const body = req.body || {};
         if (!body.id) return res.status(400).json({ success: false, error: '缺少 id' });
         if (!body.name || !String(body.name).trim()) {
@@ -133,6 +136,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, food: row.rows[0] });
       }
       case 'DELETE': {
+        if (!isAdmin(req)) {
+          return res.status(403).json({ success: false, error: '仅管理员可删除美食' });
+        }
         const body = req.body || {};
         if (!body.id) return res.status(400).json({ success: false, error: '缺少 id' });
         await client.query('DELETE FROM public.food_reviews WHERE food_id = $1', [body.id]);

@@ -105,6 +105,7 @@ export default function FoodPage() {
   const [reviewForm, setReviewForm] = useState({ reviewer: '', content: '', rating: 5 });
   // 当前登录身份；null 表示尚未确认（此时不渲染导入导出，避免闪一下再隐藏）
   const [me, setMe] = useState(null);
+  const isAdmin = !!(me && me.isAdmin);
 
   const load = () => {
     setLoading(true);
@@ -678,7 +679,9 @@ export default function FoodPage() {
                         <div className="f-review-top">
                           <b>{r.reviewer || '群友'}</b>
                           <span className="f-review-stars">{'★'.repeat(Math.max(1, Math.min(5, r.rating || 5)))}</span>
-                          <button className="f-review-del" onClick={() => removeReview(r.id)}>×</button>
+                          {isAdmin && (
+                            <button className="f-review-del" onClick={() => removeReview(r.id)}>×</button>
+                          )}
                         </div>
                         <div className="f-review-txt">{r.content}</div>
                       </div>
@@ -711,10 +714,12 @@ export default function FoodPage() {
                     )}
                   </div>
 
-                  <div className="f-foot">
-                    <button className="f-edit" onClick={() => startEdit(f)}>编辑</button>
-                    <button className="f-del" onClick={() => remove(f.id)}>删除</button>
-                  </div>
+                  {isAdmin && (
+                    <div className="f-foot">
+                      <button className="f-edit" onClick={() => startEdit(f)}>编辑</button>
+                      <button className="f-del" onClick={() => remove(f.id)}>删除</button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
