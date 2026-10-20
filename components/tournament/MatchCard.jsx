@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { memberHref } from '../../lib/member-href';
 
 /* 选手头像：走本站代理，失败回退到昵称首字 */
 function PlayerAvatar({ playerId, name, size = 22 }) {
@@ -109,6 +112,9 @@ const fmtTime = (v) => {
  */
 export default function MatchCard({ match, roundName }) {
   const [open, setOpen] = useState(true);
+  const router = useRouter();
+  // 记住从哪一页点进来，选手详情页的返回键据此回到这里
+  const from = String(router.asPath || '').split('?')[0];
   const m = match || {};
   const players = m.dota_players || [];
   const radiant = players.filter((p) => p.is_radiant);
@@ -120,16 +126,46 @@ export default function MatchCard({ match, roundName }) {
   const dur = fmtDur(m.dota_duration);
   const time = fmtTime(m.dota_start_time);
 
+  /* 头像和昵称都能点进选手详情；认不出人的账号（player_id 为空）不加链接 */
+  const avatarCell = (p) => {
+    const ava = (
+      <PlayerAvatar playerId={p.player_id} name={p.nickname || p.group_nickname} />
+    );
+    if (!p.player_id) return ava;
+    return (
+      <Link
+        href={memberHref(p.player_id, from)}
+        className="t-ava-link"
+        aria-label={`查看 ${p.group_nickname || p.nickname || '选手'} 详情`}
+      >
+        {ava}
+      </Link>
+    );
+  };
+
+  const nameCell = (p) => {
+    const inner = (
+      <>
+        {p.group_nickname || p.nickname || p.account_id || '未知'}
+        {p.is_standin && <span className="t-chip gold" style={{ marginLeft: 5 }}>替补</span>}
+      </>
+    );
+    const cls = `t-prow-name ${p.is_standin ? 'standin' : ''}`;
+    if (!p.player_id) return <span className={cls}>{inner}</span>;
+    return (
+      <Link href={memberHref(p.player_id, from)} className={`${cls} t-prow-name-link`}>
+        {inner}
+      </Link>
+    );
+  };
+
   const row = (p) => {
     const kdaMissing = p.kills === null || p.kills === undefined;
     return (
       <div className="t-prow" key={p.account_id || p.player_id}>
         <HeroIcon slug={p.hero_slug} name={p.hero_name} />
-        <PlayerAvatar playerId={p.player_id} name={p.nickname || p.group_nickname} />
-        <span className={`t-prow-name ${p.is_standin ? 'standin' : ''}`}>
-          {p.group_nickname || p.nickname || p.account_id || '未知'}
-          {p.is_standin && <span className="t-chip gold" style={{ marginLeft: 5 }}>替补</span>}
-        </span>
+        {avatarCell(p)}
+        {nameCell(p)}
         <span className="t-prow-items">
           {(p.items || []).length === 0 && <span className="t-prow-empty">—</span>}
           {(p.items || []).map((it) => (
@@ -162,11 +198,8 @@ export default function MatchCard({ match, roundName }) {
   const simpleRow = (p) => (
     <div className="t-prow-simple" key={p.account_id || p.player_id}>
       <HeroIcon slug={p.hero_slug} name={p.hero_name} size={28} />
-      <PlayerAvatar playerId={p.player_id} name={p.nickname || p.group_nickname} />
-      <span className={`t-prow-name ${p.is_standin ? 'standin' : ''}`}>
-        {p.group_nickname || p.nickname || p.account_id || '未知'}
-        {p.is_standin && <span className="t-chip gold" style={{ marginLeft: 5 }}>替补</span>}
-      </span>
+      {avatarCell(p)}
+      {nameCell(p)}
     </div>
   );
 

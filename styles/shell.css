@@ -519,3 +519,17 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* 返回键现在可能是 button（返回上一页）也可能是 a（固定跳转），
+   外观统一，但 button 要清掉浏览器默认的边框和背景 */
+button.back-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+button.back-link:hover {
+  color: var(--brand-solid);
+}

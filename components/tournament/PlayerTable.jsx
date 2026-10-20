@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/router';
+import { memberHref } from '../../lib/member-href';
 
 function PlayerAvatar({ playerId, name, size = 28 }) {
   const [failed, setFailed] = useState(false);
@@ -46,6 +48,8 @@ const fmtSigned = (v) => {
  * @param {object[]} teams   /api/teams 返回的队伍，用于反查所属队伍
  */
 export default function PlayerTable({ signups = [], teams = [] }) {
+  const router = useRouter();
+  const from = String(router.asPath || '').split('?')[0];
   const [kw, setKw] = useState('');
   const [pos, setPos] = useState('all');
   const [sort, setSort] = useState('score_desc');
@@ -164,7 +168,7 @@ export default function PlayerTable({ signups = [], teams = [] }) {
             <span style={{ color: 'var(--t-text-3)', fontSize: 12 }}>{i + 1}</span>
             <PlayerAvatar playerId={s.player_id} name={s.nickname || s.group_nickname} />
             <Link
-              href={`/members/${s.player_id}`}
+              href={memberHref(s.player_id, from)}
               className="t-tr-name"
               style={{ color: 'inherit', textDecoration: 'none' }}
             >

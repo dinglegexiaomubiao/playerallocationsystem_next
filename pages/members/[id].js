@@ -7,6 +7,7 @@ import useSession from '../../hooks/useSession';
 import Avatar from '../../components/Avatar';
 import HeroAvatar from '../../components/HeroAvatar';
 import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
+import { backLabelOf, memberHref } from '../../lib/member-href';
 
 // 只到「日」，比赛时间不需要精确到分
 function fmtDay(v) {
@@ -29,6 +30,25 @@ function tier(score) {
 export default function MemberDetail() {
   const router = useRouter();
   const { id } = router.query;
+
+  // 来源页由跳转方通过 ?from= 带过来（见 lib/member-href.js）
+  const from = Array.isArray(router.query.from) ? router.query.from[0] : router.query.from;
+  const backLabel = backLabelOf(from);
+  /* 页内跳到另一个群友（默契队友 / 仇人）时，来源要延续下去，
+     否则链路一断，返回键又变回「回群友列表」 */
+  const origin = from || String(router.asPath || '').split('?')[0];
+
+  /* 返回键：知道来路就退一步，退回真正的上一页；
+     直接把 router.push(from) 会把历史栈越堆越长（赛事→选手→赛事→…），
+     浏览器后退变成在两个页面间来回跳。
+     没有来路（直接打开链接 / 从外站进来）才回群友列表。 */
+  const goBack = () => {
+    if (from && typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(from || '/members');
+    }
+  };
 
   const [player, setPlayer] = useState(null);
   const [players, setPlayers] = useState([]);
@@ -130,9 +150,9 @@ export default function MemberDetail() {
 
       <section className="page-hero">
         <div className="wrap">
-          <Link href="/members" className="back-link">
-            ← 返回群友列表
-          </Link>
+          <button type="button" className="back-link" onClick={goBack}>
+            ← {backLabel}
+          </button>
           <div className="detail-head">
             <Avatar className="detail-avatar" src={player.avatar} name={player.nickname} eager />
             <div>
@@ -201,7 +221,7 @@ export default function MemberDetail() {
                 <div className="hero-chips">
                   {(player.synergy_players || []).length > 0 ? (
                     player.synergy_players.map((sid, i) => (
-                      <Link className="hero-chip" href={'/members/' + sid} key={i}>
+                      <Link className="hero-chip" href={memberHref(sid, origin)} key={i}>
                         {nameMap.get(String(sid)) || sid}
                       </Link>
                     ))
@@ -216,7 +236,7 @@ export default function MemberDetail() {
                 <div className="hero-chips">
                   {(player.enemies || []).length > 0 ? (
                     player.enemies.map((sid, i) => (
-                      <Link className="hero-chip hero-chip-enemy" href={'/members/' + sid} key={i}>
+                      <Link className="hero-chip hero-chip-enemy" href={memberHref(sid, origin)} key={i}>
                         {nameMap.get(String(sid)) || sid}
                       </Link>
                     ))

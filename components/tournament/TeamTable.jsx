@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import { memberHref } from '../../lib/member-href';
 
 /* 选手头像：走本站代理，失败回退昵称首字 */
 function PlayerAvatar({ playerId, name, size = 26 }) {
@@ -85,6 +87,8 @@ function buildRecords(matches) {
  * 两者都没有就不显示徽标——不用数组序号冒充名次。
  */
 export default function TeamTable({ teams, matches, tournament }) {
+  const router = useRouter();
+  const from = String(router.asPath || '').split('?')[0];
   const records = useMemo(() => buildRecords(matches), [matches]);
 
   /* team_id → 名次（1 冠军 / 2 亚军 / 3 季军） */
@@ -170,7 +174,7 @@ export default function TeamTable({ teams, matches, tournament }) {
                 return (
                   <Link
                     key={p.id}
-                    href={`/members/${p.id}`}
+                    href={memberHref(p.id, from)}
                     className="t-rp"
                     title={`${p.group_nickname || p.nickname}${isCap ? '（队长）' : ''}${
                       pos ? ' · ' + pos : ''
