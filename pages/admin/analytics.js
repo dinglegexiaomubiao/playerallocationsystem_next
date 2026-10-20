@@ -42,8 +42,9 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
         <div className="wrap">
           <div className="adm-tabs" style={{ marginBottom: 16 }}>
             <Link className="adm-tab" href="/admin">赛事管理</Link>
-            <Link className="adm-tab" href="/members">群友管理</Link>
-            <Link className="adm-tab" href="/food">美食管理</Link>
+            <Link className="adm-tab" href="/admin/members">群友管理</Link>
+            <Link className="adm-tab" href="/admin/food">美食管理</Link>
+            <Link className="adm-tab" href="/admin/party">开黑管理</Link>
             <Link className="adm-tab" href="/main">阵容分配</Link>
             <span className="adm-tab active">访问统计</span>
           </div>

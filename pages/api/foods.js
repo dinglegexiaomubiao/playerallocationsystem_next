@@ -1,5 +1,5 @@
 import { pool } from '../../lib/db';
-import { denyIfImportNotAdmin, isAdmin } from '../../lib/auth';
+import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
 
 let tableReady = false;
 
@@ -84,7 +84,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, foods: list });
       }
       case 'POST': {
-        if (denyIfImportNotAdmin(req, res)) return;
+        // 提交美食推荐需要登录（原先是 denyIfImportNotAdmin，
+        // 不带 x-excel-import 头时会直接放行，导致匿名也能提交）
+        if (denyIfNotLoggedIn(req, res, '请先登录后再推荐美食')) return;
         const body = req.body || {};
         if (!body.name || !String(body.name).trim()) {
           return res.status(400).json({ success: false, error: '店名不能为空' });

@@ -315,8 +315,9 @@ export default function Admin({ denied }) {
           <div className="adm-bar">
             <div className="adm-tabs">
               <span className="adm-tab active">赛事管理</span>
-              <Link className="adm-tab" href="/members">群友管理</Link>
-              <Link className="adm-tab" href="/food">美食管理</Link>
+              <Link className="adm-tab" href="/admin/members">群友管理</Link>
+              <Link className="adm-tab" href="/admin/food">美食管理</Link>
+              <Link className="adm-tab" href="/admin/party">开黑管理</Link>
               <Link className="adm-tab" href="/main">阵容分配</Link>
               <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
             </div>

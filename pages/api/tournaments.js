@@ -41,7 +41,12 @@ export default async function handler(req, res) {
           LEFT JOIN public.teams tc ON tc.id = t.champion_team_id AND tc.tournament_id = t.id
           LEFT JOIN public.teams tr ON tr.id = t.runner_up_team_id AND tr.tournament_id = t.id
           LEFT JOIN public.teams tt ON tt.id = t.third_place_team_id AND tt.tournament_id = t.id
-          ORDER BY t.id DESC
+          -- 排序：先按起止时间倒序（最近结束/开始的在上），没有日期的排后面；
+          -- 时间相同或都为空时，按赛季名称升序。
+          -- 用 end_date 优先、start_date 兜底，比只看 start_date 更符合"最近办完的在上"的直觉。
+          ORDER BY
+            COALESCE(t.end_date, t.start_date) DESC NULLS LAST,
+            t.name ASC
         `);
         
         res.status(200).json({

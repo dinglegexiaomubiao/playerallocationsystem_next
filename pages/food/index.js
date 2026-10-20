@@ -105,7 +105,17 @@ export default function FoodPage() {
   const [openReviewId, setOpenReviewId] = useState(null);
   const [reviewForm, setReviewForm] = useState({ reviewer: '', content: '', rating: 5 });
   // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
-  const { isAdmin } = useSession();
+  const { me, isAdmin, name: myName } = useSession();
+
+  // 未登录时拦截提交：接口已经要求登录，这里提前挡住并引导去登录页，
+  // 免得用户填完一大堆再看到一句「请先登录」
+  const requireLogin = (action) => {
+    if (me) return true;
+    if (window.confirm(`请先登录后再${action}\n\n现在去登录？`)) {
+      window.location.href = '/login?from=%2Ffood';
+    }
+    return false;
+  };
 
   const load = () => {
     setLoading(true);
@@ -220,6 +230,7 @@ export default function FoodPage() {
 
   const submit = async (e) => {
     e.preventDefault();
+    if (!requireLogin('推荐美食')) return;
     if (!form.name.trim()) {
       alert('请填写店名');
       return;
@@ -228,6 +239,8 @@ export default function FoodPage() {
     try {
       const payload = {
         ...form,
+        // 没填推荐人时，默认记到当前登录账号名下
+        recommender: form.recommender || myName || '',
         avg_price: form.avg_price === '' ? null : Number(form.avg_price),
         rating: Number(form.rating) || 5,
       };
@@ -263,6 +276,7 @@ export default function FoodPage() {
   };
 
   const addReview = async (foodId) => {
+    if (!requireLogin('发表评价')) return;
     if (!reviewForm.content.trim()) {
       alert('写点什么吧～');
       return;
@@ -270,7 +284,13 @@ export default function FoodPage() {
     const r = await fetch('/api/food-reviews', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ food_id: foodId, ...reviewForm, rating: Number(reviewForm.rating) || 5 }),
+      body: JSON.stringify({
+        food_id: foodId,
+        ...reviewForm,
+        // 没填评价人时，默认记到当前登录账号名下
+        reviewer: reviewForm.reviewer || myName || '',
+        rating: Number(reviewForm.rating) || 5,
+      }),
     });
     if (r.ok) {
       setReviewForm({ reviewer: '', content: '', rating: 5 });

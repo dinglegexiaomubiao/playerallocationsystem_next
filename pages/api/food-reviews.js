@@ -1,5 +1,5 @@
 import { pool } from '../../lib/db';
-import { denyIfImportNotAdmin, isAdmin } from '../../lib/auth';
+import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
 
 function clampRating(v) {
   const n = parseInt(v, 10);
@@ -24,7 +24,8 @@ export default async function handler(req, res) {
 
     switch (req.method) {
       case 'POST': {
-        if (denyIfImportNotAdmin(req, res)) return;
+        // 提交评价需要登录（原先的 denyIfImportNotAdmin 在不带 x-excel-import 头时会放行，匿名也能评）
+        if (denyIfNotLoggedIn(req, res, '请先登录后再发表评价')) return;
         const body = req.body || {};
         if (!body.food_id) return res.status(400).json({ success: false, error: '缺少 food_id' });
         if (!body.content || !String(body.content).trim()) {
