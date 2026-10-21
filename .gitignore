@@ -73,3 +73,6 @@ _*_profile/
 backups/
 # 旧的 env 备份（含连接串与密钥）
 .env.local.bak*
+
+# 本地截图产物（scripts/check-diag.cjs 等生成）
+shots/

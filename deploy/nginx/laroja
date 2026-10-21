@@ -1,0 +1,42 @@
+# HTTP：全部 301 跳转到 HTTPS（保留 ACME 续期验证路径）
+server {
+    listen 80;
+    listen [::]:80;
+    server_name dota.playerallocationsystem.online 47.115.130.170;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name dota.playerallocationsystem.online;
+
+    ssl_certificate     /etc/letsencrypt/live/dota.playerallocationsystem.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dota.playerallocationsystem.online/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # 安全头统一放在片段里：任何自己写了 add_header 的 location 都必须重新
+    # include 一遍，否则这一批头会被 Nginx 的继承规则清空。
+    include /etc/nginx/snippets/laroja-sec-headers.conf;
+
+    # 访问统计（GoAccess 生成的静态报告），带密码保护
+    location /stats/ {
+        alias /var/www/html/stats/;
+        index index.html;
+        auth_basic "Site Statistics";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+
+    include /etc/nginx/snippets/laroja-proxy.conf;
+}
