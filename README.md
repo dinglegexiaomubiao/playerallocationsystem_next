@@ -4,7 +4,10 @@
 
 > 网页信息均由群友提供，仅供群内交流使用。
 
-线上跑在 Vercel，数据库用 Neon PostgreSQL（新加坡区域）。
+线上跑在**阿里云自托管**（Nginx + PM2 + 本机 PostgreSQL），域名 `dota.playerallocationsystem.online`。
+部署方式见 `deploy/`：`./deploy/deploy.sh`（带自动快照与 `./deploy/rollback.sh` 秒级回滚）。
+
+> 历史说明：2026-10 之前跑在 Vercel + Neon，那两个都已经不用了；下文凡是提到 Vercel / Neon 的段落都是当年的迁移记录，别再照着做。
 
 ---
 
@@ -89,7 +92,7 @@ npm start
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | 是 | Neon 连接串，用 **Pooled connection**（主机名带 `-pooler`） |
+| `DATABASE_URL` | 是 | 线上是服务器本机 PostgreSQL（`127.0.0.1:5432/laroja`），本地走 SSH 隧道 `npm run db:tunnel` 后连 `127.0.0.1:15432/laroja`。**不再使用 Neon** |
 | `AUTH_SECRET` | 建议 | 会话签名密钥。不填则用 `DATABASE_URL` 派生，**换库会导致所有人掉登录** |
 | `ADMIN_NAMES` | 是 | 管理员账号，逗号分隔，大小写不敏感。缺省只有 `dom` |
 | `ANTHROPIC_API_KEY` | 否 | 不配则 AI 分析返回 500，其余功能正常 |
@@ -160,9 +163,23 @@ play_score ──1:1── players ──报名──▶ tournament_players ─�
 
 ## 部署
 
-### Vercel（当前方式）
+### 阿里云自托管（当前方式）
 
-`vercel.json` 已把函数区域固定为 `sin1`（新加坡），与 Neon 库同区域：
+```bash
+./deploy/deploy.sh      # 本地构建校验 → 打包上传 → 服务器自动快照 → 构建 → pm2 restart
+./deploy/rollback.sh    # 出问题 7 秒切回上一版（含构建产物）
+```
+
+服务器：`root@47.115.130.170` → `/www/wwwroot/laroja`，PM2 应用名 `laroja-site`，
+Nginx 反代 `127.0.0.1:3000`，数据库是**服务器本机 PostgreSQL**。
+细节见 `deploy/MIGRATION.md`。
+
+### Vercel（已弃用，仅存档）
+
+以下是当年 Vercel + Neon 的配置记录，现在跑不了也不该再照着做。
+保留它只是为了解释 `vercel.json` 和下面这些「区域对齐」结论的来历。
+
+`vercel.json` 已把函数区域固定为 `sin1`（新加坡），当年与 Neon 库同区域：
 
 ```json
 { "regions": ["sin1"] }

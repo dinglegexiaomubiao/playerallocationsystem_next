@@ -5,7 +5,7 @@
  * 只要装了项目依赖就能跑。
  *
  * 用法：
- *   TARGET_DATABASE_URL='postgresql://user:pass@host:5432/neondb' node scripts/import-data.js
+ *   TARGET_DATABASE_URL='postgresql://laroja:pass@127.0.0.1:15432/laroja' node scripts/import-data.js
  *   DATABASE_SSL=off TARGET_DATABASE_URL='...' node scripts/import-data.js   # 内网 RDS
  *   node scripts/import-data.js --dir ./somewhere --force
  *

@@ -68,3 +68,8 @@ _*_profile/
 
 # 图片缓存（英雄头像 / Steam 头像，首次访问自动回源落下，不入库）
 .cache/
+
+# Neon 弃用前的数据归档（含用户反馈/IP，不进仓库）
+backups/
+# 旧的 env 备份（含连接串与密钥）
+.env.local.bak*

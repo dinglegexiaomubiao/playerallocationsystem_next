@@ -194,8 +194,13 @@ crontab -e
 5. `pm2 logs laroja-site` 看有没有报错
 6. 浏览器 Network 面板看 `/api/players` 的 TTFB：应该 **50ms 以内**（现在是 1 秒以上）
 
-稳定运行 1-2 周后再考虑：Vercel 项目 pause、Neon 删库。
-删 Neon 等于旧密码自动失效，之前那个泄漏的凭据问题一并解决。
+**已完成（2026-10-21）**：Neon 已弃用，代码与配置里不再有任何 Neon 引用。
+- 本地 `.env.local` 改为走 SSH 隧道连线上库（`npm run db:tunnel`）
+- 弃用前数据已归档到 `backups/neon-archive-<日期>.json`（该目录不进 git）
+- 剩余动作需要你自己在 Neon 控制台做：**删除项目**，让之前进过 git 历史的旧凭据彻底失效
+
+历史背景：Neon 当年是为了 Vercel 部署引的，迁到阿里云自托管后一直没人清，导致本地开发连的是
+一份 77 人的旧副本、线上是 161 人的真库，两边数据对不上。
 
 ---
 

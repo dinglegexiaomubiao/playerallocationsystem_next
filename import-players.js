@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { requireDatabaseUrl } = require('./scripts/env');
 
-// 连接串从 .env.local / 环境变量读取。此处曾硬编码过 Neon 密码并进入 git 历史，
-// 已轮换；不要为了图方便改回明文字符串。
+// 连接串从 .env.local / 环境变量读取。此处曾硬编码过数据库密码并进入 git 历史，
+// 已轮换、且那个库（Neon）已弃用；不要为了图方便改回明文字符串。
 const CONNECTION_STRING = requireDatabaseUrl();
 const TOURNAMENT_NAME = '测试';
 const DATA_FILE = path.join(__dirname, '测试的数据.json');

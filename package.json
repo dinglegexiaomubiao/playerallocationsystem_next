@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "warm:heroes": "node scripts/warm-hero-icons.mjs"
+    "warm:heroes": "node scripts/warm-hero-icons.mjs",
+    "db:tunnel": "bash scripts/db-tunnel.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
