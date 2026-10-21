@@ -214,7 +214,7 @@ export default function MemberDetail() {
           <div className="detail-grid">
             {/* 主区：最近比赛（模式 / 版本筛选都在这一块里） */}
             <div className="detail-main">
-              <MatchHistory accountId={player.game_id} />
+              <MatchHistory accountId={player.game_id} accounts={player.steamIds} />
             </div>
 
             {/* 侧栏：AI 分析（可收起）+ 本人填写的资料 */}

@@ -2058,6 +2058,30 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .mh-refresh { background: none; border: 0; color: var(--text-3); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; }
 .mh-refresh:hover { color: var(--brand); }
 
+/* 多 Steam 号切换（主号 / 小号）：对局按账号分开，一个号一套数据。
+   和下面的模式 tab 视觉上要区分开，所以用下划线式而不是胶囊式。 */
+.mh-accounts {
+  display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+  margin-top: 10px; padding-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+}
+.mh-accounts-label { font-size: .74rem; color: var(--text-3); margin-right: 6px; }
+.mh-acc {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 4px 8px 6px; margin-bottom: -3px;
+  color: var(--text-2); font: inherit; font-size: .8rem;
+  font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.mh-acc:hover { color: var(--text); }
+.mh-acc.on { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+.mh-acc-tag {
+  font-style: normal; font-size: .62rem; line-height: 1; font-weight: 700;
+  color: var(--brand); background: var(--brand-soft);
+  border-radius: 3px; padding: 2px 4px;
+}
+
 .mh-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0 10px; }
 .mh-tab {
   display: inline-flex; align-items: center; gap: 6px;

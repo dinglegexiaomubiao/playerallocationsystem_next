@@ -107,10 +107,22 @@ export default function AdminMembersPage({ denied }) {
       if (filter === 'nosteam' && p.game_id) return false;
       if (filter === 'unbound' && p.account_name) return false;
       if (!kw) return true;
+      // 一个人可能有多个 SteamID（主号 + 小号）、多个群昵称，逐个都比一遍，
+      // 否则合并之后搜副号会「搜不到这个人」。
+      const steamAll = (p.steam_ids || [])
+        .map((s) => (s && typeof s === 'object' ? s.accountId : s))
+        .filter((x) => x !== null && x !== undefined)
+        .map(String);
+      const nickAll = (p.group_nicknames_all || [])
+        .map((n) => (n && typeof n === 'object' ? n.nickname : n))
+        .filter(Boolean)
+        .map((x) => String(x).toLowerCase());
       return (
         String(p.nickname || '').toLowerCase().includes(kw) ||
         String(p.group_nickname || '').toLowerCase().includes(kw) ||
         String(p.game_id || '').includes(kw) ||
+        steamAll.some((id) => id.includes(kw)) ||
+        nickAll.some((n) => n.includes(kw)) ||
         String(p.account_name || '').toLowerCase().includes(kw)
       );
     });

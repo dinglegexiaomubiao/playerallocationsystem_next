@@ -65,11 +65,24 @@ const EMPTY_FILTERS = {
 };
 
 // 把一名选手所有可检索信息拼成小写文本，供搜索使用（全字段）
+/**
+ * 搜索哈栈：一个人可能有好几个 SteamID 和群昵称，全部都要能被搜到。
+ * 只拼 p.game_id 会导致「合并进来的副号搜不到人」——玩家搜自己小号
+ * 却查不出档案，看起来就像是合并把号弄丢了。
+ */
 function buildHaystack(p) {
+  const steamIds = (p.steamIds || [])
+    .map((s) => (s && typeof s === 'object' ? s.accountId : s))
+    .filter(Boolean);
+  const groupNicknames = (p.groupNicknames || [])
+    .map((n) => (n && typeof n === 'object' ? n.nickname : n))
+    .filter(Boolean);
   const parts = [
     p.nickname,
     p.group_nickname,
     p.game_id,
+    ...steamIds,
+    ...groupNicknames,
     p.region,
     p.self_intro,
     tierOf(Number(p.score) || 0).label,
@@ -299,13 +312,19 @@ export default function MembersPage() {
     reload();
   };
 
-  // 去重：steamID 相同 或 昵称相同，视为重复
+  // 去重：SteamID 相同 或 昵称相同，视为重复。
+  // SteamID 要比对「全部号」而不只是主号，否则拿小号重新导入会造出第二条档案。
   const checkDuplicate = (row, existing) => {
     const gid = String(row['steamID'] || '').trim();
     const nick = String(row['昵称'] || '').trim();
-    return existing.some(
-      (p) => (gid && String(p.game_id || '') === gid) || (nick && (p.nickname || '') === nick)
-    );
+    return existing.some((p) => {
+      if (nick && (p.nickname || '') === nick) return true;
+      if (!gid) return false;
+      const all = [p.game_id, ...(p.steamIds || []).map((s) => (s && typeof s === 'object' ? s.accountId : s))]
+        .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
+        .map(String);
+      return all.includes(gid);
+    });
   };
 
   return (

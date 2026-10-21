@@ -15,24 +15,43 @@ const PAGE_STEP = 20;
  *
  * 数据一次性从 /api/player-matches 拿全（默认 200 场），
  * 切 tab / 版本都在本地过滤，不重新请求。
+ *
+ * 一个人可能有多个 Steam 号（主号 + 小号），对局是**按账号分开**的，
+ * 所以多号时给一个账号切换器；默认看主号。
  */
-export default function MatchHistory({ accountId }) {
+export default function MatchHistory({ accountId, accounts }) {
+  // 统一成 [{ accountId, isPrimary }]，兼容老调用方只传 accountId 的情况
+  const accountList = useMemo(() => {
+    const list = (accounts || [])
+      .map((a) => (a && typeof a === 'object' ? a : { accountId: a }))
+      .map((a) => ({ accountId: String(a.accountId || '').trim(), isPrimary: !!a.isPrimary }))
+      .filter((a) => a.accountId);
+    if (list.length === 0 && accountId) return [{ accountId: String(accountId), isPrimary: true }];
+    return list;
+  }, [accounts, accountId]);
+
+  const primaryAccount = useMemo(() => {
+    const hit = accountList.find((a) => a.isPrimary);
+    return (hit || accountList[0] || {}).accountId || '';
+  }, [accountList]);
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [acc, setAcc] = useState(primaryAccount);
   const [mode, setMode] = useState('all');
   const [patch, setPatch] = useState('all');
   const [shown, setShown] = useState(PAGE_STEP);
 
   const load = useCallback(
     (silent) => {
-      if (!accountId) {
+      if (!acc) {
         setLoading(false);
         return;
       }
       if (!silent) setLoading(true);
       setError('');
-      fetch('/api/player-matches?accountId=' + encodeURIComponent(accountId))
+      fetch('/api/player-matches?accountId=' + encodeURIComponent(acc))
         .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
         .then(({ ok, d }) => {
           if (!ok || !d || d.success === false) {
@@ -45,12 +64,18 @@ export default function MatchHistory({ accountId }) {
         .catch(() => setError('网络错误，稍后重试'))
         .finally(() => setLoading(false));
     },
-    [accountId]
+    [acc]
   );
 
   useEffect(() => {
     load(false);
   }, [load]);
+
+  // 换账号后筛选口径完全不同（版本集合都不一样），回到默认
+  useEffect(() => {
+    setMode('all');
+    setPatch('all');
+  }, [acc]);
 
   // 换筛选条件后从第一屏重新看起
   useEffect(() => {
@@ -71,7 +96,7 @@ export default function MatchHistory({ accountId }) {
   const best = useMemo(() => bestOf(filtered), [filtered]);
   const recent20 = useMemo(() => filtered.slice(0, 20), [filtered]);
 
-  if (!accountId) {
+  if (!primaryAccount) {
     return (
       <div className="side-card mh">
         <h4>最近比赛</h4>
@@ -93,6 +118,25 @@ export default function MatchHistory({ accountId }) {
           </button>
         </span>
       </div>
+
+      {/* 多个 Steam 号时给切换器：对局按账号分开，主号没数据也能看小号 */}
+      {accountList.length > 1 && (
+        <div className="mh-accounts">
+          <span className="mh-accounts-label">Steam 账号</span>
+          {accountList.map((a) => (
+            <button
+              type="button"
+              key={a.accountId}
+              className={'mh-acc' + (a.accountId === acc ? ' on' : '')}
+              onClick={() => setAcc(a.accountId)}
+              title={a.isPrimary ? '主号' : '备用号'}
+            >
+              {a.isPrimary && <i className="mh-acc-tag">主</i>}
+              {a.accountId}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && <div className="empty" style={{ padding: '36px 0' }}>正在拉取对局…</div>}
 
