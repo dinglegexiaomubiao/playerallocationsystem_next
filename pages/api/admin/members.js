@@ -9,6 +9,7 @@
  */
 import { getSession, isAdmin } from '../../../lib/auth';
 import { pool } from '../../../lib/db';
+import { ensureIdentityTables, identitiesForPlayers } from '../../../lib/player-identity';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -46,6 +47,16 @@ export default async function handler(req, res) {
       account_name: p.account_name || null,
       login_count: p.login_count == null ? 0 : Number(p.login_count),
     }));
+
+    // 多值身份（全部 SteamID / 全部群昵称）：一次批量查出，避免逐人查库
+    await ensureIdentityTables(pool);
+    const ids = players.map((p) => String(p.id));
+    const identityMap = await identitiesForPlayers(pool, ids);
+    players.forEach((p) => {
+      const id = identityMap.get(String(p.id)) || { steam: [], nicknames: [] };
+      p.steam_ids = id.steam;          // [{ accountId, isPrimary }]
+      p.group_nicknames_all = id.nicknames; // [nickname]
+    });
 
     return res.status(200).json({ ok: true, players });
   } catch (error) {

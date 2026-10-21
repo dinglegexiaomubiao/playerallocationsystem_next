@@ -93,23 +93,32 @@ export default async function handler(req, res) {
 
       let candidates = [];
       if (isNumeric) {
-        const r = await query(`${CANDIDATE_SQL} WHERE p.game_id = $1 ORDER BY p.id LIMIT 5`, [raw]);
+        // 查**全部** SteamID（主号 + 副号），否则用副号来认领会找不到自己
+        const r = await query(
+          `${CANDIDATE_SQL}
+            WHERE p.id IN (SELECT player_id FROM public.player_steam_accounts WHERE account_id = $1)
+            ORDER BY p.id LIMIT 5`,
+          [raw]
+        );
         candidates = r.rows.map(shapeCandidate);
       }
 
-      // 近似建议：数字按 ID 前缀，非数字按昵称
+      // 近似建议：数字按 ID 前缀（含副号），非数字按昵称（含全部群昵称）
       let suggestions = [];
       if (candidates.length === 0) {
         const r = isNumeric
           ? await query(
               `${CANDIDATE_SQL}
-                WHERE CAST(p.game_id AS TEXT) LIKE $1
+                WHERE p.id IN (SELECT player_id FROM public.player_steam_accounts
+                                WHERE CAST(account_id AS TEXT) LIKE $1)
                 ORDER BY p.id LIMIT 6`,
               [`${raw}%`]
             )
           : await query(
               `${CANDIDATE_SQL}
-                WHERE p.nickname ILIKE $1 OR p.group_nickname ILIKE $1
+                WHERE p.nickname ILIKE $1
+                   OR EXISTS (SELECT 1 FROM public.player_group_nicknames n
+                               WHERE n.player_id = p.id AND n.nickname ILIKE $1)
                 ORDER BY p.score DESC NULLS LAST, p.id LIMIT 6`,
               [`%${raw}%`]
             );
@@ -150,15 +159,19 @@ export default async function handler(req, res) {
 
       if (playerId) {
         // ---- 继承已有资料 ----
-        const target = await query(
-          'SELECT id, game_id FROM public.players WHERE id = $1',
-          [playerId]
+        // 防越权：这个 SteamID 必须真的属于所选选手（主号或任一备用号）
+        const owns = await query(
+          `SELECT 1 FROM public.player_steam_accounts WHERE player_id = $1 AND account_id = $2
+           UNION ALL
+           SELECT 1 FROM public.players WHERE id = $1 AND game_id = $2
+           LIMIT 1`,
+          [playerId, gameId]
         );
-        if (target.rows.length === 0) {
+        const exists = await query('SELECT id FROM public.players WHERE id = $1', [playerId]);
+        if (exists.rows.length === 0) {
           return res.status(404).json({ success: false, error: '该选手资料不存在' });
         }
-        // 防越权：只允许绑定到自己填的那个 SteamID 对应的选手
-        if (String(target.rows[0].game_id) !== gameId) {
+        if (owns.rows.length === 0) {
           return res
             .status(400)
             .json({ success: false, error: '所选资料与填写的 SteamID 不一致，请重新查找' });
@@ -183,11 +196,17 @@ export default async function handler(req, res) {
       if (!groupNickname) {
         return res.status(400).json({ success: false, error: '请填写群昵称' });
       }
-      const dup = await query('SELECT id FROM public.players WHERE game_id = $1 LIMIT 1', [gameId]);
+      // 这个 SteamID 可能已经作为别人的副号存在了
+      const dup = await query(
+        `SELECT s.player_id AS id, p.nickname FROM public.player_steam_accounts s
+           JOIN public.players p ON p.id = s.player_id
+          WHERE s.account_id = $1 LIMIT 1`,
+        [gameId]
+      );
       if (dup.rows.length > 0) {
         return res.status(409).json({
           success: false,
-          error: '库里已有这个 SteamID 的资料，请选择「继承」而不是新建',
+          error: `库里已有这个 SteamID 的资料（${dup.rows[0].nickname || '未命名'}），请选择「继承」而不是新建`,
         });
       }
 
@@ -195,6 +214,9 @@ export default async function handler(req, res) {
         nickname: groupNickname,
         game_id: gameId,
         group_nickname: groupNickname,
+        steamIds: [gameId],
+        groupNicknames: [groupNickname],
+        identitySource: 'register',
         score: null,
         positions: [],
         heroes: [],

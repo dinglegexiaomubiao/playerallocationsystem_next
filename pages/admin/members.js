@@ -7,6 +7,7 @@ import PositionPicker from '../../components/PositionPicker';
 import MultiSelectFilter from '../../components/MultiSelectFilter';
 import UnregisteredAccounts from '../../components/admin/UnregisteredAccounts';
 import DuplicatePlayers from '../../components/admin/DuplicatePlayers';
+import IdentityEditor from '../../components/IdentityEditor';
 import heroIdToName from '../../lib/heroMapping';
 
 /* 全英雄选项：后台改资料时要能选任意英雄，不能只限已有数据里出现过的 */
@@ -119,13 +120,36 @@ export default function AdminMembersPage({ denied }) {
     setMsg(null);
     try {
       const { account_name, login_count, created_at, updated_at, ...rest } = editing;
+
+      // 身份是「一或多」，走数组；主号由子表决定，players 上的单值只是主号缓存，
+      // 后端写完会按主号回写一次，所以这里传什么都以数组为准。
+      // IdentityEditor 内部统一用 { value, isPrimary }，提交前换回接口字段名
+      const steamIds = (editing.steam_ids || [])
+        .map((s) => ({ accountId: String(s.value ?? '').trim(), isPrimary: !!s.isPrimary }))
+        .filter((s) => s.accountId);
+      const groupNicknames = (editing.group_nicknames_all || [])
+        .map((n) => ({ nickname: String(n.value ?? '').trim(), isPrimary: !!n.isPrimary }))
+        .filter((n) => n.nickname);
+
+      const badId = steamIds.find((s) => !/^\d+$/.test(s.accountId));
+      if (badId) {
+        setBusy(false);
+        setMsg({ type: 'err', text: `SteamID「${badId.accountId}」只能是数字` });
+        return;
+      }
+
       // updatePlayer 是全量 UPDATE，这里把完整对象传回去（含前端没展示的 heroes 等）
       await apiPut('/api/players', {
         playerId: editing.id,
         player: {
           nickname: rest.nickname,
-          game_id: rest.game_id || null,
-          group_nickname: rest.group_nickname || null,
+          // 单值字段仍带上主号，保持和旧逻辑一致（后端最终会按子表主号覆盖）
+          game_id: steamIds.length ? (steamIds.find((s) => s.isPrimary) || steamIds[0]).accountId : null,
+          group_nickname: groupNicknames.length
+            ? (groupNicknames.find((n) => n.isPrimary) || groupNicknames[0]).nickname
+            : null,
+          steamIds,
+          groupNicknames,
           score: rest.score === '' ? 0 : Number(rest.score),
           // 弹窗里是数组，写库要还原成逗号分隔字符串
           positions: Array.isArray(rest.positions) ? rest.positions.join(',') : (rest.positions || ''),
@@ -346,6 +370,19 @@ export default function AdminMembersPage({ denied }) {
                             // 位置与英雄在库里是逗号分隔字符串，弹窗里用数组编辑
                             positions: splitList(p.positions),
                             heroes: splitList(p.heroes),
+                            // 身份：优先用子表返回的多值，老接口没给就退回单值
+                            steam_ids:
+                              Array.isArray(p.steam_ids) && p.steam_ids.length > 0
+                                ? p.steam_ids.map((s) => ({ value: String(s.accountId ?? s), isPrimary: !!s.isPrimary }))
+                                : p.game_id
+                                  ? [{ value: String(p.game_id), isPrimary: true }]
+                                  : [],
+                            group_nicknames_all:
+                              Array.isArray(p.group_nicknames_all) && p.group_nicknames_all.length > 0
+                                ? p.group_nicknames_all.map((n) => ({ value: String(n.nickname ?? n), isPrimary: !!n.isPrimary }))
+                                : p.group_nickname
+                                  ? [{ value: String(p.group_nickname), isPrimary: true }]
+                                  : [],
                           })}>
                             编辑
                           </button>
@@ -390,17 +427,12 @@ export default function AdminMembersPage({ denied }) {
             <div style={{ padding: '4px 2px 8px' }}>
               {[
                 { k: 'nickname', label: '昵称', ph: '正式昵称' },
-                { k: 'group_nickname', label: '群昵称', ph: '微信群昵称，用于导入匹配' },
-                { k: 'game_id', label: 'SteamID', ph: '纯数字，用于同步头像与天梯分' },
                 { k: 'score', label: '天梯分', ph: '0', type: 'number' },
                 { k: 'region', label: '地区', ph: '深圳' },
               ].map((f) => (
                 <div key={f.k} style={{ marginBottom: 12 }}>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
                     {f.label}
-                    {!editing[f.k] && (f.k === 'game_id' || f.k === 'group_nickname') && (
-                      <span style={{ color: '#C0392B', marginLeft: 6 }}>当前为空</span>
-                    )}
                   </label>
                   <input
                     type={f.type || 'text'}
@@ -417,6 +449,31 @@ export default function AdminMembersPage({ denied }) {
                   />
                 </div>
               ))}
+
+              {/* 群昵称与 SteamID 都是「一或多」：导入匹配、开黑帖、赛程认人都会用到 */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
+                  群昵称（可多个）
+                </label>
+                <IdentityEditor
+                  kind="nickname"
+                  items={editing.group_nicknames_all || []}
+                  onChange={(next) => setEditing((prev) => ({ ...prev, group_nicknames_all: next }))}
+                  hint="改成别的群名片时把旧的也留着：Excel 导入、赛事包导入按群昵称认人，多留一个就多一条命中路径。"
+                />
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
+                  SteamID（可多个）
+                </label>
+                <IdentityEditor
+                  kind="steam"
+                  items={editing.steam_ids || []}
+                  onChange={(next) => setEditing((prev) => ({ ...prev, steam_ids: next }))}
+                  hint="「主」决定头像、天梯分和卡片上显示哪个号。一个 SteamID 只能归一个人，撞了会提示。"
+                />
+              </div>
 
               {/* 位置：多选 + 排序（顺序决定群友卡片上先展示哪个） */}
               <div style={{ marginBottom: 12 }}>

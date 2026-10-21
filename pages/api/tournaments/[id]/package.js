@@ -14,6 +14,7 @@
 //   - PUT /api/teams 的 updateTeam 只认 name 一个字段，拿它改 captain 会把队名写成 null；
 //   - 跨表要保持一致（队伍建了、队员没建成就很难看），必须同事务。
 import { pool } from '../../../../lib/db';
+import { ensureIdentityTables } from '../../../../lib/player-identity';
 import { denyIfNotAdmin } from '../../../../lib/auth';
 
 const MAX_ROWS = 500;
@@ -73,19 +74,40 @@ export default async function handler(req, res) {
     await client.query('BEGIN');
 
     /* ---------- 预载索引：66 个选手、几十支队伍，一次读进内存比逐行查快得多 ---------- */
+    // 匹配键取「全部 SteamID（主号+副号）」和「全部群昵称」，否则表里写副号/备用昵称就认不出人
     const players = await client.query(
       'SELECT id, nickname, group_nickname, game_id FROM public.players'
     );
+    const byId = new Map(players.rows.map((p) => [String(p.id), p]));
     const byGameId = new Map();
+    // 群昵称允许不同人重名 → 值可能是数组，命中多条时按歧义处理，不瞎猜
     const byName = new Map();
-    players.rows.forEach((p) => {
-      if (p.game_id !== null && p.game_id !== undefined) byGameId.set(String(p.game_id).trim(), p);
-      // 群昵称先放，昵称后放 —— 同名时以正式昵称为准
-      if (p.group_nickname) byName.set(key(p.group_nickname), p);
+
+    await ensureIdentityTables(client);
+    const steamRows = await client.query(
+      'SELECT account_id::text AS account, player_id::text AS pid FROM public.player_steam_accounts'
+    );
+    steamRows.rows.forEach((r) => {
+      const p = byId.get(String(r.pid));
+      if (p && r.account) byGameId.set(String(r.account).trim(), p);
     });
-    players.rows.forEach((p) => {
-      if (p.nickname) byName.set(key(p.nickname), p);
+    const nickRows = await client.query(
+      'SELECT nickname, player_id::text AS pid FROM public.player_group_nicknames'
+    );
+    nickRows.rows.forEach((r) => {
+      const p = byId.get(String(r.pid));
+      if (!p || !r.nickname) return;
+      const k = key(r.nickname);
+      if (!byName.has(k)) byName.set(k, []);
+      if (!byName.get(k).some((x) => String(x.id) === String(p.id))) byName.get(k).push(p);
     });
+    // 正式昵称优先级最高：单值覆盖（同名以 players.nickname 为准）
+    players.rows.forEach((p) => {
+      if (p.nickname) byName.set(key(p.nickname), [p]);
+    });
+
+    // 导入过程中攒下的歧义，最后一次性返回给管理员
+    const ambiguous = new Map(); // 名字 → Set(候选人昵称)
 
     const teamRes = await client.query(
       'SELECT id, name, captain_id, rank FROM public.teams WHERE tournament_id = $1',
@@ -110,8 +132,15 @@ export default async function handler(req, res) {
       }
       const nm = String(row.nickname || '').trim();
       if (nm) {
-        const hit = byName.get(key(nm));
-        if (hit) return hit;
+        const hits = byName.get(key(nm)) || [];
+        if (hits.length === 1) return hits[0];
+        if (hits.length > 1) {
+          // 重名：不猜，记下来让管理员自己认
+          const k = key(nm);
+          if (!ambiguous.has(nm)) ambiguous.set(nm, new Set());
+          hits.forEach((h) => ambiguous.get(nm).add(h.nickname));
+          return null;
+        }
       }
       return null;
     };
@@ -377,6 +406,11 @@ export default async function handler(req, res) {
       summary,
       errors: errors.slice(0, 200),
       errorCount: errors.length,
+      // 群昵称重名导致认不出人的，单独列出来 —— 这类不是「失败」，是「需要人工确认」
+      ambiguous: [...ambiguous.entries()].map(([name, candidates]) => ({
+        name,
+        candidates: [...candidates],
+      })),
     });
   } catch (e) {
     try {

@@ -1465,3 +1465,133 @@ button.back-link:hover {
 .modal-card input[type='checkbox'] {
   accent-color: var(--brand-solid);
 }
+
+/* ============================================================
+   多值身份编辑器（SteamID / 群昵称）
+   ------------------------------------------------------------
+   一行一个 + 单选「主」。深色底上要给输入框明确的背景色，
+   否则会退回浏览器默认白底（后台弹窗以前就踩过这个坑）。
+   ============================================================ */
+.id-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-subtle);
+}
+/* 主号那一行左侧加一条金线，一眼看出哪个是主 */
+.id-row-main {
+  border-left: 3px solid var(--gold);
+  padding-left: 4px;
+}
+.id-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  font-size: 11px;
+  color: var(--text-3);
+  cursor: pointer;
+  user-select: none;
+}
+.id-primary input {
+  margin: 0;
+  cursor: pointer;
+}
+.id-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+}
+.id-input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+.id-del {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.id-del:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.id-add {
+  align-self: flex-start;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  padding: 5px 11px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.id-add:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.id-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.id-warn {
+  flex: none;
+  font-size: 11px;
+  color: var(--accent);
+}
+.id-hint {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+/* 公开资料页的只读展示：一行列出全部，主号带标记 */
+.id-view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.id-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  color: var(--text-2);
+}
+.id-chip.is-main {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.id-chip-tag {
+  font-family: var(--font-sans, inherit);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}

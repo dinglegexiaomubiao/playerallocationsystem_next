@@ -20,6 +20,7 @@
  */
 import { denyIfNotAdmin } from '../../../lib/auth';
 import { pool } from '../../../lib/db';
+import { ensureIdentityTables, syncPrimary } from '../../../lib/player-identity';
 import listCache from '../../../lib/list-cache';
 
 // 这些表直接把 player_id 改指 keep；有唯一约束的另外处理去重
@@ -380,7 +381,51 @@ export default async function handler(req, res) {
         dropId,
       ]);
 
-      // ---------- 8. 删掉并入方 ----------
+      // ---------- 8. 身份子表：SteamID 与群昵称一起搬 ----------
+      await ensureIdentityTables(client);
+
+      // 先把并入方的主号标记清掉，否则搬过去会和保留方的主号撞唯一索引
+      await client.query('UPDATE public.player_steam_accounts SET is_primary = false WHERE player_id = $1', [dropId]);
+      await client.query('UPDATE public.player_group_nicknames SET is_primary = false WHERE player_id = $1', [dropId]);
+
+      // SteamID：account_id 全局唯一，保留方已有的同号直接丢弃，其余改指
+      const steamMoved = await client.query(
+        `UPDATE public.player_steam_accounts s SET player_id = $1
+          WHERE s.player_id = $2
+            AND NOT EXISTS (SELECT 1 FROM public.player_steam_accounts k
+                             WHERE k.player_id = $1 AND k.account_id = s.account_id)`,
+        [keepId, dropId]
+      );
+      await client.query('DELETE FROM public.player_steam_accounts WHERE player_id = $1', [dropId]);
+
+      // 群昵称：同一个人不能登记同一条（归一化后比较），重复的丢掉
+      const nickMoved = await client.query(
+        `UPDATE public.player_group_nicknames n SET player_id = $1
+          WHERE n.player_id = $2
+            AND NOT EXISTS (SELECT 1 FROM public.player_group_nicknames k
+                             WHERE k.player_id = $1
+                               AND lower(regexp_replace(btrim(k.nickname), '\\s+', '', 'g'))
+                                 = lower(regexp_replace(btrim(n.nickname), '\\s+', '', 'g')))`,
+        [keepId, dropId]
+      );
+      await client.query('DELETE FROM public.player_group_nicknames WHERE player_id = $1', [dropId]);
+
+      // 保留方如果一条主号都没有（并入方也没主号），把第一条提上来
+      await client.query(
+        `UPDATE public.player_steam_accounts SET is_primary = true
+          WHERE id = (SELECT id FROM public.player_steam_accounts WHERE player_id = $1 ORDER BY id LIMIT 1)
+            AND NOT EXISTS (SELECT 1 FROM public.player_steam_accounts WHERE player_id = $1 AND is_primary)`,
+        [keepId]
+      );
+      await client.query(
+        `UPDATE public.player_group_nicknames SET is_primary = true
+          WHERE id = (SELECT id FROM public.player_group_nicknames WHERE player_id = $1 ORDER BY id LIMIT 1)
+            AND NOT EXISTS (SELECT 1 FROM public.player_group_nicknames WHERE player_id = $1 AND is_primary)`,
+        [keepId]
+      );
+      await syncPrimary(client, keepId);
+
+      // ---------- 9. 删掉并入方 ----------
       await client.query('DELETE FROM public.players WHERE id = $1', [dropId]);
 
       await client.query('COMMIT');
@@ -399,6 +444,8 @@ export default async function handler(req, res) {
           开黑报名: moved.party_signups || 0,
           队长身份: cap.rowCount,
           登录账号: accMoved.rowCount,
+          SteamID: steamMoved.rowCount,
+          群昵称: nickMoved.rowCount,
         },
         // 去重删掉的行数，让管理员知道「少了几条」不是丢数据
         deduped: {

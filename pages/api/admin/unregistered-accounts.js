@@ -13,6 +13,12 @@
  */
 import { getSession, isAdminName } from '../../../lib/auth';
 import { pool } from '../../../lib/db';
+import {
+  ensureIdentityTables,
+  listIdentities,
+  replaceIdentities,
+  playerIdBySteamId,
+} from '../../../lib/player-identity';
 
 /* Steam 昵称走进程内缓存：后台一进去就拉 5 次 OpenDota 太慢，
    而这些名字几乎不变。进程重启后重新拉，可接受。 */
@@ -47,16 +53,18 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const client = await pool.connect();
     try {
+      await ensureIdentityTables(client);
       const rows = await client.query(
         `SELECT mp.account_id,
                 count(*)::int AS games,
                 array_agg(DISTINCT t.name) AS tournaments,
                 count(*) FILTER (WHERE mp.is_standin)::int AS standin_games,
-                -- 有些人早就绑了 SteamID，只是历史比赛明细漏回填。
+                -- 有些人早就登记过这个号（主号或副号），只是历史比赛明细漏回填。
                 -- 这种不是「未登记」，只需要补关联，不该出现在补录分支里。
                 (SELECT json_build_object('id', p.id::text, 'nickname', p.nickname)
-                   FROM public.players p
-                  WHERE p.game_id = mp.account_id
+                   FROM public.player_steam_accounts s
+                   JOIN public.players p ON p.id = s.player_id
+                  WHERE s.account_id = mp.account_id
                   LIMIT 1) AS owner
            FROM public.dota_match_players mp
            JOIN public.matches m ON m.dota_match_id = mp.match_id
@@ -110,21 +118,18 @@ export default async function handler(req, res) {
 
     const client = await pool.connect();
     try {
+      await ensureIdentityTables(client);
       await client.query('BEGIN');
 
-      // 一号只能绑一个人：先查占用
-      const taken = await client.query('SELECT id, nickname, game_id FROM public.players WHERE game_id = $1', [acc]);
-      if (taken.rowCount > 0) {
-        const owner = taken.rows[0];
-        // 传的就是这个号本人 → 说明只是明细漏关联，走回填而不是拒绝
-        const isSame = playerId && String(playerId) === String(owner.id);
-        if (!isSame) {
-          await client.query('ROLLBACK');
-          return res.status(409).json({
-            ok: false,
-            error: `该 Steam 账号已被「${owner.nickname}」绑定。如需修改，请尽快联系 dom 处理。`,
-          });
-        }
+      // 一号只能归一个人：查全部 SteamID（主号或副号），不再只看 players.game_id
+      const ownerId = await playerIdBySteamId(client, acc);
+      if (ownerId && !(playerId && String(playerId) === String(ownerId))) {
+        const owner = await client.query('SELECT nickname FROM public.players WHERE id = $1', [ownerId]);
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          ok: false,
+          error: `该 Steam 账号已经登记在「${owner.rows[0]?.nickname || '未命名'}」名下（可能是副号）。要挪过来请先在对方资料里删掉。`,
+        });
       }
 
       let targetId = playerId ? String(playerId) : null;
@@ -143,27 +148,30 @@ export default async function handler(req, res) {
           [nick, acc, new Date().toISOString()]
         );
         targetId = String(ins.rows[0].id);
+        await replaceIdentities(client, targetId, {
+          steamIds: [acc],
+          nicknames: [],
+          source: 'admin',
+        });
       } else {
-        // 绑定到已有群友：目标不能再有别的 SteamID，否则等于静默覆盖
-        const cur = await client.query('SELECT game_id FROM public.players WHERE id = $1', [targetId]);
-        if (cur.rowCount === 0) {
+        // 绑定到已有群友：不再因为「已经有别的号」而拒绝 —— 这个号直接加为副号。
+        // 第一个人号自动当主号，之后的都算副号（用户可以事后在资料里改主号）。
+        const exists = await client.query('SELECT id FROM public.players WHERE id = $1', [targetId]);
+        if (exists.rowCount === 0) {
           await client.query('ROLLBACK');
           return res.status(404).json({ ok: false, error: '群友不存在' });
         }
-        if (cur.rows[0].game_id) {
-          // 同一个账号 → 只是回填明细，放行；不同账号才拒绝
-          if (String(cur.rows[0].game_id) !== acc) {
-            await client.query('ROLLBACK');
-            return res.status(409).json({
-              ok: false,
-              error: '该群友已绑定其它 Steam 账号，多账号绑定请等「常用号」功能上线',
-            });
-          }
-        } else {
-          await client.query(
-            'UPDATE public.players SET game_id = $1, updated_at = $2 WHERE id = $3',
-            [acc, new Date().toISOString(), targetId]
-          );
+        const cur = await listIdentities(client, targetId);
+        const already = cur.steam.some((s) => String(s.accountId) === acc);
+        if (!already) {
+          await replaceIdentities(client, targetId, {
+            steamIds: [
+              ...cur.steam.map((s) => ({ accountId: s.accountId, isPrimary: s.isPrimary })),
+              { accountId: acc, isPrimary: cur.steam.length === 0 },
+            ],
+            nicknames: cur.nicknames.map((n) => ({ nickname: n.nickname, isPrimary: n.isPrimary })),
+            source: 'admin',
+          });
         }
       }
 

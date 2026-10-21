@@ -176,10 +176,50 @@ export default function MemberDetail() {
             <Avatar className="detail-avatar" src={player.avatar} name={player.nickname} eager />
             <div>
               <h1 style={{ fontSize: '1.9rem' }}>{player.nickname || '未命名'}</h1>
+              {/* 身份可能是多个：SteamID 与群昵称都全部列出，主号带「主」标记。
+                  卡片（PlayerCard）只显示主号，避免列表被撑高。 */}
               <div className="detail-sub">
-                steamID {player.game_id || '—'}
-                {player.group_nickname ? ' · 群昵称 ' + player.group_nickname : ''}
+                {(() => {
+                  const list = (player.steamIds && player.steamIds.length
+                    ? player.steamIds
+                    : player.game_id
+                      ? [{ accountId: String(player.game_id), isPrimary: true }]
+                      : []);
+                  if (list.length === 0) return 'steamID —';
+                  return (
+                    <span className="id-view">
+                      <span style={{ opacity: 0.75 }}>steamID</span>
+                      {list.map((s, i) => (
+                        <span className={`id-chip${s.isPrimary ? ' is-main' : ''}`} key={i}>
+                          {s.accountId}
+                          {s.isPrimary && <i className="id-chip-tag">主</i>}
+                        </span>
+                      ))}
+                    </span>
+                  );
+                })()}
               </div>
+              {(() => {
+                const nicks = player.groupNicknames && player.groupNicknames.length
+                  ? player.groupNicknames
+                  : player.group_nickname
+                    ? [{ nickname: player.group_nickname, isPrimary: true }]
+                    : [];
+                if (nicks.length === 0) return null;
+                return (
+                  <div className="detail-sub">
+                    <span className="id-view">
+                      <span style={{ opacity: 0.75 }}>群昵称</span>
+                      {nicks.map((n, i) => (
+                        <span className={`id-chip${n.isPrimary ? ' is-main' : ''}`} key={i}>
+                          {n.nickname}
+                          {n.isPrimary && <i className="id-chip-tag">主</i>}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="detail-score">
               <div className="n">{score}</div>

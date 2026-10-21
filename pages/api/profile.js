@@ -2,7 +2,14 @@
 // GET：返回当前用户的选手资料 + 比赛履历（名次/担任位置）+ 可选地区列表
 // PUT：更新当前用户的选手资料（地区/分数/位置/英雄/评价/默契队友/仇人）
 import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions, ensurePlayerTextColumns, ensureTournamentSchema } from '../../lib/db';
+import {
+  ensureIdentityTables,
+  listIdentities,
+  replaceIdentities,
+  IdentityError,
+} from '../../lib/player-identity';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
+import listCache from '../../lib/list-cache';
 
 // 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
 // 直接返回原始行会让前端把它们当数组用（.join / [0] 全都会出错），这里统一成数组。
@@ -49,10 +56,17 @@ export default async function handler(req, res) {
       }
       const tournaments = await getPlayerTournaments(playerId);
       const regions = await getDistinctRegions();
+      // 一个群友可以有多个 SteamID / 多个群昵称，全部带出去给编辑页用
+      await ensureIdentityTables(client);
+      const identities = await listIdentities(client, playerId);
       return res.status(200).json({
         success: true,
         bound: true,
-        profile: shapePlayer(ply.rows[0]),
+        profile: {
+          ...shapePlayer(ply.rows[0]),
+          steamIds: identities.steam,
+          groupNicknames: identities.nicknames,
+        },
         tournaments,
         regions,
       });
@@ -65,10 +79,30 @@ export default async function handler(req, res) {
       const body = req.body || {};
       // heroes 原来是 varchar(50)，多选英雄会超长，先确保已放宽为 text
       await ensurePlayerTextColumns();
+      await ensureIdentityTables(client);
       const ply = await client.query('SELECT * FROM public.players WHERE id = $1', [playerId]);
       const cur = ply.rows[0];
       if (!cur) {
         return res.status(404).json({ success: false, error: '选手资料不存在' });
+      }
+
+      // ---------- 多值身份（SteamID / 群昵称）----------
+      // 自助场景传 requirePrimary：主号只能「替换」不能直接删空，
+      // 否则头像、战绩、赛程会集体失联，用户还不知道自己干了什么。
+      if (Array.isArray(body.steamIds) || Array.isArray(body.groupNicknames)) {
+        try {
+          await replaceIdentities(client, playerId, {
+            steamIds: body.steamIds,
+            nicknames: body.groupNicknames,
+            source: 'self',
+            requirePrimary: true,
+          });
+        } catch (e) {
+          if (e instanceof IdentityError) {
+            return res.status(400).json({ success: false, error: e.message, code: e.code });
+          }
+          throw e;
+        }
       }
 
       // 只允许更新资料字段，game_id / nickname 等标识由注册时确定
@@ -124,6 +158,8 @@ export default async function handler(req, res) {
         enemies: body.enemies !== undefined ? body.enemies : cur.enemies,
         updated_at: new Date().toISOString(),
       });
+      // 群友列表带了头像/分数/身份，改完要立刻失效，否则公开页最多 45 秒看不到新号
+      listCache.clear('playersList');
       return res.status(200).json({ success: true, profile: updated });
     }
 

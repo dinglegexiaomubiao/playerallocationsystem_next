@@ -9,6 +9,7 @@ import {
   pool,
 } from '../../lib/db';
 import { denyIfNotAdmin } from '../../lib/auth';
+import { ensureIdentityTables, identitiesForPlayers } from '../../lib/player-identity';
 import listCache from '../../lib/list-cache';
 
 // ===== 列表结果的内存缓存 =====
@@ -166,6 +167,30 @@ export default async function handler(req, res) {
           };
         });
 
+        // 多值身份：全部 SteamID / 全部群昵称。
+        // 个人详情页要公开显示，卡片只取主号（也就是 players.game_id / group_nickname）。
+        try {
+          await ensureIdentityTables(pool);
+          const identityMap = await identitiesForPlayers(
+            pool,
+            formattedPlayers.map((p) => String(p.id))
+          );
+          formattedPlayers.forEach((p) => {
+            const id = identityMap.get(String(p.id)) || { steam: [], nicknames: [] };
+            p.steamIds = id.steam;            // [{ accountId, isPrimary }]
+            p.groupNicknames = id.nicknames;  // [{ nickname, isPrimary }]
+          });
+        } catch (e) {
+          // 身份表还没建好也不该让整个群友列表挂掉，退回单值
+          console.error('附加多值身份失败（列表仍返回单值）:', e.message);
+          formattedPlayers.forEach((p) => {
+            p.steamIds = p.game_id ? [{ accountId: String(p.game_id), isPrimary: true }] : [];
+            p.groupNicknames = p.group_nickname
+              ? [{ nickname: p.group_nickname, isPrimary: true }]
+              : [];
+          });
+        }
+
         writeListCache(cacheKey, formattedPlayers);
         res.status(200).json({ success: true, players: formattedPlayers });
       } catch (error) {
@@ -186,7 +211,13 @@ export default async function handler(req, res) {
         res.status(201).json({ success: true, player: newPlayer });
       } catch (error) {
         console.error('创建选手错误:', error);
-        res.status(500).json({ success: false, error: '创建选手失败' });
+        // SteamID 被别人占用这类是可修正的输入问题，回 400 并把原因带给前端
+        const code = error && error.name === 'IdentityError' ? 400 : 500;
+        res.status(code).json({
+          success: false,
+          error: code === 400 ? error.message : '创建选手失败',
+          code: error && error.code,
+        });
       }
       break;
 
@@ -231,7 +262,12 @@ export default async function handler(req, res) {
         res.status(200).json({ success: true, player: updatedPlayer });
       } catch (error) {
         console.error('更新选手错误:', error);
-        res.status(500).json({ success: false, error: `更新选手失败: ${error.message}` });
+        const isIdentity = error && error.name === 'IdentityError';
+        res.status(isIdentity ? 400 : 500).json({
+          success: false,
+          error: isIdentity ? error.message : `更新选手失败: ${error.message}`,
+          code: error && error.code,
+        });
       }
       break;
 

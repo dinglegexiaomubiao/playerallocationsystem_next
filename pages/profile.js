@@ -8,6 +8,7 @@ import PlayerBind from '../components/PlayerBind';
 import MyTournamentTable from '../components/MyTournamentTable';
 import OrderedChips from '../components/OrderedChips';
 import PositionPicker from '../components/PositionPicker';
+import IdentityEditor from '../components/IdentityEditor';
 import HeroPicker from '../components/HeroPicker';
 import { mergeMyTournaments } from '../lib/tournament-format.mjs';
 
@@ -56,6 +57,15 @@ export default function Profile() {
           if (d.profile) {
             setForm({
               group_nickname: d.profile.group_nickname || '',
+              // 多值身份：一个群友可以有多个 SteamID / 多个群昵称
+              steam_ids: (d.profile.steamIds || []).map((s) => ({
+                value: String(s.accountId),
+                isPrimary: !!s.isPrimary,
+              })),
+              group_nicknames_all: (d.profile.groupNicknames || []).map((n) => ({
+                value: n.nickname,
+                isPrimary: !!n.isPrimary,
+              })),
               region: d.profile.region || '',
               score: d.profile.score ?? '',
               peak_score: d.profile.peak_score ?? '',
@@ -125,8 +135,27 @@ export default function Profile() {
 
     setSaving(true);
     setMsg('');
+    // 身份数组里可能有空行（点了「添加」还没填），先滤掉再提交
+    const steamIds = (form.steam_ids || [])
+      .map((s) => ({ accountId: String(s.value ?? '').trim(), isPrimary: !!s.isPrimary }))
+      .filter((s) => s.accountId);
+    const badId = steamIds.find((s) => !/^\d+$/.test(s.accountId));
+    if (badId) {
+      setMsg(`SteamID「${badId.accountId}」只能是数字（Steam 好友码）`);
+      return;
+    }
+    const groupNicknames = (form.group_nicknames_all || [])
+      .map((n) => ({ nickname: String(n.value ?? '').trim(), isPrimary: !!n.isPrimary }))
+      .filter((n) => n.nickname);
+    if (groupNicknames.length === 0) {
+      setMsg('群昵称至少要留一个');
+      return;
+    }
+
     const body = {
-      group_nickname: form.group_nickname || null,
+      group_nickname: groupNicknames.find((n) => n.isPrimary)?.nickname || groupNicknames[0].nickname,
+      steamIds,
+      groupNicknames,
       region: form.region || null,
       score: form.score === '' || form.score === null ? null : Number(form.score),
       peak_score: form.peak_score === '' || form.peak_score === null ? null : Number(form.peak_score),
@@ -213,11 +242,29 @@ export default function Profile() {
           {editing ? (
             <div className="side-card" style={{ marginBottom: 22 }}>
               <h4>编辑资料</h4>
+              {/* 群昵称与 SteamID 都是「一或多」：改名/换号时把旧的也留着，
+                  导入和赛程认人时多一个匹配路径。主号决定头像与战绩取自哪个号。 */}
+              <div className="form-field" style={{ marginBottom: 16 }}>
+                <label>群昵称（可多个）</label>
+                <IdentityEditor
+                  kind="nickname"
+                  items={form.group_nicknames_all || []}
+                  onChange={(next) => setForm((prev) => ({ ...prev, group_nicknames_all: next }))}
+                  hint="「主」是群友卡片和列表上显示的那个。改过群名片就把旧的也留着，方便从 Excel 认人。"
+                />
+              </div>
+
+              <div className="form-field" style={{ marginBottom: 16 }}>
+                <label>SteamID（可多个）</label>
+                <IdentityEditor
+                  kind="steam"
+                  items={form.steam_ids || []}
+                  onChange={(next) => setForm((prev) => ({ ...prev, steam_ids: next }))}
+                  hint="填 Steam 好友码（纯数字）。主号决定头像与天梯分；主号只能替换不能删空，要换号请先添加新的再设为主。"
+                />
+              </div>
+
               <div className="form-row" style={{ marginBottom: 14 }}>
-                <div className="form-field">
-                  <label>群昵称</label>
-                  <input value={form.group_nickname || ''} onChange={(e) => setForm({ ...form, group_nickname: e.target.value })} />
-                </div>
                 <div className="form-field">
                   <label>所处地区（可选已有或新增）</label>
                   <input list="region-options" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="选择或输入新地区" />
