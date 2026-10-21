@@ -5,7 +5,12 @@
    圆角克制 / 编辑式排版。详见 styles/tokens.md
    令牌改动会影响全站，改之前先想清楚作用面。
    ============================================================ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* 不再从 Google Fonts 拉 Inter。
+   原因（2026-10 实测）：这个 @import 会让浏览器先渲染系统字体、4 秒后才换上 Inter，
+   首屏必然发生一次字体替换（CLS）；而国内网络基本拉不到 fonts.googleapis.com，
+   等于多数用户永远看到 fallback，只有少数人看到「字体闪一下再变样」。
+   Inter 本身不含中日韩字形，中文一直是系统字体，去掉它只影响拉丁字母与数字。
+   --font-sans 仍把 'Inter' 放在首位：本机装了 Inter 的人照样能用到。 */
 
 /* 页面间高度不同：滚动条出现/消失会让整个版心横向抖一下。
    实测：无此设置时 1440 视口下内容区在 1440 / 1432 之间跳，居中容器左右各移 4px。
@@ -21,60 +26,7 @@ html {
   }
 }
 
-:root {
-  /* —— 底色：炭黑偏暖 —— */
-  --bg-page: #17130f;
-  --bg-card: #1e1915;
-  --bg-subtle: #221c17;
-  --bg-sunk: #12100c;
 
-  /* —— 品牌：低饱和深红 —— */
-  --brand: #c9867c;            /* 文字/链接用，保证深底可读 */
-  --brand-dark: #b8776e;
-  --brand-soft: rgba(142, 58, 53, 0.16);
-  --accent: #c9867c;           /* 品牌点缀，与 brand 同源 */
-  --accent-soft: rgba(142, 58, 53, 0.14);
-  /* 实底用深红：文字用 brand（提亮），实心块用 brand-solid（压深） */
-  --brand-solid: #8e3a35;
-  --brand-solid-hover: #6d2b27;
-
-  /* —— 荣誉：古铜金，只给名次与奖赏 —— */
-  --gold: #d6b47b;
-  --gold-soft: rgba(176, 141, 87, 0.12);
-  --green-soft: rgba(147, 168, 126, 0.14);
-  --ok: #93a87e;               /* 唯一保留的绿色，只用于「进行中/活跃」状态点 */
-
-  /* —— 文字：暖白灰阶 —— */
-  --text: #f0eae2;
-  --text-2: #ada298;
-  --text-3: #7b716a;
-
-  /* —— 分隔线 —— */
-  --border: #352d26;
-  --border-strong: #4a3f36;
-
-  /* —— 圆角：克制，圆角不当装饰 —— */
-  --radius-sm: 4px;
-  --radius: 8px;
-  --radius-lg: 12px;
-
-  /* —— 阴影：深色底只做层次，不做发光 —— */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 14px 34px rgba(0, 0, 0, 0.45);
-
-  --maxw: 1320px;
-  /* 布局骨架令牌（安全边界统一走这几个值，别再各页写死） */
-  --nav-h: 64px;
-  --card-pad: 20px;
-  --gutter: 18px;
-
-  /* 字体三档：衬线（标题）/ 无衬线（正文）/ 等宽（数值） */
-  --font-serif: 'Songti SC', 'STSong', 'Noto Serif SC', 'SimSun', Georgia, serif;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  --font-mono: 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', Consolas, Monaco, monospace;
-}
 
 .site-root {
   min-height: 100vh;

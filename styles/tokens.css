@@ -1,0 +1,114 @@
+/* ============================================================
+   设计令牌（唯一来源）
+   ------------------------------------------------------------
+   必须是 pages/_app.js 里第一个引入的样式表。其余样式表都引用这里的变量。
+
+   原先 globals.css 与 layout.css 各有一个 :root，同名变量靠加载顺序决胜负，
+   改一处经常「看起来没生效」。现在收敛成这一份，说明见 styles/tokens.md。
+   ============================================================ */
+:root {
+  /* 主色：低饱和深红。primary 用于实底，primary-light 用于文字/链接 */
+  --color-primary: #8e3a35;
+  --color-primary-light: #c9867c;
+  --color-primary-dark: #6d2b27;
+  --color-primary-bg: rgba(142, 58, 53, 0.14);
+  --color-primary-bg-light: rgba(142, 58, 53, 0.08);
+  --color-primary-border: rgba(142, 58, 53, 0.42);
+  --color-primary-border-light: rgba(142, 58, 53, 0.26);
+
+  /* 危险色：比品牌红更亮一档，避免和品牌色混淆 */
+  --color-danger: #d05044;
+  --color-danger-light: #e07a6f;
+  --color-danger-dark: #a83a31;
+  --color-danger-bg: rgba(208, 80, 68, 0.14);
+  --color-danger-border: rgba(208, 80, 68, 0.38);
+
+  --color-success: #93a87e;
+  --color-success-light: #a9bd95;
+  --color-success-bg: rgba(147, 168, 126, 0.14);
+
+  --color-warning: #d6b47b;
+  --color-warning-bg: rgba(176, 141, 87, 0.14);
+  --color-warning-border: rgba(176, 141, 87, 0.4);
+
+  --color-text: #f0eae2;
+  --color-text-secondary: #ada298;
+  --color-text-muted: #7b716a;
+  --color-text-dark: #f0eae2;
+  --color-text-body: #ada298;
+
+  --color-bg: #1e1915;
+  --color-bg-secondary: #221c17;
+  --color-bg-hover: rgba(240, 232, 220, 0.04);
+  --color-bg-overlay: rgba(10, 8, 6, 0.72);
+  --color-bg-page-start: #17130f;
+  --color-bg-page-mid1: #17130f;
+  --color-bg-page-mid2: #18140f;
+  --color-bg-page-end: #17130f;
+
+  /* 段位色：原先是一套蓝/紫/绿，与「不要紫蓝」冲突，统一收进暖色系 */
+  --color-score-master: #c9867c;
+  --color-score-master-bg: rgba(142, 58, 53, 0.16);
+  --color-score-master-text: #d99a90;
+  --color-score-diamond: #b08d57;
+  --color-score-diamond-bg: rgba(176, 141, 87, 0.14);
+  --color-score-diamond-text: #d6b47b;
+  --color-score-platinum: #9d9287;
+  --color-score-platinum-bg: rgba(157, 146, 135, 0.13);
+  --color-score-platinum-text: #c0b5a8;
+  --color-score-gold: #93a87e;
+  --color-score-gold-bg: rgba(147, 168, 126, 0.14);
+  --color-score-gold-text: #a9bd95;
+  --color-score-silver: #7b716a;
+  --color-score-silver-bg: rgba(123, 113, 106, 0.14);
+  --color-score-silver-text: #a49a92;
+
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 12px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 14px 34px rgba(0, 0, 0, 0.45);
+  --shadow-xl: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-primary: 0 2px 8px rgba(142, 58, 53, 0.24);
+  --shadow-primary-hover: 0 4px 16px rgba(142, 58, 53, 0.34);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.2s ease;
+  --transition-smooth: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ==== 以下来自 layout.css（globals 里没有的）==== */
+  --bg-page: #17130f;
+  --bg-card: #1e1915;
+  --bg-subtle: #221c17;
+  --bg-sunk: #12100c;
+  --brand: #c9867c;
+  --brand-dark: #b8776e;
+  --brand-soft: rgba(142, 58, 53, 0.16);
+  --accent: #c9867c;
+  --accent-soft: rgba(142, 58, 53, 0.14);
+  --brand-solid: #8e3a35;
+  --brand-solid-hover: #6d2b27;
+  --gold: #d6b47b;
+  --gold-soft: rgba(176, 141, 87, 0.12);
+  --green-soft: rgba(147, 168, 126, 0.14);
+  --ok: #93a87e;
+  --text: #f0eae2;
+  --text-2: #ada298;
+  --text-3: #7b716a;
+  --border: #352d26;
+  --border-strong: #4a3f36;
+  --radius: 8px;
+  --shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --maxw: 1320px;
+  --nav-h: 64px;
+  --card-pad: 20px;
+  --gutter: 18px;
+  --font-serif: 'Songti SC', 'STSong', 'Noto Serif SC', 'SimSun', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'SF Mono', 'JetBrains Mono', 'Cascadia Mono', Consolas, Monaco, monospace;
+}

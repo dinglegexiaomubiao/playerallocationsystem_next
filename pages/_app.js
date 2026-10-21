@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+// 设计令牌必须最先加载：其余样式表都引用这里的 CSS 变量
+import '../styles/tokens.css';
 import '../styles/globals.css';
 import '../styles/main/index.css';
 import '../styles/layout.css';
