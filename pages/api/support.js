@@ -3,6 +3,7 @@ import {
   insertSupportReport,
   countRecentSimilarReports,
   listSupportReports,
+  listMySupportReports,
   updateSupportReport,
   ensureSupportTable,
 } from '../../lib/db';
@@ -80,6 +81,16 @@ const clip = (v, n) => {
   return s ? s.slice(0, n) : null;
 };
 
+// 前端生成的设备串。只放行字母数字与短横，长度受限 ——
+// 它会被当成查询条件用，不能给它任何 SQL / 通配的余地。
+const TOKEN_RE = /^[A-Za-z0-9_-]{8,64}$/;
+const cleanToken = (v) => {
+  const s = typeof v === 'string' ? v.trim() : '';
+  return TOKEN_RE.test(s) ? s : null;
+};
+
+const STATUSES = ['new', 'doing', 'done', 'ignored'];
+
 export default async function handler(req, res) {
   try {
     await ensureSupportTable();
@@ -139,6 +150,7 @@ export default async function handler(req, res) {
         platform: parsePlatform(req.headers['user-agent']),
         ip,
         contact: clip(b.contact, 120),
+        client_token: cleanToken(b.client_token),
       });
     } catch (e) {
       console.error('写入售后表失败:', e);
@@ -185,8 +197,26 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, id: saved.id, notified: notify.ok });
   }
 
-  // ---------- 列表（管理员） ----------
+  // ---------- 列表（管理员 / 我的反馈） ----------
   if (req.method === 'GET') {
+    // 用户端「我的反馈」：不需要管理员权限，但要限定在自己名下。
+    // 登录的按账号认（换设备也能看到），未登录的按设备串认。
+    // 两者都为空时直接返回空列表，绝不退化成「查全表」。
+    const mine = req.query.mine === '1' || req.query.mine === 'true';
+    if (mine) {
+      try {
+        const reports = await listMySupportReports({
+          account: session ? session.name : null,
+          token: cleanToken(req.query.token),
+          limit: 30,
+        });
+        return res.status(200).json({ success: true, reports });
+      } catch (e) {
+        console.error('读取我的反馈失败:', e);
+        return res.status(500).json({ success: false, error: '读取失败' });
+      }
+    }
+
     if (denyIfNotAdmin(req, res, '仅管理员可查看售后工单')) return;
     const { kind, status, limit, offset } = req.query;
     try {
@@ -198,14 +228,35 @@ export default async function handler(req, res) {
     }
   }
 
-  // ---------- 改状态（管理员） ----------
+  // ---------- 改状态 / 留言（管理员） ----------
   if (req.method === 'PATCH') {
     if (denyIfNotAdmin(req, res, '仅管理员可处理工单')) return;
-    const { id, status } = req.body || {};
-    if (!id || !status) {
-      return res.status(400).json({ success: false, error: '缺少 id 或 status' });
+    const b = req.body || {};
+    const { id } = b;
+    if (!id) {
+      return res.status(400).json({ success: false, error: '缺少 id' });
     }
-    const ok = await updateSupportReport(id, { status: clip(status, 20) });
+
+    const patch = {};
+    if (b.status !== undefined && b.status !== null && b.status !== '') {
+      if (!STATUSES.includes(b.status)) {
+        return res.status(400).json({ success: false, error: '状态值不合法' });
+      }
+      patch.status = b.status;
+    }
+    // reply 传了才改（用于区分「没提这件事」和「清空留言」）
+    if (Object.prototype.hasOwnProperty.call(b, 'reply')) {
+      if (b.reply !== null && typeof b.reply !== 'string') {
+        return res.status(400).json({ success: false, error: '留言内容格式不对' });
+      }
+      patch.reply = b.reply === null ? '' : b.reply;
+      patch.replied_by = session ? session.name : 'admin';
+    }
+    if (!Object.keys(patch).length) {
+      return res.status(400).json({ success: false, error: '没有要更新的内容' });
+    }
+
+    const ok = await updateSupportReport(id, patch);
     return res.status(ok ? 200 : 404).json({ success: ok });
   }
 

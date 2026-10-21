@@ -92,10 +92,26 @@ function FeedbackPanel({ data }) {
   const [handled, setHandled] = useState(0);
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState('');
+  // 就地回复：展开某一行、写留言、连状态一起提交，不必跳去 /admin/support
+  const [openId, setOpenId] = useState(null);
+  const [draft, setDraft] = useState('');
+  const [draftStatus, setDraftStatus] = useState('new');
+  const [savedId, setSavedId] = useState(null);
 
   const pending = Math.max(((data && data.pending) || 0) - handled, 0);
   const total = (data && data.total) || 0;
   const errorNew = (data && data.errorNew) || 0;
+
+  const expand = (r) => {
+    if (String(openId) === String(r.id)) {
+      setOpenId(null);
+      return;
+    }
+    setOpenId(r.id);
+    setDraft(r.reply || '');
+    setDraftStatus(r.status || 'new');
+    setErr('');
+  };
 
   const markDone = async (id) => {
     setBusy(id);
@@ -110,6 +126,45 @@ function FeedbackPanel({ data }) {
       setBusy(null);
     }
   };
+
+  // 状态进 done / ignored 时这条就不再属于「待处理」，从首屏撤下；
+  // 存成 doing 则留在原位并把徽标换掉 —— 否则管理员会以为没保存成功。
+  const save = async (r) => {
+    setBusy(r.id);
+    setErr('');
+    try {
+      await apiFetch('/api/support', {
+        method: 'PATCH',
+        body: { id: r.id, status: draftStatus, reply: draft.trim() },
+      });
+      if (draftStatus === 'done' || draftStatus === 'ignored') {
+        setItems((list) => list.filter((x) => String(x.id) !== String(r.id)));
+        setHandled((n) => n + 1);
+        setOpenId(null);
+      } else {
+        setItems((list) =>
+          list.map((x) =>
+            String(x.id) === String(r.id)
+              ? { ...x, status: draftStatus, reply: draft.trim() || null }
+              : x
+          )
+        );
+        setSavedId(r.id);
+        setTimeout(() => setSavedId((cur) => (String(cur) === String(r.id) ? null : cur)), 2400);
+      }
+    } catch (e) {
+      setErr(e.message || '保存失败');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const STATUS_CHIPS = [
+    ['new', '待处理'],
+    ['doing', '处理中'],
+    ['done', '已处理'],
+    ['ignored', '不处理'],
+  ];
 
   return (
     <div className="adm-fb" id="adm-feedback">
@@ -135,7 +190,7 @@ function FeedbackPanel({ data }) {
         </div>
       ) : (
         items.map((r) => (
-          <div className="adm-fb-row" key={r.id}>
+          <div className={'adm-fb-row' + (String(openId) === String(r.id) ? ' is-open' : '')} key={r.id}>
             <span className="adm-fb-cat">{FB_CATEGORY[r.category] || '反馈'}</span>
             <span className="adm-fb-msg" title={r.message || ''}>
               {clip(r.message, FB_MSG_MAX) || '（无描述）'}
@@ -145,14 +200,62 @@ function FeedbackPanel({ data }) {
               {fbPage(r.page_url) ? ' · ' + fbPage(r.page_url) : ''}
               {fbTime(r.created_at) ? ' · ' + fbTime(r.created_at) : ''}
             </span>
-            <button
-              type="button"
-              className="adm-link-btn adm-fb-done"
-              onClick={() => markDone(r.id)}
-              disabled={busy !== null}
-            >
-              {String(busy) === String(r.id) ? '处理中…' : '标记已处理'}
-            </button>
+            <span className="adm-fb-acts">
+              <button
+                type="button"
+                className="adm-link-btn"
+                onClick={() => expand(r)}
+                disabled={busy !== null}
+              >
+                {String(openId) === String(r.id) ? '收起' : r.reply ? '改回复' : '回复'}
+              </button>
+              <button
+                type="button"
+                className="adm-link-btn adm-fb-done"
+                onClick={() => markDone(r.id)}
+                disabled={busy !== null}
+              >
+                {String(busy) === String(r.id) ? '处理中…' : '标记已处理'}
+              </button>
+            </span>
+
+            {String(openId) === String(r.id) && (
+              <div className="adm-fb-replybox">
+                <div className="adm-fb-status">
+                  {STATUS_CHIPS.map(([v, label]) => (
+                    <button
+                      type="button"
+                      key={v}
+                      className={'chip chip-sm' + (draftStatus === v ? ' active' : '')}
+                      onClick={() => setDraftStatus(v)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  className="sup-reply-input"
+                  rows={3}
+                  maxLength={2000}
+                  placeholder="给这位群友回一句，会显示在他的「我的反馈」里"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                />
+                <div className="adm-fb-replybar">
+                  {String(savedId) === String(r.id) && <span className="adm-fb-saved">已保存</span>}
+                  <div style={{ flex: 1 }} />
+                  <span className="adm-fb-count">{draft.length} / 2000</span>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => save(r)}
+                    disabled={busy !== null}
+                  >
+                    {String(busy) === String(r.id) ? '保存中…' : '保存'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))
       )}
@@ -865,6 +968,8 @@ async function loadFeedbackPanel() {
         account_name: r.account_name,
         page_url: r.page_url,
         created_at: r.created_at,
+        status: r.status,
+        reply: r.reply || null,
       })),
       pending: recent.total || 0,
       total: all.total || 0,

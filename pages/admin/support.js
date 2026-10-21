@@ -17,7 +17,13 @@ const CATEGORY_LABEL = {
   bug: '遇到问题',
   feature: '功能建议',
 };
-const STATUS_LABEL = { new: '待处理', doing: '处理中', done: '已处理', ignored: '已忽略' };
+const STATUS_LABEL = { new: '待处理', doing: '处理中', done: '已处理', ignored: '不处理' };
+const STATUS_OPTIONS = [
+  ['new', '待处理'],
+  ['doing', '处理中'],
+  ['done', '已处理'],
+  ['ignored', '不处理'],
+];
 
 // 时间用绝对时刻（timestamptz），本地格式化即可
 const fmtTime = (v) => {
@@ -41,6 +47,13 @@ export default function AdminSupport({ denied }) {
   const [notify, setNotify] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [openDetail, setOpenDetail] = useState({});
+  // 回复草稿与状态草稿：按 id 存，避免每敲一个字都重排整页。
+  // 值为 undefined 表示「没动过」，显示时回落到库里的值。
+  const [replyDraft, setReplyDraft] = useState({});
+  const [statusDraft, setStatusDraft] = useState({});
+  const [savedId, setSavedId] = useState(null);
+  const [mailMsg, setMailMsg] = useState(null);
+  const [mailBusy, setMailBusy] = useState(false);
 
   // 用 isReady 之后再读 query：首次渲染时 router.query 还是空的，
   // 直接拿来初始化会造成「服务端渲染 A、客户端渲染 B」的 hydration 不一致
@@ -93,6 +106,62 @@ export default function AdminSupport({ denied }) {
     }
   };
 
+  // 保存「状态 + 留言」：一次 PATCH 同时提交，避免出现
+  // 「状态改了、留言没存上」这种一半成功的中间态。
+  const saveReply = async (r) => {
+    const id = r.id;
+    const reply = replyDraft[id] !== undefined ? replyDraft[id] : r.reply || '';
+    const status = statusDraft[id] !== undefined ? statusDraft[id] : r.status || 'new';
+    setBusyId(id);
+    setErr('');
+    try {
+      await apiFetch('/api/support', {
+        method: 'PATCH',
+        body: { id, status, reply: reply.trim() },
+      });
+      const next = {
+        ...r,
+        status,
+        reply: reply.trim() || null,
+        replied_at: reply.trim() ? new Date().toISOString() : null,
+      };
+      setReports((list) => list.map((x) => (String(x.id) === String(id) ? next : x)));
+      setReplyDraft((s) => {
+        const n = { ...s };
+        delete n[id];
+        return n;
+      });
+      setStatusDraft((s) => {
+        const n = { ...s };
+        delete n[id];
+        return n;
+      });
+      setSavedId(id);
+      setTimeout(() => setSavedId((cur) => (String(cur) === String(id) ? null : cur)), 2400);
+    } catch (e) {
+      setErr(e.message || '保存失败');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const testMail = async () => {
+    setMailBusy(true);
+    setMailMsg(null);
+    try {
+      const d = await apiFetch('/api/admin/support-mail-test', { method: 'POST' });
+      setMailMsg(
+        d && d.success
+          ? { ok: true, text: '测试邮件已发出，去 710082349@qq.com 收一下（可能在垃圾箱）' }
+          : { ok: false, text: (d && d.error) || '发送失败' }
+      );
+    } catch (e) {
+      setMailMsg({ ok: false, text: e.message || '发送失败' });
+    } finally {
+      setMailBusy(false);
+    }
+  };
+
   if (denied) {
     return (
       <div className="empty" style={{ padding: '110px 0' }}>
@@ -131,11 +200,17 @@ export default function AdminSupport({ denied }) {
               </p>
             </div>
             <div className="hero-actions">
+              <button type="button" className="btn btn-ghost" onClick={testMail} disabled={mailBusy}>
+                {mailBusy ? '发送中…' : '测试邮件'}
+              </button>
               <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
                 {loading ? '刷新中…' : '刷新'}
               </button>
             </div>
           </div>
+          {mailMsg && (
+            <div className={'sup-mailmsg' + (mailMsg.ok ? ' ok' : ' bad')}>{mailMsg.text}</div>
+          )}
         </div>
       </section>
 
@@ -174,7 +249,7 @@ export default function AdminSupport({ denied }) {
                 ['new', '待处理'],
                 ['doing', '处理中'],
                 ['done', '已处理'],
-                ['ignored', '已忽略'],
+                ['ignored', '不处理'],
               ].map(([v, label]) => (
                 <button
                   type="button"
@@ -247,38 +322,94 @@ export default function AdminSupport({ denied }) {
                   </div>
                 )}
 
-                <div className="sup-actions">
-                  {r.status !== 'done' && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setStatusOf(r.id, 'done')}
-                      disabled={busyId !== null}
-                    >
-                      {String(busyId) === String(r.id) ? '处理中…' : '标记已处理'}
-                    </button>
-                  )}
-                  {r.status !== 'ignored' && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setStatusOf(r.id, 'ignored')}
-                      disabled={busyId !== null}
-                    >
-                      忽略
-                    </button>
-                  )}
-                  {r.status !== 'new' && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => setStatusOf(r.id, 'new')}
-                      disabled={busyId !== null}
-                    >
-                      重置为待处理
-                    </button>
-                  )}
-                </div>
+                {r.reply && (
+                  <div className="sup-reply-shown">
+                    <div className="sup-reply-shown-head">
+                      已回复
+                      {r.replied_by ? ` · ${r.replied_by}` : ''}
+                      {r.replied_at ? ` · ${fmtTime(r.replied_at)}` : ''}
+                      <span className="sup-reply-shown-hint">群友在他的「我的反馈」里能看到这段</span>
+                    </div>
+                    <div className="sup-reply-shown-body">{r.reply}</div>
+                  </div>
+                )}
+
+                {r.kind === 'feedback' ? (
+                  <div className="sup-reply">
+                    <div className="sup-reply-status">
+                      <span className="sup-reply-label">状态</span>
+                      {STATUS_OPTIONS.map(([v, label]) => {
+                        const cur = statusDraft[r.id] !== undefined ? statusDraft[r.id] : r.status || 'new';
+                        return (
+                          <button
+                            type="button"
+                            key={v}
+                            className={'chip chip-sm' + (cur === v ? ' active' : '')}
+                            onClick={() => setStatusDraft((s) => ({ ...s, [r.id]: v }))}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <textarea
+                      className="sup-reply-input"
+                      rows={3}
+                      maxLength={2000}
+                      placeholder="给这位群友留一句话（会显示在他的反馈浮窗里）。例如：已改成图文并排，刷新看看？"
+                      value={replyDraft[r.id] !== undefined ? replyDraft[r.id] : r.reply || ''}
+                      onChange={(e) => setReplyDraft((s) => ({ ...s, [r.id]: e.target.value }))}
+                    />
+                    <div className="sup-reply-bar">
+                      <span className="sup-reply-count">
+                        {(replyDraft[r.id] !== undefined ? replyDraft[r.id] : r.reply || '').length} / 2000
+                      </span>
+                      <div style={{ flex: 1 }} />
+                      {String(savedId) === String(r.id) && <span className="sup-reply-saved">已保存</span>}
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => saveReply(r)}
+                        disabled={busyId !== null}
+                      >
+                        {String(busyId) === String(r.id) ? '保存中…' : '保存状态与留言'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="sup-actions">
+                    {r.status !== 'done' && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setStatusOf(r.id, 'done')}
+                        disabled={busyId !== null}
+                      >
+                        {String(busyId) === String(r.id) ? '处理中…' : '标记已处理'}
+                      </button>
+                    )}
+                    {r.status !== 'ignored' && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setStatusOf(r.id, 'ignored')}
+                        disabled={busyId !== null}
+                      >
+                        忽略
+                      </button>
+                    )}
+                    {r.status !== 'new' && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setStatusOf(r.id, 'new')}
+                        disabled={busyId !== null}
+                      >
+                        重置为待处理
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
