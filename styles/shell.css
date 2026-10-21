@@ -85,7 +85,9 @@ body {
 .nav-links a.active {
   background: none;
   color: var(--text);
-  font-weight: 600;
+  /* 不再加重字重：中文字形 500/600 宽度不同，切 tab 时会把兄弟项挤得左右抖。
+     激活态靠颜色 + 下划线区分就够了（见 ::after）。 */
+  font-weight: 500;
 }
 .nav-links a.active::after {
   content: '';

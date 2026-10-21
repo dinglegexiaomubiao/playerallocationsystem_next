@@ -3,7 +3,7 @@
 // POST：报名（可带本届确认过的 score / positions，自动通过并生成快照）
 //       已报名时带这两个值等于「重新确认」，会更新快照
 // DELETE：退赛
-import { pool } from '../../../../lib/db';
+import { pool, ensureTournamentSchema } from '../../../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../../../lib/auth';
 import { POSITIONS } from '../../../../lib/options.mjs';
 
@@ -24,6 +24,8 @@ export default async function handler(req, res) {
 
   // GET 要能被匿名调用（页面只是想知道「我报名了没」），所以不能走统一的登录闸门
   if (req.method === 'GET') {
+    // 确保名次表 / 历史最高分列存在（旧库可能缺），本接口读 peak_score
+    await ensureTournamentSchema();
     const session = getSession(req);
     if (!session || !session.name) {
       return res.status(200).json({ success: true, loggedIn: false, signedUp: false, signup: null });

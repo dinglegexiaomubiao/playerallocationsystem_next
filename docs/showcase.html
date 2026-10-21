@@ -6,492 +6,101 @@
 <title>深圳 LaRoja Dota2 社区 · 站点导览</title>
 <style>
   :root{
-    --brand:#2563eb;
-    --brand-weak:#eff6ff;
-    --accent:#c23c2a;
-    --ink:#0f172a;
-    --ink-2:#334155;
-    --muted:#64748b;
-    --line:#e5e9f0;
-    --bg:#ffffff;
-    --bg-soft:#f6f8fc;
+    --bg:#17130f; --card:#1e1915; --subtle:#221c17; --border:#352d26;
+    --brand:#c9867c; --brand-solid:#8e3a35; --gold:#d6b47b;
+    --text:#f0eae2; --text-2:#ada298; --text-3:#7b716a;
   }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
-    color:var(--ink);
-    background:var(--bg);
-    line-height:1.75;
-    -webkit-font-smoothing:antialiased;
-  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter','PingFang SC','Microsoft YaHei',sans-serif;line-height:1.65;padding:40px 20px}
+  .wrap{max-width:1080px;margin:0 auto}
+  h1{font-size:1.9rem;margin-bottom:6px}
+  h1 .hl{color:var(--brand)}
+  h2{font-size:1.15rem;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .sub{color:var(--text-2);font-size:.95rem}
   a{color:var(--brand);text-decoration:none}
-  a:hover{text-decoration:underline}
-
-  /* ---------- 顶部 ---------- */
-  .topbar{
-    position:sticky;top:0;z-index:20;
-    background:rgba(255,255,255,.92);
-    backdrop-filter:saturate(180%) blur(8px);
-    border-bottom:1px solid var(--line);
-  }
-  .topbar-inner{
-    max-width:1120px;margin:0 auto;padding:10px 28px;
-    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
-  }
-  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:var(--ink)}
-  .brand .logo{
-    width:28px;height:28px;border-radius:8px;
-    background:linear-gradient(135deg,#e05b45,#c23c2a);
-    color:#fff;display:grid;place-items:center;font-size:14px;font-weight:800;
-  }
-  .brand em{font-style:normal;color:var(--accent)}
-  .toc{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
-  .toc a{
-    font-size:13px;color:var(--ink-2);padding:5px 10px;border-radius:999px;
-    border:1px solid transparent;
-  }
-  .toc a:hover{background:var(--brand-weak);color:var(--brand);text-decoration:none}
-
-  /* ---------- 版心 ---------- */
-  .wrap{max-width:1120px;margin:0 auto;padding:0 28px}
-
-  /* ---------- Hero ---------- */
-  .hero{
-    padding:64px 0 40px;
-    background:
-      radial-gradient(900px 320px at 15% 0%, #eef4ff 0%, transparent 70%),
-      radial-gradient(700px 260px at 95% 10%, #fff4f1 0%, transparent 70%);
-    border-bottom:1px solid var(--line);
-  }
-  .hero h1{
-    font-size:40px;line-height:1.25;margin:0 0 14px;letter-spacing:-.5px;font-weight:800;
-  }
-  .hero h1 em{font-style:normal;color:var(--accent)}
-  .hero p.lead{font-size:16px;color:var(--ink-2);max-width:720px;margin:0 0 28px}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:760px}
-  .stat{padding:16px 18px;border-radius:14px;background:#fff;border:1px solid var(--line);box-shadow:0 1px 2px rgba(15,23,42,.04)}
-  .stat b{display:block;font-size:26px;letter-spacing:-.5px}
-  .stat span{font-size:13px;color:var(--muted)}
-
-  /* ---------- 章节 ---------- */
-  section{padding:56px 0;border-bottom:1px solid var(--line)}
-  section:last-of-type{border-bottom:0}
-  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
-  .sec-no{
-    font-size:12px;font-weight:700;color:var(--brand);
-    background:var(--brand-weak);border-radius:6px;padding:3px 8px;letter-spacing:.5px;
-  }
-  h2{font-size:26px;margin:0;letter-spacing:-.3px}
-  h3{font-size:19px;margin:36px 0 10px}
-  h3:first-of-type{margin-top:8px}
-  .purpose{
-    display:inline-block;font-size:14px;color:var(--ink-2);
-    background:var(--bg-soft);border-left:3px solid var(--brand);
-    padding:8px 14px;border-radius:0 8px 8px 0;margin:6px 0 18px;
-  }
-  ul{margin:6px 0 18px;padding-left:20px;color:var(--ink-2)}
-  li{margin:6px 0}
-  li b{color:var(--ink)}
-  p{color:var(--ink-2)}
-
-  /* ---------- 截图 ---------- */
-  figure{
-    margin:18px 0 24px;padding:0;
-  }
-  figure a{display:block;line-height:0}
-  figure img{
-    width:100%;height:auto;display:block;border-radius:12px;
-    border:1px solid var(--line);
-    box-shadow:0 8px 28px rgba(15,23,42,.09);
-    background:#fff;
-  }
-  figcaption{font-size:12.5px;color:var(--muted);margin-top:8px;text-align:center}
-  .narrow{max-width:380px;margin-left:auto;margin-right:auto}
-
-  /* ---------- 表格 ---------- */
-  table{width:100%;border-collapse:collapse;font-size:14px;margin:14px 0 18px}
-  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{background:var(--bg-soft);font-weight:600;font-size:13px;color:var(--ink)}
-  td code{
-    background:var(--bg-soft);border-radius:5px;padding:1px 6px;font-size:12.5px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  .tag-ok{color:#15803d;font-weight:600}
-  .tag-no{color:var(--accent);font-weight:600}
-
-  /* ---------- 页脚 ---------- */
-  footer{
-    padding:36px 0 56px;color:var(--muted);font-size:13px;
-    background:var(--bg-soft);
-  }
-  footer strong{color:var(--ink-2)}
-
-  @media (max-width:760px){
-    .hero h1{font-size:28px}
-    .stats{grid-template-columns:repeat(2,1fr)}
-    .wrap,.topbar-inner{padding-left:16px;padding-right:16px}
-    .toc{display:none}
-    h2{font-size:22px}
-  }
+  .pill{display:inline-block;background:var(--subtle);border:1px solid var(--border);border-radius:99px;padding:2px 12px;font-size:.8rem;color:var(--text-2);margin:2px 4px 2px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+  .shot{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .shot img{width:100%;display:block;border-bottom:1px solid var(--border)}
+  .shot .cap{padding:12px 14px}
+  .shot .cap b{display:block;font-size:.95rem}
+  .shot .cap span{font-size:.82rem;color:var(--text-2)}
+  table{width:100%;border-collapse:collapse;font-size:.88rem;margin-top:8px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--text-3);font-weight:600}
+  code{background:var(--subtle);border-radius:4px;padding:1px 6px;font-size:.82em}
+  .foot{margin-top:44px;color:var(--text-3);font-size:.8rem}
+  .theme-note{background:var(--subtle);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin:14px 0;font-size:.85rem;color:var(--text-2)}
 </style>
 </head>
 <body>
-
-<div class="topbar">
-  <div class="topbar-inner">
-    <div class="brand"><span class="logo">刀</span>深圳<em>LaRoja</em> Dota2社区</div>
-    <nav class="toc">
-      <a href="#home">首页</a>
-      <a href="#tournaments">赛事</a>
-      <a href="#members">群友</a>
-      <a href="#party">开黑</a>
-      <a href="#food">美食</a>
-      <a href="#account">账号</a>
-      <a href="#support">反馈</a>
-      <a href="#admin">管理后台</a>
-    </nav>
+<div class="wrap">
+  <h1>深圳 LaRoja <span class="hl">Dota2 社区</span> · 站点导览</h1>
+  <p class="sub">线上地址：<a href="https://dota.playerallocationsystem.online">dota.playerallocationsystem.online</a> · 截图基于 2026-10 版本</p>
+  <div style="margin-top:10px">
+    <span class="pill">赛事信息</span><span class="pill">群友信息</span><span class="pill">群友美食</span><span class="pill">开黑组队</span><span class="pill">阵容分配</span><span class="pill">管理后台</span>
   </div>
+
+  <div class="theme-note">
+    <b>关于双主题</b>：深色为当前线上默认主题；每页附带的 <code>-light</code> 亮色图为同一页面的对照渲染，用于展示主题可切换性（线上暂未开放切换开关）。
+  </div>
+
+  <h2>这一版相比上一版的变化</h2>
+  <table>
+    <tr><th style="width:180px">变化</th><th>说明</th></tr>
+    <tr><td>整站深色社区风</td><td>炭黑暖灰底、低饱和深红品牌色、古铜金只给荣誉</td></tr>
+    <tr><td>赛事页重构</td><td>秩序册布局 + 4 Tab，支持一届多个并列冠军</td></tr>
+    <tr><td>赛程与对阵</td><td>列表 / 对阵树双视图，逐局阵容、装备、KDA 赛后数据</td></tr>
+    <tr><td>报名快照</td><td>报名时确认本届位置与分数，与个人档案分离</td></tr>
+    <tr><td>后台补录</td><td>报名名单缺漏检测 + 从选手档案一键补全 + 队伍缺人提示</td></tr>
+    <tr><td>访问统计升级</td><td>环比、7 日趋势图、时段分布、匿名占比、最近注册</td></tr>
+    <tr><td>自托管部署</td><td>自托管 + Nginx 日志 + 应用层浏览埋点</td></tr>
+  </table>
+
+  <h2>公开页面</h2>
+  <div class="grid" id="public"></div>
+
+  <h2>后台页面（需管理员）</h2>
+  <div class="grid" id="admin"></div>
+
+  <p class="foot">截图视口 1440px 全页捕获；第十届为数据最全的真实赛事示例；开黑与售后页含少量演示数据。</p>
 </div>
 
-<header class="hero">
-  <div class="wrap">
-    <h1>一群人的刀塔江湖<br>不止游戏，还有饭局与山野湖海</h1>
-    <p class="lead">
-      一个自己搭的群内站点：把「谁在打、谁强、什么时候开黑、打完去哪儿吃」这些平时散在微信群里的信息，
-      收成一套能查、能看、能报名的东西。
-    </p>
-    <div class="stats">
-      <div class="stat"><b>66</b><span>注册群友</span></div>
-      <div class="stat"><b>6</b><span>历史赛事</span></div>
-      <div class="stat"><b>101</b><span>美食推荐</span></div>
-      <div class="stat"><b>11</b><span>累计冠军</span></div>
-    </div>
-  </div>
-</header>
-
-<!-- 首页 -->
-<section id="home">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">01</span><h2>首页</h2></div>
-    <div class="purpose">一眼看清这个群在干什么</div>
-    <ul>
-      <li>顶部四个数字：注册群友 <b>66</b> / 历史赛事 <b>6</b> / 美食推荐 <b>101</b> / 累计冠军 <b>11</b></li>
-      <li>「本周焦点赛事」直接链到正在进行的比赛</li>
-      <li>「群内日常」标签：Dota2 内战、吃饭、攀岩、游泳、爬山、篮球、骑车 —— 不止 Dota2</li>
-      <li>「探索社区」四个入口卡片，新群友不用翻导航也能找到地方</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/home.png" target="_blank"><img src="screenshots/public/home.png" alt="社区首页"></a>
-      <figcaption>首页 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 赛事 -->
-<section id="tournaments">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">02</span><h2>赛事信息</h2></div>
-
-    <h3>赛事列表</h3>
-    <div class="purpose">历届比赛的入口页</div>
-    <ul>
-      <li>上半部「我的赛事」：我报过哪届、拿了什么名次、在哪个队</li>
-      <li>下半部「全部赛事」：每届一张卡片，带状态徽标（筹办中 / 进行中 / 已结束）</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/tournaments.png" target="_blank"><img src="screenshots/public/tournaments.png" alt="赛事列表"></a>
-      <figcaption>赛事列表 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>赛事详情 · 赛事信息与赛程</h3>
-    <div class="purpose">一届比赛的完整档案</div>
-    <ul>
-      <li>赛事信息：状态、时间、参赛人数、参赛队伍数</li>
-      <li>比赛结果：冠军 / 亚军 / 季军，已完结赛事自动展示</li>
-      <li>赛程与对阵：按阶段列每场对局，标未开赛 / 已结束与比分</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/tournament-detail-info.png" target="_blank"><img src="screenshots/public/tournament-detail-info.png" alt="赛事详情"></a>
-      <figcaption>赛事详情 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>赛事详情 · 报名选手与参赛队伍</h3>
-    <div class="purpose">这一届谁报了名、队怎么分的</div>
-    <ul>
-      <li>报名选手：按天梯分从高到低排，附擅长位置，一眼看出强弱分布</li>
-      <li>参赛队伍：每队的队长、队伍总分、成员明细（含每人天梯分）</li>
-      <li>名次徽标直接标在队名旁</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/tournament-detail-signups.png" target="_blank"><img src="screenshots/public/tournament-detail-signups.png" alt="报名与队伍"></a>
-      <figcaption>报名选手与参赛队伍 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 群友 -->
-<section id="members">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">03</span><h2>群友信息</h2></div>
-
-    <h3>群友列表</h3>
-    <div class="purpose">群友档案总表，找队友前先来这里</div>
-    <ul>
-      <li>默认按天梯分排序，卡片右上角就是分数</li>
-      <li>六个维度筛选：段位、天梯分区间、擅长位置、地区、擅长英雄，外加关键词搜索（昵称 / SteamID / 群昵称）</li>
-      <li>每张卡片带 SteamID 与一键复制，方便直接加好友</li>
-      <li>卡片底部显示冠亚军数与参赛届数</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/members-cards.png" target="_blank"><img src="screenshots/public/members-cards.png" alt="群友列表"></a>
-      <figcaption>群友列表（桌面 1440） · 点击查看原图</figcaption>
-    </figure>
-
-    <p>移动端自动切成单列，手机上看同样完整：</p>
-    <figure class="narrow">
-      <a href="screenshots/public/members-cards-mobile.png" target="_blank"><img src="screenshots/public/members-cards-mobile.png" alt="群友列表移动端"></a>
-      <figcaption>群友列表（移动端 390）</figcaption>
-    </figure>
-
-    <h3>群友详情</h3>
-    <div class="purpose">单个群友的完整画像</div>
-    <ul>
-      <li>基本信息：所在地区、擅长位置、自报胜率、冠军数</li>
-      <li>擅长英雄：按英雄图标列出，不用再问「你会玩什么」</li>
-      <li>默契队友 / 仇人：群内关系记录，分组时很有用</li>
-      <li>比赛记录：参加过哪届、哪个队、什么名次</li>
-      <li>「AI 战力分析」：根据资料与历史战绩生成一份评估</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/member-detail.png" target="_blank"><img src="screenshots/public/member-detail.png" alt="群友详情"></a>
-      <figcaption>群友详情 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 开黑 -->
-<section id="party">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">04</span><h2>开黑组队</h2></div>
-    <div class="purpose">替代群里刷屏的「有人开黑吗」</div>
-    <ul>
-      <li>每张卡片可以自己起名（不填就默认「昵称喊你来开黑了」），标题直接显示在卡片上</li>
-      <li>卡片带模式徽标：天梯 / 普通匹配 / 单一征召 / 加速 / 对黑</li>
-      <li>招募信息写清楚：需要几个人、我的水平、希望队友什么段位和位置、用什么语音、开始时间与时长</li>
-      <li>别人看到直接「我要报名」，报名区显示已报名人数 / 需要人数，以及每个报名者的段位与预计上号时间</li>
-      <li>发起人可以随时「关闭招募」或删卡；支持按卡片名称 / 昵称 / SteamID / 段位 / 时间搜索，也能按模式、状态筛</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/party.png" target="_blank"><img src="screenshots/public/party.png" alt="开黑组队"></a>
-      <figcaption>开黑组队：三张不同人发的卡片，其中一张已有人报名 · 点击查看原图</figcaption>
-    </figure>
-
-    <p>自己发布的卡片长这样，标题即卡片名称：</p>
-    <figure>
-      <a href="screenshots/public/party-card-title.png" target="_blank"><img src="screenshots/public/party-card-title.png" alt="开黑卡片名称"></a>
-      <figcaption>开黑卡片 · 卡片名称 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 美食 -->
-<section id="food">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">05</span><h2>群友美食</h2></div>
-    <div class="purpose">打完去哪儿吃，不用再翻聊天记录</div>
-    <ul>
-      <li>目前收录 <b>101</b> 家店</li>
-      <li>每家店记录：菜系、区位、详细地址、人均、特色、推荐人</li>
-      <li>四维筛选 + 搜索：菜系、区位、推荐人、人均区间</li>
-      <li>每店下方是「饭后评价」，群友可以写多条，评分与吐槽都在</li>
-      <li>管理员可直接编辑、删除，也支持 Excel 批量导入导出（模板可下载）</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/food.png" target="_blank"><img src="screenshots/public/food.png" alt="群友美食"></a>
-      <figcaption>群友美食（管理员登录，所以能看到编辑 / 删除） · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 账号 -->
-<section id="account">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">06</span><h2>个人信息与账号</h2></div>
-
-    <h3>个人信息</h3>
-    <div class="purpose">自己的资料卡片，也是报名比赛的前提</div>
-    <ul>
-      <li>基础信息 + 擅长英雄 + 默契队友 / 仇人，一屏可改</li>
-      <li>下方直接汇总「我的赛事」</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/profile.png" target="_blank"><img src="screenshots/public/profile.png" alt="个人信息"></a>
-      <figcaption>个人信息 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>我的赛事</h3>
-    <div class="purpose">只关心跟我有关的那几场</div>
-    <ul>
-      <li>列出席赛事、名次、担任位置、我的队伍、身份（队长 / 队员）、状态</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/my-tournaments.png" target="_blank"><img src="screenshots/public/my-tournaments.png" alt="我的赛事"></a>
-      <figcaption>我的赛事 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>登录与注册</h3>
-    <div class="purpose">进站第一步</div>
-    <ul>
-      <li>账号密码登录，登录状态保持 30 天，不用每次输</li>
-      <li>注册只要四样：账号、密码、Steam 账号（数字 ID）、群昵称；其余资料登录后慢慢补</li>
-      <li>注册页明确提示：账号密码只用于登录，不会对外展示</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/login.png" target="_blank"><img src="screenshots/public/login.png" alt="登录"></a>
-      <figcaption>登录 · 点击查看原图</figcaption>
-    </figure>
-    <figure>
-      <a href="screenshots/public/register.png" target="_blank"><img src="screenshots/public/register.png" alt="注册"></a>
-      <figcaption>注册 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 反馈 -->
-<section id="support">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">07</span><h2>反馈通道</h2></div>
-    <div class="purpose">群友发现问题，不用再单独私聊管理员</div>
-    <ul>
-      <li>全站右下角常驻「反馈」按钮，任何页面都能提；分两类：遇到问题 / 想要的功能</li>
-      <li>提交时自动带上当前页面、浏览器平台、账号，管理员不用再问「你用的什么手机」</li>
-      <li>除了手动反馈，<b>页面自身的报错也会自动上报</b>：接口 5xx、请求超时、JS 异常、页面卡住</li>
-      <li>管理员侧进「售后工单」统一处理，可按类型、状态筛，处理完标记已处理 / 忽略</li>
-    </ul>
-    <figure>
-      <a href="screenshots/public/feedback-widget.png" target="_blank"><img src="screenshots/public/feedback-widget.png" alt="反馈浮窗"></a>
-      <figcaption>右下角反馈浮窗（提交成功态） · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 管理后台 -->
-<section id="admin">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">08</span><h2>管理员视角</h2></div>
-    <p style="color:var(--muted);font-size:13.5px;margin-top:-4px">这一节是内部运维用的，对外介绍可不放。</p>
-
-    <h3>管理后台</h3>
-    <div class="purpose">赛事 / 群友 / 美食 一站式管理</div>
-    <ul>
-      <li>三个页签：赛事管理、群友管理、美食管理</li>
-      <li>赛事列表直接显示状态与起止时间，可管理、可删除</li>
-      <li>支持 Excel 导入赛事、导出全部赛事、下载模板、新建赛季</li>
-    </ul>
-    <figure>
-      <a href="screenshots/admin/admin-list.png" target="_blank"><img src="screenshots/admin/admin-list.png" alt="管理后台"></a>
-      <figcaption>管理后台 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>赛事编辑 · 队伍与队长</h3>
-    <div class="purpose">一届比赛的三个页签：报名名单 / 队伍与队长 / 赛程与结果</div>
-    <ul>
-      <li>队伍内可直接设队长、标注担任位置、移出队员</li>
-      <li>编辑只改本地草稿，点「保存修改」才写库，改坏了可以「放弃修改」</li>
-    </ul>
-    <figure>
-      <a href="screenshots/admin/admin-teams.png" target="_blank"><img src="screenshots/admin/admin-teams.png" alt="队伍与队长"></a>
-      <figcaption>队伍与队长 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>赛事编辑 · 赛程与结果</h3>
-    <div class="purpose">按阶段编排对局</div>
-    <ul>
-      <li>阶段（淘汰赛 / 半决赛 / 决赛）可自建，选好 A 队 B 队即可加对阵</li>
-      <li>录入比分后自动判定胜负</li>
-    </ul>
-    <figure>
-      <a href="screenshots/admin/admin-matches.png" target="_blank"><img src="screenshots/admin/admin-matches.png" alt="赛程与结果"></a>
-      <figcaption>赛程与结果 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>整包导入导出</h3>
-    <div class="purpose">一届赛事一个 Excel，四个 sheet 全带走</div>
-    <ul>
-      <li>一个 Excel 四张表：赛事信息 / 报名名单 / 队伍与成员 / 赛程对阵</li>
-      <li>导入前先给预览：每张表几行、哪些新增、哪些更新</li>
-      <li><b>合并语义</b>：同名的更新，没有的新增，<b>不删库里已有数据</b>；空着的格子也不会清空原内容</li>
-      <li>同一份表反复导不会重复建赛事，适合把老赛季资料一股脑搬进来</li>
-    </ul>
-
-    <h3>售后工单</h3>
-    <div class="purpose">手动反馈与自动报错汇总成一张表</div>
-    <ul>
-      <li>按类型（用户反馈 / 自动报错）、状态（待处理 / 处理中 / 已处理 / 已忽略）筛选</li>
-      <li>每条带账号、页面、平台、IP、时间，需要时可以展开技术细节</li>
-      <li>配了邮件后，新工单会同时发一封邮件提醒管理员</li>
-    </ul>
-    <figure>
-      <a href="screenshots/admin/admin-support.png" target="_blank"><img src="screenshots/admin/admin-support.png" alt="售后工单"></a>
-      <figcaption>售后工单 · 点击查看原图</figcaption>
-    </figure>
-
-    <h3>阵容分配工具</h3>
-    <div class="purpose">群内比赛的组队与分队工具，也是这个站最早的功能</div>
-    <ul>
-      <li>选一届赛事后，点选手卡片上的「+ 入队」即可分配到任意队伍</li>
-      <li>顶部实时统计：本次参加人数、未进队人数、参与队伍数</li>
-      <li>支持按昵称 / SteamID / 群昵称 / 擅长位置搜索，也能按位置筛（优势路 / 中单 / 劣势路 / 半辅助 / 纯辅助 / 全才）</li>
-      <li>队伍卡片显示总分与每人天梯分，方便控制分差</li>
-      <li>一键「重置分配」「新增选手」「添加队伍」，分完可直接保存配置</li>
-    </ul>
-    <figure>
-      <a href="screenshots/admin/main.png" target="_blank"><img src="screenshots/admin/main.png" alt="阵容分配"></a>
-      <figcaption>阵容分配 · 点击查看原图</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- 附录 -->
-<section id="appendix">
-  <div class="wrap">
-    <div class="sec-head"><span class="sec-no">09</span><h2>附录 · 截图清单</h2></div>
-    <table>
-      <thead><tr><th style="width:26%">目录</th><th style="width:30%">用途</th><th>文件</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><code>screenshots/public/</code></td>
-          <td><span class="tag-ok">对外介绍</span>，均为真实数据</td>
-          <td>home、tournaments、tournament-detail-info、tournament-detail-signups、members-cards、members-cards-mobile、member-detail、party、party-card-title、food、profile、my-tournaments、login、register、feedback-widget、feedback-widget-mobile</td>
-        </tr>
-        <tr>
-          <td><code>screenshots/admin/</code></td>
-          <td>管理后台，可对外展示</td>
-          <td>admin-list、admin-teams、admin-matches、admin-support、main</td>
-        </tr>
-        <tr>
-          <td><code>screenshots/_internal/</code></td>
-          <td><span class="tag-no">不对外</span>，含测试数据</td>
-          <td>admin-signups（该届报名名单为空态）、admin-excel-preview、tournament-package-import、tournament-package-result</td>
-        </tr>
-      </tbody>
-    </table>
-    <ul>
-      <li>截图均为 1440 宽桌面端，标注 mobile 的为 390 宽移动端</li>
-      <li>图中账号 <b>dom</b> 是管理员，所以美食页能看到「编辑 / 删除」，普通群友看不到这些按钮</li>
-      <li>页面文案与数据会随群内活动变化，正式对外前建议按当期数据重拍</li>
-    </ul>
-  </div>
-</section>
-
-<footer>
-  <div class="wrap">
-    <strong>深圳 LaRoja Dota2 社区</strong> · 站点导览 · 2026-10<br>
-    网页信息均由群友提供，数据仅限群内交流使用。
-  </div>
-</footer>
-
+<script>
+const PUBLIC = [
+  ['home','首页','「今晚谁来守高地？」Hero + 2×2 入口卡（实时计数）+ 近期赛事'],
+  ['tournaments','赛事列表','全部届次，聚合冠亚季军展示'],
+  ['t-overview-赛事概览','赛事详情 · 概览','秩序册布局：赛果对阵、最终名次（并列冠军）、赛事信息'],
+  ['t-overview-赛程与对阵','赛事详情 · 赛程','列表/对阵树双视图 + 多维筛选'],
+  ['t-overview-参赛队伍','赛事详情 · 队伍','名次徽标、天梯总分、成员位置、替补/恩怨局'],
+  ['t-overview-报名选手','赛事详情 · 报名','报名快照名单（本届确认的位置与分数）'],
+  ['members','群友信息','全部群友卡片：头像、天梯分、位置、英雄'],
+  ['member','群友详情','个人档案 + 比赛履历 + 出战记录'],
+  ['food','群友美食','群友推荐店铺 + 饭后评价'],
+  ['party','开黑组队','开黑卡片：模式、分段、时间、一键报名'],
+  ['login','登录','站内账号登录（HMAC Cookie 会话）'],
+];
+const ADMIN = [
+  ['profile','个人信息','维护自己的档案（分数/位置/英雄/仇人）'],
+  ['main','阵容分配','按届分配队伍人员、自动平衡、留言板'],
+  ['my-tournaments','我的赛事','参加过的届次与名次'],
+  ['admin','赛事管理 · 列表','全部届次的草稿式统一编辑'],
+  ['admin-tournament','赛事管理 · 单届','缺漏检测 + 从档案补全 + 队伍缺人提示'],
+  ['admin-members','群友管理','补全资料 · 标注缺失 · 补录未登记账号'],
+  ['admin-food','美食管理','店铺与评价增删改查、Excel 批量导入'],
+  ['admin-party','开黑管理','开黑卡片下架/清理'],
+  ['admin-support','售后反馈','前端异常上报 + 用户建议工单'],
+  ['admin-analytics','访问统计','环比、趋势图、时段分布、活跃用户、最近注册'],
+];
+function render(id, list){
+  document.getElementById(id).innerHTML = list.map(([f,t,d])=>`
+    <figure class="shot">
+      <img loading="lazy" src="screenshots/${id}/${f}.png" alt="${t}">
+      <figcaption class="cap"><b>${t}</b><span>${d}　·　<a href="screenshots/${id}/${f}-light.png" target="_blank">亮色版 →</a></span></figcaption>
+    </figure>`).join('');
+}
+render('public', PUBLIC);
+render('admin', ADMIN);
+</script>
 </body>
 </html>

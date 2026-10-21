@@ -29,8 +29,11 @@ export default async function handler(req, res) {
   try {
     // ---------- 查名单 + 候选 ----------
     if (req.method === 'GET') {
+      // 快照可能缺分数/位置/地区（加人时档案还没填、或老数据补录），
+      // 这里把档案当前值一并带出（profile_*），给后台「从档案补全缺漏」用。
       const signups = await client.query(
-        `SELECT tp.*, p.nickname, p.group_nickname, p.game_id
+        `SELECT tp.*, p.nickname, p.group_nickname, p.game_id,
+                p.score AS profile_score, p.positions AS profile_positions, p.region AS profile_region
            FROM public.tournament_players tp
            JOIN public.players p ON p.id = tp.player_id
           WHERE tp.tournament_id = $1

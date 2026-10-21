@@ -73,6 +73,10 @@ function normSignup(s) {
     score: s.score == null ? '' : String(s.score),
     positions: s.positions || '',
     region: s.region || '',
+    // 档案当前值（只读，用于「从档案补全缺漏」，不参与 diff / 保存）
+    profile_score: s.profile_score == null ? '' : String(s.profile_score),
+    profile_positions: s.profile_positions || '',
+    profile_region: s.profile_region || '',
     is_captain: !!s.is_captain,
     _new: false,
   };
@@ -353,6 +357,7 @@ export default function AdminTournament({ denied }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [tab, setTab] = useState('signups');
+  const [onlyIssues, setOnlyIssues] = useState(false); // 报名名单：只看信息缺漏的行
   const [msg, setMsg] = useState(null); // { type: 'ok' | 'err', text }
 
   // 云端交互态：保存走一条串行流水线，progress 用「(2/5)」的形式给反馈
@@ -625,6 +630,30 @@ export default function AdminTournament({ denied }) {
     setMsg({ type: 'ok', text: `已把 ${missingMembers.length} 名队伍成员加入草稿名单，点「保存修改」后生效` });
   };
 
+  // 报名快照缺漏一键补全：快照里空着的 分数/位置/地区，用选手档案当前值补上。
+  // 只补空字段，不覆盖管理员已录的值；走草稿 diff，点「保存修改」才落库。
+  // （档案里也没有的字段保持为空，提示里会说明。）
+  const backfillFromProfile = () => {
+    if (!draft) return;
+    let filled = 0;
+    const next = draft.signups.map((s) => {
+      const patch = {};
+      const scoreEmpty = String(s.score ?? '').trim() === '' || Number(s.score) === 0;
+      if (scoreEmpty && String(s.profile_score ?? '').trim() !== '') patch.score = String(s.profile_score);
+      if (!String(s.positions || '').trim() && String(s.profile_positions || '').trim()) patch.positions = s.profile_positions;
+      if (!String(s.region || '').trim() && String(s.profile_region || '').trim()) patch.region = s.profile_region;
+      if (Object.keys(patch).length === 0) return s;
+      filled += 1;
+      return { ...s, ...patch };
+    });
+    setDraft((d) => ({ ...d, signups: next }));
+    setMsg(
+      filled > 0
+        ? { type: 'ok', text: `已按选手档案补全 ${filled} 人的缺漏信息，点「保存修改」后生效` }
+        : { type: 'ok', text: '没有可补的缺漏（缺漏项在选手档案里也是空的）' }
+    );
+  };
+
   /* ---------- 保存 / 放弃 ---------- */
 
   const saveAll = async () => {
@@ -713,6 +742,20 @@ export default function AdminTournament({ denied }) {
   const signedIds = new Set(signups.map((s) => s.player_id));
   const allTeamMemberIds = new Set(teams.flatMap((t) => t.members.map((m) => m.player_id)));
   const candidateOptions = candidates.filter((c) => !signedIds.has(String(c.id)));
+
+  // ===== 补录辅助：报名缺漏 & 队伍缺人（对齐群友管理的「标注缺失」体验） =====
+  // 快照缺漏口径：分数为空或 0（与接口 NULLIF(x,0) 口径一致）、位置为空、地区为空
+  const signupIssues = (s) => {
+    const miss = [];
+    if (String(s.score ?? '').trim() === '' || Number(s.score) === 0) miss.push('分数');
+    if (!String(s.positions || '').trim()) miss.push('位置');
+    if (!String(s.region || '').trim()) miss.push('地区');
+    return miss;
+  };
+  const issueSignups = signups.filter((s) => signupIssues(s).length > 0);
+  const shownSignups = onlyIssues ? issueSignups : signups;
+  // 标准阵容 5 人：不满 5 人的队伍标记「缺人」，方便对着报名名单补
+  const shortTeams = teams.filter((t) => t.members.length < 5);
 
   // 某支队伍还能加谁：在报名名单里、但还没进任何队伍
   const availableForTeam = (teamId) => {
@@ -845,6 +888,23 @@ export default function AdminTournament({ denied }) {
           {/* ---------- 报名名单 ---------- */}
           {tab === 'signups' && (
             <div>
+              {/* 缺漏统计 + 过滤 + 一键补全（对齐群友管理的「标注缺失」） */}
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+                <span className="adm-hint">
+                  报名 {signups.length} 人 · 信息缺漏 <strong style={{ color: issueSignups.length > 0 ? 'var(--accent, #C0392B)' : 'inherit' }}>{issueSignups.length}</strong> 人
+                </span>
+                {issueSignups.length > 0 && (
+                  <>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.82rem' }}>
+                      <input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} />
+                      只看有缺漏
+                    </label>
+                    <button className="btn btn-ghost" onClick={backfillFromProfile}>
+                      从选手档案补全缺漏（{issueSignups.length} 人）
+                    </button>
+                  </>
+                )}
+              </div>
               <div className="adm-table">
                 <div className="adm-row adm-row-signup adm-head">
                   <div>选手</div>
@@ -854,17 +914,23 @@ export default function AdminTournament({ denied }) {
                   <div>队长</div>
                   <div>操作</div>
                 </div>
-                {signups.map((s) => {
+                {shownSignups.map((s) => {
                   const base = baseline.signups.find((x) => x.player_id === s.player_id);
                   const rowDirty =
                     !base ||
                     SIGNUP_EDIT_FIELDS.some((f) => String(base[f] ?? '') !== String(s[f] ?? '')) ||
                     base.is_captain !== s.is_captain;
+                  const miss = signupIssues(s);
                   return (
                     <div className={'adm-row adm-row-signup' + (rowDirty ? ' adm-dirty-row' : '')} key={s.player_id}>
                       <div className="adm-name">
                         {s.nickname}
                         {s._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
+                        {miss.length > 0 && (
+                          <span className="adm-dirty-badge" style={{ marginLeft: 6, color: 'var(--accent, #C0392B)' }}>
+                            缺 {miss.join('/')}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <input
@@ -942,6 +1008,14 @@ export default function AdminTournament({ denied }) {
           {/* ---------- 队伍与队长 ---------- */}
           {tab === 'teams' && (
             <div>
+              <div className="adm-hint" style={{ marginBottom: 10 }}>
+                共 {teams.length} 队
+                {shortTeams.length > 0 ? (
+                  <> · <strong style={{ color: 'var(--accent, #C0392B)' }}>{shortTeams.length}</strong> 队不满 5 人（{shortTeams.map((t) => t.name || '未命名').join('、')}），可从下方名单补人</>
+                ) : (
+                  ' · 全部满员'
+                )}
+              </div>
               {teams.map((t) => {
                 const base = baseline.teams.find((x) => x.id === t.id);
                 const nameDirty = base ? base.name !== t.name : t._new;
@@ -958,6 +1032,12 @@ export default function AdminTournament({ denied }) {
                       />
                       {t._new && <span className="adm-dirty-badge">待保存</span>}
                       <span className="adm-captain-tag">队长 {t.captain_nickname || '—'}</span>
+                      <span
+                        className="adm-captain-tag"
+                        style={t.members.length < 5 ? { color: 'var(--accent, #C0392B)', borderColor: 'var(--accent, #C0392B)' } : undefined}
+                      >
+                        队员 {t.members.length}/5{t.members.length < 5 ? ' · 缺人' : ''}
+                      </span>
                       <div className="adm-team-rank">
                         <label>名次</label>
                         <select

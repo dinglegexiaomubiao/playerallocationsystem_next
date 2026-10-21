@@ -11,7 +11,49 @@ const fmtTime = (v) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export default function AnalyticsPage({ denied, overview, trend, topUsers, topPaths, recent }) {
+const fmtDate = (v) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return String(v).slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+/* 从 UA 粗提平台，给「最近访问」多一列可读信息 */
+const uaPlatform = (ua) => {
+  const s = String(ua || '');
+  if (/Windows/i.test(s)) return 'Windows';
+  if (/iPhone|iPad|iPod/i.test(s)) return 'iOS';
+  if (/Android/i.test(s)) return 'Android';
+  if (/Macintosh|Mac OS/i.test(s)) return 'macOS';
+  if (/Linux/i.test(s)) return 'Linux';
+  return '—';
+};
+
+/* 纯 CSS 柱状图（不引图表库）：bars = [{label, value, sub}] */
+function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
+  const max = Math.max(1, ...bars.map((b) => b.value));
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height, paddingTop: 6 }}>
+      {bars.map((b, i) => (
+        <div key={i} style={{ flex: 1, minWidth: 8, textAlign: 'center' }} title={`${b.label}：${b.value}${b.sub ? ' · ' + b.sub : ''}`}>
+          <div style={{ fontSize: 10, color: 'var(--text-3, #888)', marginBottom: 2 }}>{b.value || ''}</div>
+          <div
+            style={{
+              height: `${Math.max(2, (b.value / max) * (height - 34))}px`,
+              background: b.value > 0 ? color : 'var(--border, #ddd)',
+              borderRadius: 3,
+              margin: '0 auto',
+              width: '70%',
+            }}
+          />
+          <div style={{ fontSize: 10, color: 'var(--text-3, #888)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function AnalyticsPage({ denied, overview, trend, topUsers, topPaths, recent, hourly, newPlayers }) {
   if (denied) {
     return (
       <div className="empty" style={{ padding: '110px 0' }}>
@@ -25,6 +67,13 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
   const card = { background: 'var(--bg-2, #fff)', border: '1px solid var(--line, #e5e5e5)', borderRadius: 12, padding: 18 };
   const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 };
 
+  // 环比：今日 vs 昨日
+  const dPv = overview.pv || 0;
+  const yPv = overview.pv_yesterday || 0;
+  const diff = dPv - yPv;
+  const diffPct = yPv > 0 ? Math.round((diff / yPv) * 100) : null;
+  const weekPv = trend.reduce((s, r) => s + (r.pv || 0), 0);
+
   return (
     <>
       <Head>
@@ -34,7 +83,7 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
       <section className="page-hero">
         <div className="wrap">
           <h1>访问<span className="hl">统计</span></h1>
-          <p>页面浏览埋点 · 活跃用户 · 热门路径</p>
+          <p>页面浏览埋点 · 活跃用户 · 热门路径 · 新注册</p>
         </div>
       </section>
 
@@ -49,37 +98,75 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
             <span className="adm-tab active">访问统计</span>
           </div>
 
-          {/* 概览卡片 */}
+          {/* 概览卡片：今日 + 环比 + 周期汇总 */}
           <div style={grid}>
             {[
-              { n: overview.pv, l: '今日浏览 (PV)' },
+              { n: dPv, l: '今日浏览 (PV)', sub: `昨日 ${yPv}${diffPct === null ? '' : diff >= 0 ? ` · ↑${diffPct}%` : ` · ↓${Math.abs(diffPct)}%`}` },
               { n: overview.uv, l: '今日访客 (IP)' },
               { n: overview.users, l: '今日登录用户' },
+              { n: weekPv, l: '近 7 日 PV', sub: `日均 ${Math.round(weekPv / 7)}` },
+              { n: overview.active_users, l: '30 日活跃用户' },
+              { n: `${overview.anon_pct == null ? '—' : overview.anon_pct + '%'}`, l: '30 日匿名占比' },
               { n: overview.total, l: '累计记录' },
             ].map((s) => (
               <div style={card} key={s.l}>
                 <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--brand, #2563eb)' }}>{s.n}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-3, #888)', marginTop: 4 }}>{s.l}</div>
+                {s.sub && <div style={{ fontSize: 11, color: 'var(--text-3, #999)', marginTop: 2 }}>{s.sub}</div>}
               </div>
             ))}
           </div>
 
-          {/* 趋势 */}
-          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近 7 天</h3>
+          {/* 7 天趋势柱状图 + 表 */}
+          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近 7 天趋势</h3>
+          <div style={card}>
+            {trend.length === 0 ? (
+              <div style={{ color: 'var(--text-3)', padding: 20, textAlign: 'center' }}>暂无数据</div>
+            ) : (
+              <BarChart bars={[...trend].reverse().map((r) => ({ label: String(r.d).slice(5), value: r.pv, sub: `${r.uv} 个 IP` }))} />
+            )}
+            <div style={{ overflowX: 'auto', marginTop: 12 }}>
+              <table className="adm-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr><th>日期</th><th>浏览</th><th>访客(IP)</th><th>登录用户</th></tr>
+                </thead>
+                <tbody>
+                  {trend.map((r) => (
+                    <tr key={r.d}>
+                      <td>{String(r.d).slice(0, 10)}</td>
+                      <td>{r.pv}</td>
+                      <td>{r.uv}</td>
+                      <td>{r.users}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 时段分布 */}
+          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>时段分布（近 30 天，按小时）</h3>
+          <div style={card}>
+            <BarChart bars={hourly.map((h) => ({ label: `${h.h}时`, value: h.pv }))} color="var(--ok, #16a34a)" height={100} />
+          </div>
+
+          {/* 最近注册：谁刚加入（匿名访客注册后第一时间在这里可见） */}
+          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近注册</h3>
           <div style={{ overflowX: 'auto' }}>
             <table className="adm-table" style={{ width: '100%' }}>
               <thead>
-                <tr><th>日期</th><th>浏览</th><th>访客</th></tr>
+                <tr><th>群昵称</th><th>SteamID</th><th>绑定账号</th><th>注册时间</th></tr>
               </thead>
               <tbody>
-                {trend.length === 0 && (
-                  <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
+                {newPlayers.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无注册记录</td></tr>
                 )}
-                {trend.map((r) => (
-                  <tr key={r.d}>
-                    <td>{String(r.d).slice(0, 10)}</td>
-                    <td>{r.pv}</td>
-                    <td>{r.uv}</td>
+                {newPlayers.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ fontWeight: 600 }}>{p.group_nickname || p.nickname || '未命名'}</td>
+                    <td style={{ fontFamily: 'monospace' }}>{p.game_id || '—'}</td>
+                    <td>{p.account || <span style={{ color: 'var(--text-3)' }}>未绑定</span>}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtDate(p.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -136,17 +223,18 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
           <div style={{ overflowX: 'auto' }}>
             <table className="adm-table" style={{ width: '100%' }}>
               <thead>
-                <tr><th>时间</th><th>账号</th><th>页面</th><th>IP</th></tr>
+                <tr><th>时间</th><th>账号</th><th>页面</th><th>平台</th><th>IP</th></tr>
               </thead>
               <tbody>
                 {recent.length === 0 && (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
                 )}
                 {recent.map((r, i) => (
                   <tr key={i}>
                     <td style={{ whiteSpace: 'nowrap' }}>{fmtTime(r.created_at)}</td>
                     <td>{r.account_name || <span style={{ color: 'var(--text-3)' }}>匿名</span>}</td>
                     <td style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</td>
+                    <td style={{ color: 'var(--text-3)' }}>{uaPlatform(r.ua)}</td>
                     <td style={{ color: 'var(--text-3)' }}>{r.ip || '—'}</td>
                   </tr>
                 ))}
@@ -156,6 +244,7 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
 
           <p style={{ marginTop: 18, fontSize: 12, color: 'var(--text-3)' }}>
             说明：这里是应用层埋点（谁看了什么），与 Nginx 日志统计互补。
+            未登录的访问记为「匿名」，注册登录后的访问会自动带上账号；新注册的群友在「最近注册」里可见。
             Nginx 全量流量报表见 <code>/stats/</code>（需密码）。
           </p>
         </div>
@@ -170,25 +259,31 @@ export async function getServerSideProps({ req }) {
     return { redirect: { destination: '/login?from=/admin/analytics', permanent: false } };
   }
   if (!isAdmin(req)) {
-    return { props: { denied: true, overview: {}, trend: [], topUsers: [], topPaths: [], recent: [] } };
+    return { props: { denied: true, overview: {}, trend: [], topUsers: [], topPaths: [], recent: [], hourly: [], newPlayers: [] } };
   }
 
   try {
     await ensurePageViewTable();
 
-    const [ov, tr, us, pa, rc] = await Promise.all([
+    const [ov, tr, us, pa, rc, hr, np] = await Promise.all([
       pool.query(`
         SELECT
           count(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS pv,
+          count(*) FILTER (WHERE created_at >= date_trunc('day', now()) - interval '1 day'
+                             AND created_at < date_trunc('day', now()))::int AS pv_yesterday,
           count(DISTINCT ip) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS uv,
           count(DISTINCT account_name) FILTER (WHERE created_at >= date_trunc('day', now()) AND account_name IS NOT NULL)::int AS users,
+          count(DISTINCT account_name) FILTER (WHERE account_name IS NOT NULL AND created_at >= now() - interval '30 days')::int AS active_users,
+          round(100.0 * count(*) FILTER (WHERE account_name IS NULL AND created_at >= now() - interval '30 days')
+                / GREATEST(count(*) FILTER (WHERE created_at >= now() - interval '30 days'), 1))::int AS anon_pct,
           count(*)::int AS total
         FROM public.page_views
       `),
       pool.query(`
         SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS d,
                count(*)::int AS pv,
-               count(DISTINCT ip)::int AS uv
+               count(DISTINCT ip)::int AS uv,
+               count(DISTINCT account_name) FILTER (WHERE account_name IS NOT NULL)::int AS users
           FROM public.page_views
          WHERE created_at >= now() - interval '7 days'
          GROUP BY 1 ORDER BY 1 DESC
@@ -206,11 +301,29 @@ export async function getServerSideProps({ req }) {
          GROUP BY 1 ORDER BY pv DESC LIMIT 10
       `),
       pool.query(`
-        SELECT account_name, path, ip, created_at
+        SELECT account_name, path, ip, ua, created_at
           FROM public.page_views
          ORDER BY created_at DESC LIMIT 50
       `),
+      pool.query(`
+        SELECT extract(hour from created_at)::int AS h, count(*)::int AS pv
+          FROM public.page_views
+         WHERE created_at >= now() - interval '30 days'
+         GROUP BY 1 ORDER BY 1
+      `),
+      // 最近注册的选手 + 绑定账号：匿名访客注册后第一时间在这里可见
+      pool.query(`
+        SELECT p.id, p.nickname, p.group_nickname, p.game_id, p.created_at, s.name AS account
+          FROM public.players p
+          LEFT JOIN public.play_score s ON s.player_id = p.id
+         ORDER BY p.created_at DESC NULLS LAST
+         LIMIT 8
+      `),
     ]);
+
+    // 补齐 0~23 小时，缺的补 0
+    const hourMap = new Map(hr.rows.map((r) => [Number(r.h), r.pv]));
+    const hourly = Array.from({ length: 24 }, (_, h) => ({ h, pv: hourMap.get(h) || 0 }));
 
     return {
       props: {
@@ -220,6 +333,8 @@ export async function getServerSideProps({ req }) {
         topUsers: us.rows,
         topPaths: pa.rows,
         recent: rc.rows.map((r) => ({ ...r, created_at: r.created_at ? r.created_at.toISOString() : null })),
+        hourly,
+        newPlayers: np.rows.map((r) => ({ ...r, id: String(r.id) })),
       },
     };
   } catch (error) {
@@ -232,6 +347,8 @@ export async function getServerSideProps({ req }) {
         topUsers: [],
         topPaths: [],
         recent: [],
+        hourly: [],
+        newPlayers: [],
       },
     };
   }

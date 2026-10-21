@@ -1,5 +1,5 @@
 // Next.js API route for managing individual tournament
-import { pool } from '../../../lib/db';
+import { pool, ensureTournamentSchema } from '../../../lib/db';
 import { denyIfNotAdmin } from '../../../lib/auth';
 
 export default async function handler(req, res) {
@@ -8,6 +8,8 @@ export default async function handler(req, res) {
   const client = await pool.connect();
 
   try {
+    // 确保名次表 / 历史最高分列存在（旧库可能缺），公开接口也依赖它们
+    await ensureTournamentSchema();
     switch (method) {
       case 'GET': {
         // 获取指定赛季信息（带出冠/亚/季队伍名，页面展示比赛结果不用再查一遍）

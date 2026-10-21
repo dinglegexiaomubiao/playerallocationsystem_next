@@ -1,5 +1,5 @@
 // Next.js API route for tournaments management
-import { pool } from '../../lib/db';
+import { pool, ensureTournamentSchema } from '../../lib/db';
 import { denyIfNotLoggedIn, denyIfNotAdmin, denyIfImportNotAdmin } from '../../lib/auth';
 
 // POST 可写入的字段。单条「新建赛季」只传 name/起止日期，
@@ -15,6 +15,8 @@ export default async function handler(req, res) {
   const client = await pool.connect();
 
   try {
+    // 确保名次表 / 历史最高分列存在（旧库可能缺），公开接口也依赖它们
+    await ensureTournamentSchema();
     switch (method) {
       case 'GET': {
         // 额外带出冠/亚/季的队伍名：导出 Excel 时表格里要写队名而不是 id，

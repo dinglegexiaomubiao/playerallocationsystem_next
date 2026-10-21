@@ -1,7 +1,7 @@
 // 赛程与结果接口
 // GET：公开，返回轮次 + 对阵（含队伍名、恩怨局标记）
 // POST / PUT / DELETE：管理员，编排赛程、录入比分、删除对阵/轮次
-import { pool } from '../../../../lib/db';
+import { pool, ensureTournamentSchema } from '../../../../lib/db';
 import { denyIfNotAdmin } from '../../../../lib/auth';
 import heroIdToName from '../../../../lib/heroMapping';
 import heroSlugByName from '../../../../lib/heroSlugs';
@@ -49,6 +49,8 @@ export default async function handler(req, res) {
 
   const client = await pool.connect();
   try {
+    // 确保赛后明细表存在（旧库可能缺），公开接口也依赖它们
+    await ensureTournamentSchema();
     // ---- GET：公开 ----
     if (req.method === 'GET') {
       // 轮次

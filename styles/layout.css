@@ -7,6 +7,12 @@
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+/* 页面间高度不同：滚动条出现/消失会让整个版心横向抖一下。
+   scrollbar-gutter 常驻预留滚动条槽位，切页时不再位移（老浏览器自动忽略）。 */
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   /* —— 底色：炭黑偏暖 —— */
   --bg-page: #17130f;
@@ -124,7 +130,7 @@ a { text-decoration: none; color: inherit; }
   transition: background .18s ease, color .18s ease;
 }
 .nav-links a:hover { background: var(--bg-subtle); color: var(--text); }
-.nav-links a.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.nav-links a.active { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
 
 .nav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .btn {

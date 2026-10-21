@@ -8,7 +8,7 @@
  * 替补判定来自 dota_match_players.is_standin —— 补录时按队籍名单投票认队，
  * 场上的人不在该队名单里就标记为替补。
  */
-import { pool } from '../../lib/db';
+import { pool, ensureTournamentSchema } from '../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
 
   const client = await pool.connect();
   try {
+    await ensureTournamentSchema();
     const r = await client.query(
       `SELECT m.dota_match_id,
               m.tournament_id,
