@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiFetch } from '../../lib/api-client.mjs';
 
@@ -28,15 +29,29 @@ const fmtTime = (v) => {
 };
 
 export default function AdminSupport({ denied }) {
+  const router = useRouter();
   const [reports, setReports] = useState([]);
   const [total, setTotal] = useState(0);
-  const [kind, setKind] = useState('');
+  // 默认只看「用户反馈」：自动报错的数量是反馈的几十倍，混在一起会把人写的话淹掉。
+  // 支持 ?kind= / ?status= 深链（后台首页的面板就带到这儿）。
+  const [kind, setKind] = useState('feedback');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [notify, setNotify] = useState(null);
   const [busyId, setBusyId] = useState(null);
   const [openDetail, setOpenDetail] = useState({});
+
+  // 用 isReady 之后再读 query：首次渲染时 router.query 还是空的，
+  // 直接拿来初始化会造成「服务端渲染 A、客户端渲染 B」的 hydration 不一致
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query;
+    if (typeof q.kind === 'string' && ['feedback', 'error', ''].includes(q.kind)) setKind(q.kind);
+    if (typeof q.status === 'string' && ['new', 'doing', 'done', 'ignored', ''].includes(q.status)) {
+      setStatus(q.status);
+    }
+  }, [router.isReady, router.query]);
 
   const load = useCallback(async () => {
     if (denied) return;
@@ -93,7 +108,7 @@ export default function AdminSupport({ denied }) {
   return (
     <>
       <Head>
-        <title>售后工单 · 管理后台</title>
+        <title>群友反馈 · 管理后台</title>
       </Head>
 
       <section className="page-hero">
@@ -104,10 +119,10 @@ export default function AdminSupport({ denied }) {
           <div className="hero-bar">
             <div className="hero-bar-main">
               <h1>
-                售后<span className="hl">工单</span>
+                群友<span className="hl">反馈</span>
               </h1>
               <p>
-                共 {total} 条记录 · 用户反馈与前端自动报错都会进这张表
+                共 {total} 条记录 · 群友在右下角「反馈」浮窗写的内容，以及前端自动采集的报错，都在这张表里
                 {notify
                   ? notify.email
                     ? ' · 邮件通知已配置'
@@ -126,6 +141,16 @@ export default function AdminSupport({ denied }) {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          <div className="adm-tabs" style={{ marginBottom: 16 }}>
+            <Link className="adm-tab" href="/admin">赛事管理</Link>
+            <Link className="adm-tab" href="/admin/members">群友管理</Link>
+            <Link className="adm-tab" href="/admin/food">美食管理</Link>
+            <Link className="adm-tab" href="/admin/party">开黑管理</Link>
+            <Link className="adm-tab" href="/main">阵容分配</Link>
+            <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
+            <span className="adm-tab active">群友反馈</span>
+          </div>
+
           <div className="sup-toolbar">
             <div className="chips">
               {[

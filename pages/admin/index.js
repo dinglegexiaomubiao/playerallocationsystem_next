@@ -3,9 +3,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import useSession from '../../hooks/useSession';
 import { getSession, isAdmin } from '../../lib/auth';
-import { ensureSupportTable, ensureTournamentSchema, pool } from '../../lib/db';
+import { ensureSupportTable, ensureTournamentSchema, listSupportReports, pool } from '../../lib/db';
 import ExcelIO from '../../components/ExcelIO';
-import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api-client.mjs';
+import { apiDelete, apiFetch, apiGet, apiPost, apiPut } from '../../lib/api-client.mjs';
 import {
   TOURNAMENT_COLUMNS,
   TOURNAMENT_FIELD_ALIASES,
@@ -44,6 +44,122 @@ const clip = (v, max) => {
   const s = trim(v);
   return s.length > max ? s.slice(0, max) : s;
 };
+
+/* ---------- 群友反馈 ---------- */
+
+// 反馈浮窗里的两个入口写进 category：bug = 遇到问题，feature = 想要的功能
+const FB_CATEGORY = { bug: '遇到问题', feature: '想要的功能' };
+
+// 留言可能是几百字，列表里只留一行，完整内容在「全部反馈」里看
+const FB_MSG_MAX = 90;
+
+function fbTime(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  return sameDay
+    ? `${p(d.getHours())}:${p(d.getMinutes())}`
+    : `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// 只显示路径：整条 URL 太长，把「哪一页出的问题」这个关键信息挤没了
+function fbPage(url) {
+  if (!url) return '';
+  try {
+    return new URL(url).pathname + (new URL(url).search || '');
+  } catch {
+    return String(url);
+  }
+}
+
+/**
+ * 「群友反馈」面板。
+ *
+ * 为什么放在赛事管理首屏：反馈原本只在 /admin/support 里，而那一页默认混着
+ * 自动报错（量是反馈的几十倍），管理员要先切一次筛选才能看到人说的话，
+ * 结果就是「群友反馈了但后台看不到」。这里直接把最新几条待人处理的反馈
+ * 摊在首屏，一条一行，就地能标记已处理，详情仍回原页面。
+ *
+ * 数据由 getServerSideProps 直接查库（不额外打接口）：和「需要你处理」
+ * 的计数同源，不会出现「概览说 3 条、面板列 1 条」的对不上。
+ */
+function FeedbackPanel({ data }) {
+  const [items, setItems] = useState((data && data.items) || []);
+  const [handled, setHandled] = useState(0);
+  const [busy, setBusy] = useState(null);
+  const [err, setErr] = useState('');
+
+  const pending = Math.max(((data && data.pending) || 0) - handled, 0);
+  const total = (data && data.total) || 0;
+  const errorNew = (data && data.errorNew) || 0;
+
+  const markDone = async (id) => {
+    setBusy(id);
+    setErr('');
+    try {
+      await apiFetch('/api/support', { method: 'PATCH', body: { id, status: 'done' } });
+      setItems((list) => list.filter((x) => String(x.id) !== String(id)));
+      setHandled((n) => n + 1);
+    } catch (e) {
+      setErr(e.message || '处理失败');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="adm-fb" id="adm-feedback">
+      <div className="adm-fb-head">
+        <span className="adm-fb-title">群友反馈</span>
+        <span className="adm-fb-sum">
+          {pending > 0 ? `${pending} 条待处理` : '暂无待处理'}
+          {total > 0 ? ` · 累计 ${total} 条` : ''}
+          {errorNew > 0 ? ` · 另有 ${errorNew} 条自动报错` : ''}
+        </span>
+        <div style={{ flex: 1 }} />
+        <Link className="adm-fb-all" href="/admin/support">
+          全部反馈 →
+        </Link>
+      </div>
+
+      {err && <div className="adm-fb-err">{err}</div>}
+
+      {items.length === 0 ? (
+        <div className="adm-fb-empty">
+          群友在右下角「反馈」浮窗提交的内容会出现在这里，目前没有待处理的。
+          {errorNew > 0 && `（那 ${errorNew} 条「自动报错」是前端采集的异常，不是人写的反馈）`}
+        </div>
+      ) : (
+        items.map((r) => (
+          <div className="adm-fb-row" key={r.id}>
+            <span className="adm-fb-cat">{FB_CATEGORY[r.category] || '反馈'}</span>
+            <span className="adm-fb-msg" title={r.message || ''}>
+              {clip(r.message, FB_MSG_MAX) || '（无描述）'}
+            </span>
+            <span className="adm-fb-meta">
+              {r.account_name || '未登录'}
+              {fbPage(r.page_url) ? ' · ' + fbPage(r.page_url) : ''}
+              {fbTime(r.created_at) ? ' · ' + fbTime(r.created_at) : ''}
+            </span>
+            <button
+              type="button"
+              className="adm-link-btn adm-fb-done"
+              onClick={() => markDone(r.id)}
+              disabled={busy !== null}
+            >
+              {String(busy) === String(r.id) ? '处理中…' : '标记已处理'}
+            </button>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 // 赛季名做匹配键：去空白 + 转小写，"第十届" 与 "第十届 " 视为同一个
 const nameKey = (n) => trim(n).toLowerCase().replace(/\s+/g, '');
 
@@ -324,7 +440,7 @@ function PendingPanel({ pending }) {
   );
 }
 
-export default function Admin({ denied, todo, pending }) {
+export default function Admin({ denied, todo, pending, feedback }) {
   const { me, isAdmin, ready } = useSession();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -541,6 +657,7 @@ export default function Admin({ denied, todo, pending }) {
               <Link className="adm-tab" href="/admin/party">开黑管理</Link>
               <Link className="adm-tab" href="/main">阵容分配</Link>
               <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
+              <Link className="adm-tab" href="/admin/support">群友反馈</Link>
             </div>
             <div className="adm-bar-actions">
               {/* 赛事信息导入 / 导出 / 模板下载：非管理员整块不渲染 */}
@@ -556,7 +673,7 @@ export default function Admin({ denied, todo, pending }) {
                 canManage={isAdmin}
               />
               <Link className="btn btn-ghost" href="/admin/support">
-                售后工单
+                反馈与报错
               </Link>
               <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
                 ＋ 新建赛季
@@ -582,13 +699,16 @@ export default function Admin({ denied, todo, pending }) {
                 </a>
               )}
               {todo.feedback > 0 && (
-                <Link className="adm-todo-item" href="/admin/support">
+                <a className="adm-todo-item" href="#adm-feedback" title="下面「群友反馈」里能看到每条留言的完整内容">
                   <span className="adm-todo-n">{todo.feedback}</span>
                   <span className="adm-todo-label">条用户反馈待查看</span>
-                </Link>
+                </a>
               )}
             </div>
           )}
+
+          {/* 群友反馈：最新几条待人处理的留言直接摊在首屏，一条一行 */}
+          {feedback && <FeedbackPanel data={feedback} />}
 
           {/* 待补录明细：摊到「赛事 → 队伍/选手 → 缺什么」，每条可直达编辑 */}
           <PendingPanel pending={pending} />
@@ -725,13 +845,44 @@ async function loadAdminTodo() {
   return { incomplete, feedback, short };
 }
 
+/**
+ * 「群友反馈」面板的数据：最新 5 条待处理留言 + 两个计数。
+ * 与 loadAdminTodo 的「用户反馈」计数共用同一张表同一个条件，
+ * 差别只是这里带内容。查失败就整块降级为空，不能让后台首页 500。
+ */
+async function loadFeedbackPanel() {
+  try {
+    const [recent, all, errors] = await Promise.all([
+      listSupportReports({ kind: 'feedback', status: 'new', limit: 5 }),
+      listSupportReports({ kind: 'feedback', limit: 1 }),
+      listSupportReports({ kind: 'error', status: 'new', limit: 1 }),
+    ]);
+    return {
+      items: (recent.reports || []).map((r) => ({
+        id: r.id,
+        category: r.category,
+        message: r.message,
+        account_name: r.account_name,
+        page_url: r.page_url,
+        created_at: r.created_at,
+      })),
+      pending: recent.total || 0,
+      total: all.total || 0,
+      errorNew: errors.total || 0,
+    };
+  } catch (e) {
+    console.error('群友反馈查询失败:', e.message);
+    return { items: [], pending: 0, total: 0, errorNew: 0 };
+  }
+}
+
 export async function getServerSideProps({ req }) {
   const session = getSession(req);
   if (!session) {
     return { redirect: { destination: '/login?from=/admin', permanent: false } };
   }
   const denied = !isAdmin(req);
-  if (denied) return { props: { denied: true, todo: null, pending: null } };
+  if (denied) return { props: { denied: true, todo: null, pending: null, feedback: null } };
 
   // 这两张表可能是新库首次访问时还没建，先确保存在再统计
   try {
@@ -740,6 +891,10 @@ export async function getServerSideProps({ req }) {
     /* 自举失败不影响计数，count() 内部会兜底为 0 */
   }
 
-  const [todo, pending] = await Promise.all([loadAdminTodo(), loadPending()]);
-  return { props: { denied: false, todo, pending } };
+  const [todo, pending, feedback] = await Promise.all([
+    loadAdminTodo(),
+    loadPending(),
+    loadFeedbackPanel(),
+  ]);
+  return { props: { denied: false, todo, pending, feedback } };
 }

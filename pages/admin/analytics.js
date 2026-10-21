@@ -106,6 +106,7 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
             <Link className="adm-tab" href="/admin/party">开黑管理</Link>
             <Link className="adm-tab" href="/main">阵容分配</Link>
             <span className="adm-tab active">访问统计</span>
+            <Link className="adm-tab" href="/admin/support">群友反馈</Link>
           </div>
 
           {/* 概览卡片：今日 + 环比 + 周期汇总 */}

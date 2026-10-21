@@ -191,6 +191,7 @@ export default function AdminFoodPage({ denied }) {
             <Link className="adm-tab" href="/admin/party">开黑管理</Link>
             <Link className="adm-tab" href="/main">阵容分配</Link>
             <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
+            <Link className="adm-tab" href="/admin/support">群友反馈</Link>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
