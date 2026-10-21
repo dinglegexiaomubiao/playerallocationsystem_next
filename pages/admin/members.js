@@ -478,6 +478,57 @@ export default function AdminMembersPage({ denied }) {
                 </div>
               ))}
 
+              {/* ===== 登录账号与重置密码 =====
+                  密码在库里是加盐散列，查不到原文，只能「作废 + 发一个一次性临时密码」。
+                  临时密码只在这里显示一次，关掉弹窗就没了。 */}
+              <div className="pwd-box">
+                <div className="pwd-box-head">
+                  <span>登录账号</span>
+                  {editing.account_name ? (
+                    <>
+                      <b className="pwd-acct">{editing.account_name}</b>
+                      <span className="pwd-meta">已登录 {editing.login_count || 0} 次</span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={resetState.busy}
+                        onClick={() => resetPassword(editing)}
+                      >
+                        {resetState.busy ? '重置中…' : '重置密码'}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="pwd-none">还没有登录账号，等他注册后再来重置</span>
+                  )}
+                </div>
+
+                {resetState.result && (
+                  <div className="pwd-result">
+                    <div className="pwd-result-title">临时密码（只显示这一次）</div>
+                    <div className="pwd-result-line">
+                      <code>{resetState.result.tempPassword}</code>
+                      <button
+                        type="button"
+                        className="pwd-copy"
+                        onClick={() => {
+                          try {
+                            navigator.clipboard.writeText(resetState.result.tempPassword);
+                            setMsg({ type: 'ok', text: '临时密码已复制' });
+                          } catch {
+                            setMsg({ type: 'err', text: '复制失败，请手动选中复制' });
+                          }
+                        }}
+                      >
+                        复制
+                      </button>
+                    </div>
+                    <div className="pwd-result-foot">
+                      发给本人 → 他登录后会被强制先改成自己的密码。关掉这个弹窗就再也看不到了。
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* 群昵称与 SteamID 都是「一或多」：导入匹配、开黑帖、赛程认人都会用到 */}
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
@@ -549,56 +600,6 @@ export default function AdminMembersPage({ denied }) {
                 />
               </div>
 
-              {/* ===== 登录账号与重置密码 =====
-                  密码在库里是加盐散列，查不到原文，只能「作废 + 发一个一次性临时密码」。
-                  临时密码只在这里显示一次，关掉弹窗就没了。 */}
-              <div className="pwd-box">
-                <div className="pwd-box-head">
-                  <span>登录账号</span>
-                  {editing.account_name ? (
-                    <>
-                      <b className="pwd-acct">{editing.account_name}</b>
-                      <span className="pwd-meta">已登录 {editing.login_count || 0} 次</span>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        disabled={resetState.busy}
-                        onClick={() => resetPassword(editing)}
-                      >
-                        {resetState.busy ? '重置中…' : '重置密码'}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="pwd-none">还没有登录账号，等他注册后再来重置</span>
-                  )}
-                </div>
-
-                {resetState.result && (
-                  <div className="pwd-result">
-                    <div className="pwd-result-title">临时密码（只显示这一次）</div>
-                    <div className="pwd-result-line">
-                      <code>{resetState.result.tempPassword}</code>
-                      <button
-                        type="button"
-                        className="pwd-copy"
-                        onClick={() => {
-                          try {
-                            navigator.clipboard.writeText(resetState.result.tempPassword);
-                            setMsg({ type: 'ok', text: '临时密码已复制' });
-                          } catch {
-                            setMsg({ type: 'err', text: '复制失败，请手动选中复制' });
-                          }
-                        }}
-                      >
-                        复制
-                      </button>
-                    </div>
-                    <div className="pwd-result-foot">
-                      发给本人 → 他登录后会被强制先改成自己的密码。关掉这个弹窗就再也看不到了。
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="modal-actions">
