@@ -1329,6 +1329,114 @@ button.back-link:hover {
 }
 
 /* ============================================================
+   疑似重复群友 → 关联合并
+   ------------------------------------------------------------
+   和「未登记账号」是同一类「数据体检」区块，沿用 .unreg 外壳，
+   只在里面加分组 + 两条对比行的样式。
+   ============================================================ */
+.dup-group {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-card);
+}
+.dup-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.dup-reason {
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.dup-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.dup-pick .unreg-select {
+  flex: 0 1 auto;
+  min-width: 130px;
+}
+.dup-table {
+  margin-top: 2px;
+}
+.dup-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) 104px 58px minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr);
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line-soft, rgba(240, 232, 220, 0.06));
+  font-size: 12.5px;
+}
+.dup-row:last-child {
+  border-bottom: 0;
+}
+.dup-row-head {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+/* 「保留 / 并入」各自染个底色，避免看错方向 */
+.dup-row.dup-keep {
+  background: rgba(122, 168, 116, 0.07);
+}
+.dup-row.dup-drop {
+  background: rgba(201, 134, 124, 0.07);
+}
+.dup-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+.dup-tag {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 16px;
+}
+.dup-tag.keep {
+  background: rgba(122, 168, 116, 0.18);
+  color: var(--ok, #7aa874);
+}
+.dup-tag.drop {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+@media (max-width: 1100px) {
+  .dup-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 4px;
+  }
+  .dup-row-head {
+    display: none;
+  }
+  .dup-name {
+    grid-column: 1;
+  }
+}
+
+/* ============================================================
    后台弹窗里的表单控件
    ------------------------------------------------------------
    admin 页的 input/textarea 用的内联样式，只给了 border 和 padding，

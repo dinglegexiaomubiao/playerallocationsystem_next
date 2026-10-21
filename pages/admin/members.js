@@ -6,6 +6,7 @@ import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
 import PositionPicker from '../../components/PositionPicker';
 import MultiSelectFilter from '../../components/MultiSelectFilter';
 import UnregisteredAccounts from '../../components/admin/UnregisteredAccounts';
+import DuplicatePlayers from '../../components/admin/DuplicatePlayers';
 import heroIdToName from '../../lib/heroMapping';
 
 /* 全英雄选项：后台改资料时要能选任意英雄，不能只限已有数据里出现过的 */
@@ -223,6 +224,9 @@ export default function AdminMembersPage({ denied }) {
 
           {/* 打了比赛但没绑定群友的账号：补录后赛程里的裸账号立刻变成昵称 */}
           <UnregisteredAccounts onChanged={load} />
+
+          {/* 同一个人留下两条（导入 + 补录各一条）：合并后报名/入队/场次并到一处 */}
+          <DuplicatePlayers onChanged={load} />
 
           <div className="adm-bar" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
             <input
