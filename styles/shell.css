@@ -35,7 +35,7 @@ body {
   height: 32px;
   border-radius: 7px;
   background: var(--brand-solid, #c0392f);
-  color: #f5efe7;
+  color: var(--on-solid);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 0;
@@ -62,9 +62,68 @@ body {
   color: var(--text-3);
 }
 
+/* ==================== 日间 / 夜间切换 ====================
+   位置：导航右上角（.nav-right 第一个元素），窄屏进抽屉。
+   形态：32px 方形图标按钮，一根发丝边。不做胶囊、不打光、
+   不加第二层描边 —— 它是工具，不是行动召唤。 */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+.theme-toggle svg {
+  flex: 0 0 auto;
+}
+.theme-toggle:hover {
+  color: var(--brand-on-soft);
+  border-color: var(--color-primary-border);
+  background: var(--brand-soft);
+}
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.theme-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* 抽屉里：撑成和「登录 / 注册」一样宽的操作项，并补上文字 */
+.theme-toggle-label {
+  display: none;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+.nav-drawer-actions .theme-toggle {
+  width: auto;
+  height: auto;
+  padding: 7px 12px;
+}
+.nav-drawer-actions .theme-toggle-label {
+  display: inline;
+}
+
+/* 不套导航的页面（登录页）用固定定位的那一颗 */
+.theme-toggle-floating {
+  position: fixed;
+  top: 18px;
+  right: 20px;
+  z-index: 60;
+}
+
 /* 导航链接：纯文字，靠位置和颜色分层，不用胶囊底 */
-.nav-links {
-  gap: 24px;
+.nav-links {  gap: 24px;
   margin-left: 8px;
 }
 .nav-links a {
@@ -212,13 +271,13 @@ body {
 /* ==================== 反馈浮窗 ==================== */
 .fb-fab {
   background: var(--brand-solid, #c0392f);
-  color: #f7f2ec;
+  color: var(--on-solid);
   border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 18px var(--shadow-lg);
 }
 .fb-fab:hover {
-  background: #a52f27;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  background: var(--brand-solid-hover);
+  box-shadow: 0 10px 24px var(--shadow-lg);
   transform: none;
 }
 .fb-fab.is-open {
@@ -259,7 +318,7 @@ body {
   transition: background 0.12s ease;
 }
 .lr-trow:hover {
-  background: rgba(238, 241, 244, 0.018);
+  background: var(--overlay-faint);
   color: inherit;
 }
 .lr-cell-main {
@@ -401,7 +460,7 @@ body {
 }
 .login-button {
   background: var(--brand-solid);
-  color: #f7f2ec;
+  color: var(--on-solid);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -451,7 +510,7 @@ body {
 .rank .no.top {
   background: var(--gold-soft);
   color: var(--gold);
-  border: 1px solid rgba(224, 184, 120, 0.4);
+  border: 1px solid var(--color-warning-border);
 }
 .rank .sc {
   font-family: var(--font-mono);
@@ -474,7 +533,7 @@ body {
 }
 .register-submit {
   background: var(--brand-solid);
-  color: #f7f2ec;
+  color: var(--on-solid);
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -633,7 +692,7 @@ button.back-link:hover {
   line-height: 1.7;
   letter-spacing: 0.06em;
   color: var(--gold);
-  border: 1px solid rgba(224, 184, 120, 0.45);
+  border: 1px solid var(--color-warning-border);
   background: var(--gold-soft);
 }
 .ap-starter {
@@ -1048,7 +1107,7 @@ button.back-link:hover {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm, 4px);
   background: var(--bg-card);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 10px 28px var(--shadow-lg);
   overflow: hidden;
 }
 .msf-panel-head,
@@ -1298,7 +1357,7 @@ button.back-link:hover {
   border: 1px solid var(--brand-solid);
   border-radius: var(--radius-sm, 4px);
   background: var(--brand-solid);
-  color: #f7f2ec;
+  color: var(--on-solid);
   padding: 4px 10px;
   font-family: inherit;
   font-size: 11.5px;
@@ -1394,10 +1453,10 @@ button.back-link:hover {
 }
 /* 「保留 / 并入」各自染个底色，避免看错方向 */
 .dup-row.dup-keep {
-  background: rgba(122, 168, 116, 0.07);
+  background: var(--green-soft);
 }
 .dup-row.dup-drop {
-  background: rgba(201, 134, 124, 0.07);
+  background: var(--brand-soft);
 }
 .dup-name {
   display: flex;
@@ -1417,12 +1476,12 @@ button.back-link:hover {
   line-height: 16px;
 }
 .dup-tag.keep {
-  background: rgba(122, 168, 116, 0.18);
+  background: var(--green-soft);
   color: var(--ok, #7aa874);
 }
 .dup-tag.drop {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--brand-on-soft);
 }
 @media (max-width: 1100px) {
   .dup-row {

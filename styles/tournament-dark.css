@@ -13,32 +13,34 @@
    ============================================================ */
 
 .t-dark {
-  /* —— 底色：中性深灰，四级明度阶梯 —— */
-  --t-bg: #15171a;
-  --t-bg-2: #1c1f24;
-  --t-sunk: #0f1114; /* 比底色更深，用于凹陷区（表头、代码段） */
+  /* —— 全部指向全局令牌 ——
+     2026-10-21 双主题改造：这里原先写死了一套深色值，导致赛事页
+     无法跟随 data-theme。现在只做语义映射，主题切换自动生效。 */
+  --t-bg: var(--bg-page);
+  --t-bg-2: var(--bg-card);
+  --t-sunk: var(--bg-sunk); /* 比页面底更沉，用于凹陷区（表头、代码段） */
 
-  /* —— 品牌：深红打底，文字用提纯后的亮红 —— */
-  --t-red: #c0392f;
-  --t-red-deep: #a52f27;
-  --t-red-ink: #e2635a; /* 深色底上的可读红，用于文字（4.9:1） */
-  --t-red-ink-soft: #f28a81; /* 淡红底（red-dim）上的文字要再亮一档 */
-  --t-red-dim: rgba(226, 99, 90, 0.14);
+  /* —— 品牌：深红打底，文字用可读红 —— */
+  --t-red: var(--brand-solid);
+  --t-red-deep: var(--brand-solid-hover);
+  --t-red-ink: var(--brand); /* 当前主题下的可读红，用于文字 */
+  --t-red-ink-soft: var(--brand-on-soft); /* 淡红底上的文字要再强一档 */
+  --t-red-dim: var(--brand-soft);
 
   /* —— 荣誉：古铜金，只给名次与奖赏 —— */
-  --t-bronze: #c79a5a;
-  --t-bronze-ink: #e0b878;
-  --t-bronze-dim: rgba(224, 184, 120, 0.12);
+  --t-bronze: var(--gold);
+  --t-bronze-ink: var(--gold);
+  --t-bronze-dim: var(--gold-soft);
 
-  /* —— 文字：中性灰阶，不再带暖色 —— */
-  --t-text: #eef1f4;
-  --t-text-2: #a8b0ba;
-  --t-text-3: #8b939e;
+  /* —— 文字：中性灰阶 —— */
+  --t-text: var(--text);
+  --t-text-2: var(--text-2);
+  --t-text-3: var(--text-3);
 
   /* —— 分隔线：一根头发丝，页面大部分结构靠它 —— */
-  --t-line: #2b3038;
-  --t-line-soft: rgba(238, 241, 244, 0.07);
-  --t-line-strong: #3a4149;
+  --t-line: var(--border);
+  --t-line-soft: var(--line-hairline);
+  --t-line-strong: var(--border-strong);
 
   /* —— 圆角：克制 —— */
   --t-r-1: 2px;
@@ -101,21 +103,22 @@
   inset: 0;
   background-size: cover;
   background-position: center 32%;
-  opacity: 0.2;
+  opacity: var(--hero-img-opacity, 0.2);
   filter: saturate(0.55) contrast(1.05);
 }
 .t-hero-bg::after {
   content: '';
   position: absolute;
   inset: 0;
+  /* 遮罩随主题翻转：深色用暗、浅色用亮，保证图上的文字始终是高对比 */
   background: linear-gradient(
       100deg,
       var(--t-bg) 0%,
-      rgba(23, 19, 15, 0.94) 38%,
-      rgba(23, 19, 15, 0.62) 70%,
-      rgba(23, 19, 15, 0.3) 100%
+      var(--hero-scrim-a) 38%,
+      var(--hero-scrim-b) 70%,
+      var(--hero-scrim-c) 100%
     ),
-    linear-gradient(180deg, rgba(23, 19, 15, 0) 55%, var(--t-bg) 100%);
+    linear-gradient(180deg, transparent 55%, var(--t-bg) 100%);
 }
 .t-hero-inner {
   position: relative;
@@ -253,12 +256,12 @@
   color: var(--t-text-3);
 }
 .t-badge.live {
-  border-color: rgba(226, 99, 90, 0.5);
+  border-color: var(--color-primary-border);
   color: var(--t-red-ink);
   background: var(--t-red-dim);
 }
 .t-badge.open {
-  border-color: rgba(224, 184, 120, 0.45);
+  border-color: var(--color-warning-border);
   color: var(--t-bronze-ink);
   background: var(--t-bronze-dim);
 }
@@ -557,7 +560,7 @@
   color: var(--t-text-3);
 }
 .t-side-tag.radiant {
-  color: #7d8f6a;
+  color: var(--ok);
 }
 .t-side-tag.dire {
   color: var(--t-red-ink);
@@ -628,14 +631,14 @@
   border-radius: var(--t-r-1);
 }
 .t-team-tag.radiant {
-  color: #8ed492;
-  background: rgba(111, 191, 115, 0.14);
-  border: 1px solid rgba(111, 191, 115, 0.3);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
 }
 .t-team-tag.dire {
   color: var(--t-red-ink-soft);
   background: var(--t-red-dim);
-  border: 1px solid rgba(226, 99, 90, 0.38);
+  border: 1px solid var(--color-primary-border);
 }
 .t-team-bar-name {
   font-family: var(--t-serif);
@@ -653,7 +656,7 @@
   font-size: 9.5px;
   letter-spacing: 0.14em;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(224, 184, 120, 0.45);
+  border: 1px solid var(--color-warning-border);
   background: var(--t-bronze-dim);
   border-radius: var(--t-r-1);
   padding: 0 5px;
@@ -674,7 +677,7 @@
   margin: 0 7px;
   /* 装饰性分隔符不走 AA（不是正文），但 --t-line-strong 只有 1.7:1，
      等于没有，提亮到能看见又不抢正文的程度 */
-  color: #55606d;
+  color: var(--text-3);
 }
 
 /* 列头 */
@@ -787,14 +790,14 @@
   line-height: 1;
 }
 .t-aghs.scepter {
-  color: #e0b46a;
-  background: rgba(224, 180, 106, 0.14);
-  border: 1px solid rgba(224, 180, 106, 0.42);
+  color: var(--gold);
+  background: var(--gold-soft);
+  border: 1px solid var(--color-warning-border);
 }
 .t-aghs.shard {
-  color: #8fb6d8;
-  background: rgba(143, 182, 216, 0.14);
-  border: 1px solid rgba(143, 182, 216, 0.4);
+  color: var(--tone-radiant);
+  background: var(--tone-radiant-bg);
+  border: 1px solid var(--border-strong);
 }
 
 /* 头像 / 英雄图：唯一允许的圆形与圆角，因为它们是图像 */
@@ -816,7 +819,7 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--t-red-dim);
-  border: 1px solid rgba(226, 99, 90, 0.35);
+  border: 1px solid var(--color-primary-border);
   color: var(--t-red-ink);
   font-size: 10px;
   font-weight: 700;
@@ -858,7 +861,7 @@
   transition: background 0.12s ease;
 }
 .t-trow:hover {
-  background: rgba(238, 241, 244, 0.018);
+  background: var(--overlay-faint);
 }
 .t-num {
   text-align: right;
@@ -904,16 +907,16 @@
 }
 .t-team-rank.gold {
   color: var(--t-bronze-ink);
-  border-color: rgba(224, 184, 120, 0.5);
+  border-color: var(--color-warning-border);
   background: var(--t-bronze-dim);
 }
 .t-team-rank.silver {
-  color: #bfc2c5;
-  border-color: #4c4a46;
+  color: var(--text-2);
+  border-color: var(--border-strong);
 }
 .t-team-rank.bronze {
-  color: #c09a78;
-  border-color: #523f31;
+  color: var(--gold);
+  border-color: var(--border-strong);
 }
 .t-td-total {
   font-size: 14px;
@@ -976,7 +979,7 @@
   line-height: 1.5;
   vertical-align: 1px;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(224, 184, 120, 0.45);
+  border: 1px solid var(--color-warning-border);
 }
 .t-rp-pos {
   font-size: 10px;
@@ -1034,7 +1037,7 @@
   font-family: var(--t-mono);
   font-size: 10.5px;
   font-weight: 600;
-  color: #6fbf73;
+  color: var(--ok);
 }
 .t-vs-l {
   font-family: var(--t-mono);
@@ -1117,7 +1120,7 @@
   transition: background 0.12s ease;
 }
 .t-tr:hover {
-  background: rgba(238, 241, 244, 0.018);
+  background: var(--overlay-faint);
 }
 .t-tr-name {
   font-weight: 600;
@@ -1159,12 +1162,12 @@
 }
 .t-chip.brand {
   color: var(--t-red-ink);
-  border-color: rgba(226, 99, 90, 0.45);
+  border-color: var(--color-primary-border);
   background: var(--t-red-dim);
 }
 .t-chip.gold {
   color: var(--t-bronze-ink);
-  border-color: rgba(224, 184, 120, 0.45);
+  border-color: var(--color-warning-border);
   background: var(--t-bronze-dim);
 }
 .t-chip.muted {
@@ -1330,7 +1333,7 @@
   font-size: 9.5px;
   letter-spacing: 0.1em;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(224, 184, 120, 0.45);
+  border: 1px solid var(--color-warning-border);
   background: var(--t-bronze-dim);
   border-radius: var(--t-r-1);
   padding: 0 5px;
@@ -1472,7 +1475,7 @@
 }
 /* 线条要看得见：1px + 深棕在深色底上几乎不可见 */
 .bk-line {
-  stroke: #5d5044;
+  stroke: var(--border-strong);
   stroke-width: 1.5;
 }
 .bk-line.win {

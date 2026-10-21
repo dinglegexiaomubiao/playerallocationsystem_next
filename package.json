@@ -10,7 +10,9 @@
     "warm:heroes": "node scripts/warm-hero-icons.mjs",
     "db:tunnel": "bash scripts/db-tunnel.sh",
     "css:dup": "node scripts/css-dup-check.cjs",
-    "a11y": "node scripts/a11y-contrast.cjs"
+    "a11y": "node scripts/a11y-contrast.cjs",
+    "shoot:theme": "node scripts/shoot-theme.cjs",
+    "theme:check": "node scripts/theme-check.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

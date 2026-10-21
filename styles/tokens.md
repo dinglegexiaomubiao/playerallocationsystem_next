@@ -149,23 +149,85 @@
 | `--font-sans` | `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif` | 正文 |
 | `--font-mono` | `'SF Mono', 'JetBrains Mono', 'Cascadia Mono', Consolas, Monaco, monospace` | 分数/时间/编号 |
 
+## 双主题：夜间（默认）/ 日间
+
+> 2026-10-21 新增。做法是**只有一份样式，只换令牌值**，没有为浅色写任何选择器级覆盖。
+
+机制：
+
+| 环节 | 实现 |
+|---|---|
+| 触发 | `<html data-theme="light">`；夜间是默认态，**不挂属性** |
+| 令牌 | `styles/tokens.css` 里的 `[data-theme='light']` 块，照着 `:root` 逐项覆写 |
+| 持久化 | `localStorage['laroja-theme']`（`lib/theme.js` 统一读写） |
+| 防闪烁 | `pages/_document.js` 内联脚本，在 hydration 之前贴属性（线上 CSP 已含 `'unsafe-inline'`） |
+| 切换入口 | 导航右上角 `.theme-toggle`；窄屏进抽屉；登录页用 `.theme-toggle-floating` |
+| 浏览器 UI | `color-scheme` + `<meta name="theme-color">` 随主题更新 |
+
+浅色板的三条设计约束（照抄深色板的逻辑，只是明度阶梯反向）：
+
+| 层级 | 夜间 | 日间 |
+|---|---|---|
+| 页面底 `--bg-page` | `#15171a` | `#f5f6f8` |
+| 卡片 `--bg-card` | `#1c1f24` | `#ffffff` |
+| 次级底 `--bg-subtle` | `#23272d` | `#f1f3f5` |
+| 凹陷 `--bg-sunk` | `#0f1114` | `#e6e9ed` |
+| 正文 `--text` | `#eef1f4` | `#15181c` |
+| 辅助 `--text-3` | `#8b939e` | `#626973` |
+| 品牌字 `--brand` | `#e2635a` | `#b02b25` |
+| 实底 `--brand-solid` | `#c0392f` | `#b02b25` |
+| 主 CTA | 亮底 **深字** `#e8635a` + `#1a1211` | 深红底 **白字** `#b02b25` + `#ffffff` |
+
+1. **底色仍是中性灰**，不用米黄/米白——否则和深色主题不是同一套色彩逻辑
+2. **品牌红必须压深**：`#e2635a` 在白底上只有 2.6:1，浅色主题统一用 `#b02b25`
+3. **明度阶梯反向**：夜间「越深越沉」，日间「越白越浮」，卡片始终是离视线最近的一层
+
 ## 赛事页的镜像令牌
 
 `styles/tournament-dark.css` 的 `.t-dark` 作用域里有一整套 `--t-*` 镜像
-（`--t-bg` / `--t-red-ink` / `--t-text-3` / `--t-line` 等），值必须与上面保持一致。
-它们存在的原因是赛事详情页要能脱离全局 `:root` 独立作用域，**改配色时两处都要动**。
+（`--t-bg` / `--t-red-ink` / `--t-text-3` / `--t-line` 等）。
+
+**2026-10-21 起它们不再写死色值**，全部改成 `var(--bg-page)` / `var(--brand)` 这类指向：
+
+```css
+.t-dark {
+  --t-bg: var(--bg-page);
+  --t-red-ink: var(--brand);
+  --t-line: var(--border);
+}
+```
+
+这样主题切换会自动跟随，改色只需动 `tokens.css` 一处。
+保留 `--t-*` 这层的目的只剩「赛事页的语义命名」，不是独立色板。
+
 
 ## 使用约定
 
-- 颜色/圆角/阴影/字体一律用 `var(--x)`，不要写死色值。浅色主题遗留的硬编码
-  （`#6d28d9` 紫、`#1e5fa8` 蓝、`#8a6408` 暗金）已经清掉，别再加回来。
+- 颜色/圆角/阴影/字体一律用 `var(--x)`，**不要写死色值**。
+  写死的后果不再只是深色下难看：它在另一个主题里会直接消失或糊掉。
+  已知需要令牌化的类别：背景、文字、描边、遮罩、阴影、叠加高光。
+- **随主题翻转的 rgba 必须做成令牌**，不能直接写 `rgba(238,241,244,0.07)`
+  这种「白光叠加」——浅色主题下它应该是黑光。已有：`--line-hairline` /
+  `--overlay-hover` / `--overlay-faint` / `--overlay-scrim` / `--nav-bg`。
 - 深色底不要写白底（后台弹窗 input 曾因缺背景色退化成浏览器白底）。
 - 古铜金 `--gold` 只给名次、冠军、待处理等「荣誉/提醒」，泛用就贬值。
 - `--ok` 是唯一保留的绿色，只用于「进行中/活跃」状态点，不做实底大面积色块。
-- **淡色底上的文字要换亮一档的令牌**：`--brand` 放到 `--brand-soft` 底上只剩 4.0:1，
-  这时该用 `--brand-on-soft`（赛事页对应 `--t-red-ink-soft`）。
-- 主 CTA 是**亮底深字**（`--btn-primary-*`）。暗红实底 `--brand-solid` 留给
-  徽标、标签这类小面积实底，因为它配白字虽然达标，但在暗页面上抓不住视线。
+- **淡色底上的文字要换一档令牌**：`--brand` 放到 `--brand-soft` 底上在夜间只剩 4.0:1，
+  浅色主题下 `--brand` 又偏亮，两个主题都该用 `--brand-on-soft`。
+- 主 CTA 用 `--btn-primary-*` 三件套，它会随主题反向（亮底深字 ⇄ 深底白字），
+  不要单独写 `background` / `color`。
+- 图像上的文字（赛事 Hero）用 `--hero-scrim-*` 遮罩保证对比，
+  遮罩方向随主题翻转（暗遮罩配亮字 / 亮遮罩配深字）。
 - 圆角克制：4 / 8 / 12 三档，圆角不当装饰。
 - 阴影只做层次，不做发光；导航等深色实底不加玻璃拟态。
-- **改完跑一次对比度审计**：`node _a11y.cjs` 会遍历五个页面，列出所有低于 4.5:1 的文本样式。
+
+## 改完必做的两件事
+
+```bash
+# 1) 对比度：两个主题都要跑，任一主题有低于 4.5:1 的正文都算没改完
+MSYS_NO_PATHCONV=1 THEME=dark  BASE=http://127.0.0.1:3000 npm run a11y -- / /tournaments /tournaments/16 /members /party /food
+MSYS_NO_PATHCONV=1 THEME=light BASE=http://127.0.0.1:3000 npm run a11y -- / /tournaments /tournaments/16 /members /party /food
+
+# 2) 视觉：截图比对，重点看浅色下的卡片层次、描边、图像上的文字
+```
+

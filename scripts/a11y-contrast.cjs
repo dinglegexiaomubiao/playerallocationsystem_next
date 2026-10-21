@@ -10,6 +10,7 @@
  *   node scripts/a11y-contrast.cjs                      # 默认测五个主要页面
  *   node scripts/a11y-contrast.cjs /admin /profile      # 指定路径
  *   BASE=http://127.0.0.1:3000 node scripts/...         # 指定站点
+ *   THEME=light node scripts/a11y-contrast.cjs          # 测日间模式（默认 dark）
  *
  * 判定口径：
  *   - 背景按 DOM 向上逐层合成（容器半透明时算真实合成色），不是简单取父级
@@ -19,6 +20,7 @@
 const { chromium } = require('playwright');
 
 const BASE = process.env.BASE || 'http://127.0.0.1:3000';
+const THEME = process.env.THEME === 'light' ? 'light' : 'dark';
 const DEFAULT_PAGES = ['/', '/tournaments', '/members'];
 
 const auditFn = () => {
@@ -38,6 +40,13 @@ const auditFn = () => {
     b: fg.b * fg.a + bg.b * (1 - fg.a),
     a: 1,
   });
+  // 兜底色取 --bg-page 的实际值，这样同一份脚本能分别审计深色与浅色
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute;left:-9999px;top:0;background:var(--bg-page)';
+  document.body.appendChild(probe);
+  const canvas = parse(getComputedStyle(probe).backgroundColor) || { r: 21, g: 23, b: 26, a: 1 };
+  probe.remove();
+
   const bgOf = (el) => {
     let cur = el;
     const stack = [];
@@ -49,7 +58,7 @@ const auditFn = () => {
       }
       cur = cur.parentElement;
     }
-    let base = { r: 21, g: 23, b: 26, a: 1 };
+    let base = { ...canvas, a: 1 };
     for (let i = stack.length - 1; i >= 0; i--) base = over(stack[i], base);
     return base;
   };
@@ -91,7 +100,16 @@ const auditFn = () => {
   const pages = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_PAGES;
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, locale: 'zh-CN' });
+  if (THEME === 'light') {
+    // 主题由 localStorage 决定，必须在首次导航前注入
+    await page.addInitScript(() => {
+      try {
+        localStorage.setItem('laroja-theme', 'light');
+      } catch (e) {}
+    });
+  }
   let total = 0;
+  console.log(`主题：${THEME}`);
   for (const url of pages) {
     await page.goto(BASE + url, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForTimeout(700);

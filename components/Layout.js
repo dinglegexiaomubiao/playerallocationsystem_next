@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import useSession from '../hooks/useSession';
+import ThemeToggle from './ThemeToggle';
 import { footerAccountItems } from '../lib/nav-items.mjs';
 
 // 顶级导航：只放「全站板块」，个人相关入口按登录态追加
@@ -52,9 +53,17 @@ export default function Layout({ children }) {
     }
   };
 
-  // 登录页保持纯净，不套用社区导航与页脚
+  // 登录页保持纯净，不套用社区导航与页脚。
+  // 但它同样需要能切日夜 —— 否则用户在这个页面被锁在某个主题里。
   if (pathname === '/login') {
-    return <>{children}</>;
+    return (
+      <>
+        <div className="theme-toggle-floating">
+          <ThemeToggle />
+        </div>
+        {children}
+      </>
+    );
   }
 
   const isActive = (href) =>
@@ -118,7 +127,10 @@ export default function Layout({ children }) {
             ))}
           </nav>
 
-          <div className="nav-right">{accountBlock}</div>
+          <div className="nav-right">
+            <ThemeToggle />
+            {accountBlock}
+          </div>
 
           <button
             type="button"
@@ -146,7 +158,10 @@ export default function Layout({ children }) {
                   {n.label}
                 </Link>
               ))}
-              <div className="nav-drawer-actions">{accountBlock}</div>
+              <div className="nav-drawer-actions">
+                <ThemeToggle className="is-drawer" />
+                {accountBlock}
+              </div>
             </div>
           </div>
         )}
