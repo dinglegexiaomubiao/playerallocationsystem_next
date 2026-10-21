@@ -70,6 +70,8 @@ export default function useSession() {
     ready,
     name: me ? me.name : null,
     isAdmin: !!(me && me.isAdmin),
+    // 管理员重置过密码、本人还没改 → 全站守卫会把人推到 /change-password
+    mustChangePassword: !!(me && me.mustChangePassword),
     refresh: load,
     logout,
   };

@@ -2,7 +2,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
-import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
+import { apiGet, apiPost, apiPut, apiDelete } from '../../lib/api-client.mjs';
 import PositionPicker from '../../components/PositionPicker';
 import MultiSelectFilter from '../../components/MultiSelectFilter';
 import UnregisteredAccounts from '../../components/admin/UnregisteredAccounts';
@@ -71,6 +71,8 @@ export default function AdminMembersPage({ denied }) {
   const [filter, setFilter] = useState('all'); // all | issues | nosteam | unbound
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
+  /* 重置密码：busy 管按钮，result 装一次性临时密码（关弹窗即丢弃） */
+  const [resetState, setResetState] = useState({ busy: false, result: null });
   const [msg, setMsg] = useState(null);
 
   const load = useCallback(async () => {
@@ -169,6 +171,28 @@ export default function AdminMembersPage({ denied }) {
       setMsg({ type: 'err', text: '保存失败：' + e.message });
     } finally {
       setBusy(false);
+    }
+  };
+
+  // 重置登录密码：旧密码作废，发一个一次性临时密码，本人登录后必须改
+  const resetPassword = async (p) => {
+    const acc = p.account_name;
+    if (!acc || resetState.busy) return;
+    const ok = window.confirm(
+      `确认重置「${acc}」的登录密码？\n\n` +
+        '旧密码会立刻失效，系统会生成一个一次性临时密码。\n' +
+        '把临时密码发给本人后，他登录时会被强制先改成自己的密码。'
+    );
+    if (!ok) return;
+
+    setResetState({ busy: true, result: null });
+    setMsg(null);
+    try {
+      const r = await apiPost('/api/admin/reset-password', { playerId: p.id });
+      setResetState({ busy: false, result: r });
+    } catch (e) {
+      setResetState({ busy: false, result: null });
+      setMsg({ type: 'err', text: '重置密码失败：' + e.message });
     }
   };
 
@@ -365,7 +389,10 @@ export default function AdminMembersPage({ denied }) {
                           )}
                         </td>
                         <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => setEditing({
+                          <button className="btn btn-ghost btn-sm" onClick={() => {
+                            // 临时密码是一次性的，重新打开弹窗必须清掉
+                            setResetState({ busy: false, result: null });
+                            setEditing({
                             ...p,
                             // 位置与英雄在库里是逗号分隔字符串，弹窗里用数组编辑
                             positions: splitList(p.positions),
@@ -383,7 +410,8 @@ export default function AdminMembersPage({ denied }) {
                                 : p.group_nickname
                                   ? [{ value: String(p.group_nickname), isPrimary: true }]
                                   : [],
-                          })}>
+                            });
+                          }}>
                             编辑
                           </button>
                           <button
@@ -521,11 +549,56 @@ export default function AdminMembersPage({ denied }) {
                 />
               </div>
 
-              {editing.account_name && (
-                <p style={{ fontSize: 12, color: 'var(--text-3, #888)' }}>
-                  已绑定登录账号：<b>{editing.account_name}</b>（登录 {editing.login_count} 次）
-                </p>
-              )}
+              {/* ===== 登录账号与重置密码 =====
+                  密码在库里是加盐散列，查不到原文，只能「作废 + 发一个一次性临时密码」。
+                  临时密码只在这里显示一次，关掉弹窗就没了。 */}
+              <div className="pwd-box">
+                <div className="pwd-box-head">
+                  <span>登录账号</span>
+                  {editing.account_name ? (
+                    <>
+                      <b className="pwd-acct">{editing.account_name}</b>
+                      <span className="pwd-meta">已登录 {editing.login_count || 0} 次</span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={resetState.busy}
+                        onClick={() => resetPassword(editing)}
+                      >
+                        {resetState.busy ? '重置中…' : '重置密码'}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="pwd-none">还没有登录账号，等他注册后再来重置</span>
+                  )}
+                </div>
+
+                {resetState.result && (
+                  <div className="pwd-result">
+                    <div className="pwd-result-title">临时密码（只显示这一次）</div>
+                    <div className="pwd-result-line">
+                      <code>{resetState.result.tempPassword}</code>
+                      <button
+                        type="button"
+                        className="pwd-copy"
+                        onClick={() => {
+                          try {
+                            navigator.clipboard.writeText(resetState.result.tempPassword);
+                            setMsg({ type: 'ok', text: '临时密码已复制' });
+                          } catch {
+                            setMsg({ type: 'err', text: '复制失败，请手动选中复制' });
+                          }
+                        }}
+                      >
+                        复制
+                      </button>
+                    </div>
+                    <div className="pwd-result-foot">
+                      发给本人 → 他登录后会被强制先改成自己的密码。关掉这个弹窗就再也看不到了。
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="modal-actions">

@@ -9,6 +9,7 @@ import '../styles/home.css';
 import '../styles/tournament-dark.css';
 import Layout from '../components/Layout';
 import FeedbackWidget from '../components/FeedbackWidget';
+import ForcePasswordChange from '../components/ForcePasswordChange';
 import { installErrorReporting } from '../lib/support-client.mjs';
 
 function MyApp({ Component, pageProps }) {
@@ -49,6 +50,8 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <Layout>
+      {/* 被重置过密码的人，去任何页面都会被推回改密页 */}
+      <ForcePasswordChange />
       <Component {...pageProps} />
       {/* 反馈浮窗挂在 Layout 外层：登录页不套 Layout，但也得能反馈 */}
       <FeedbackWidget />

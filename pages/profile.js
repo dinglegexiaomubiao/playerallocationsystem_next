@@ -227,7 +227,12 @@ export default function Profile() {
               </div>
             </div>
             {!editing && (
-              <button className="btn btn-primary" onClick={startEdit} style={{ marginLeft: 'auto' }}>
+              <Link href="/change-password" className="btn btn-ghost" style={{ marginLeft: 'auto' }}>
+                修改密码
+              </Link>
+            )}
+            {!editing && (
+              <button className="btn btn-primary" onClick={startEdit} style={{ marginLeft: 8 }}>
                 编辑资料
               </button>
             )}

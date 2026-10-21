@@ -2,6 +2,7 @@ import { initDatabase, query } from '../../lib/db';
 import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { getClientIp, getLock, recordFail, resetFail, formatRetry } from '../../lib/rate-limit';
 import { hashPasswordWithSalt, verifyPassword, needsRehash } from '../../lib/password';
+import { ensurePasswordResetColumns } from '../../lib/db';
 
 let dbInitialized = false;
 
@@ -67,8 +68,12 @@ export default async function handler(req, res) {
   };
 
   try {
+    // 管理员重置过密码的账号带 must_change_password，登录后要强制去改密
+    await ensurePasswordResetColumns();
+
     const result = await query(
-      'SELECT name, count, password FROM public.play_score WHERE name = $1',
+      `SELECT name, count, password, coalesce(must_change_password, false) AS must_change_password
+         FROM public.play_score WHERE name = $1`,
       [trimmedUsername]
     );
 
@@ -119,6 +124,8 @@ export default async function handler(req, res) {
       count: updated.rows[0].count,
       message: '登录成功',
       isAdmin: isAdminName(trimmedUsername),
+      // true 表示这个密码是管理员重置的临时密码，前端要强制他去改
+      mustChangePassword: !!user.must_change_password,
     });
   } catch (error) {
     console.error('登录错误:', error);
