@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import useSession from '../../hooks/useSession';
 import { getSession, isAdmin } from '../../lib/auth';
+import { ensureSupportTable, ensureTournamentSchema, pool } from '../../lib/db';
 import ExcelIO from '../../components/ExcelIO';
 import { apiDelete, apiGet, apiPost, apiPut } from '../../lib/api-client.mjs';
 import {
@@ -103,7 +104,7 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function Admin({ denied }) {
+export default function Admin({ denied, todo }) {
   const { me, isAdmin, ready } = useSession();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -343,6 +344,32 @@ export default function Admin({ denied }) {
             </div>
           </div>
 
+          {/* 「需要你处理」：新群友注册 / 资料缺漏 / 未处理反馈。
+              没有通知渠道（邮件、webhook 未配置）时，这是管理员唯一能立刻看到变化的地方。 */}
+          {todo && (todo.incomplete > 0 || todo.feedback > 0 || todo.short > 0) && (
+            <div className="adm-todo">
+              <span className="adm-todo-title">需要你处理</span>
+              {todo.incomplete > 0 && (
+                <Link className="adm-todo-item" href="/admin/members">
+                  <span className="adm-todo-n">{todo.incomplete}</span>
+                  <span className="adm-todo-label">位新群友资料待补全</span>
+                </Link>
+              )}
+              {todo.short > 0 && (
+                <span className="adm-todo-item" title="在各赛季的「管理」页里可以补人">
+                  <span className="adm-todo-n">{todo.short}</span>
+                  <span className="adm-todo-label">支队伍不满 5 人</span>
+                </span>
+              )}
+              {todo.feedback > 0 && (
+                <Link className="adm-todo-item" href="/admin/support">
+                  <span className="adm-todo-n">{todo.feedback}</span>
+                  <span className="adm-todo-label">条用户反馈待查看</span>
+                </Link>
+              )}
+            </div>
+          )}
+
           {showCreate && (
             <div className="adm-create">
               <form onSubmit={handleCreate}>
@@ -426,10 +453,67 @@ export default function Admin({ denied }) {
   );
 }
 
+/**
+ * 后台首屏的「待处理」计数。
+ * 每项独立 try/catch：任何一张表缺失或查询出错，都只让该项为 0，
+ * 不能让后台首页因为统计而 500。
+ */
+async function loadAdminTodo() {
+  const count = async (label, sql) => {
+    try {
+      const r = await pool.query(sql);
+      return Number(r.rows[0]?.n || 0);
+    } catch (e) {
+      console.error(`后台待处理计数失败（${label}）:`, e.message);
+      return 0;
+    }
+  };
+
+  // 新群友资料是否齐全：分数、位置、地区三项任一为空即视为「待补全」。
+  // players.created_at 是 varchar，直接用 left(...,10) 和 'YYYY-MM-DD' 比，避开类型转换问题。
+  const [incomplete, feedback, short] = await Promise.all([
+    count(
+      '新群友资料',
+      `SELECT count(*)::int AS n
+         FROM public.players p
+        WHERE left(p.created_at, 10) >= to_char(now() - interval '30 days', 'YYYY-MM-DD')
+          AND (p.score IS NULL OR p.score = 0
+               OR coalesce(btrim(p.positions), '') = ''
+               OR coalesce(btrim(p.region), '') = '')`
+    ),
+    // 只算用户主动反馈：自动报错（kind='error'）量大且多为前端抖动，不该占「待处理」位
+    count(
+      '用户反馈',
+      `SELECT count(*)::int AS n FROM public.support_reports WHERE status = 'new' AND kind = 'feedback'`
+    ),
+    count(
+      '不满员队伍',
+      `SELECT count(*)::int AS n FROM (
+         SELECT t.id FROM public.teams t
+           LEFT JOIN public.team_players tp ON tp.team_id = t.id
+          GROUP BY t.id
+         HAVING count(tp.player_id) < 5
+       ) s`
+    ),
+  ]);
+
+  return { incomplete, feedback, short };
+}
+
 export async function getServerSideProps({ req }) {
   const session = getSession(req);
   if (!session) {
     return { redirect: { destination: '/login?from=/admin', permanent: false } };
   }
-  return { props: { denied: !isAdmin(req) } };
+  const denied = !isAdmin(req);
+  if (denied) return { props: { denied: true, todo: null } };
+
+  // 这两张表可能是新库首次访问时还没建，先确保存在再统计
+  try {
+    await Promise.all([ensureTournamentSchema(), ensureSupportTable()]);
+  } catch (e) {
+    /* 自举失败不影响计数，count() 内部会兜底为 0 */
+  }
+
+  return { props: { denied: false, todo: await loadAdminTodo() } };
 }

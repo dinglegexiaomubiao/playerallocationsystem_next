@@ -29,6 +29,16 @@ const uaPlatform = (ua) => {
   return '—';
 };
 
+/* 新注册的人常常只填了账号和昵称，分数/位置/地区都留空。
+   这里算出来，后台一眼就能看出谁需要去补资料。 */
+const missingOf = (p) => {
+  const miss = [];
+  if (p.score === null || p.score === undefined || Number(p.score) === 0) miss.push('分数');
+  if (!String(p.positions || '').trim()) miss.push('位置');
+  if (!String(p.region || '').trim()) miss.push('地区');
+  return miss;
+};
+
 /* 纯 CSS 柱状图（不引图表库）：bars = [{label, value, sub}] */
 function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
   const max = Math.max(1, ...bars.map((b) => b.value));
@@ -152,23 +162,54 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
 
           {/* 最近注册：谁刚加入（匿名访客注册后第一时间在这里可见） */}
           <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近注册</h3>
+          {(() => {
+            const bad = newPlayers.filter((p) => missingOf(p).length > 0).length;
+            if (newPlayers.length === 0 || bad === 0) return null;
+            return (
+              <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-2)' }}>
+                这 {newPlayers.length} 位里有 <strong style={{ color: 'var(--accent, #c23c2a)' }}>{bad}</strong> 位资料不全，
+                <Link href="/admin/members" style={{ color: 'var(--brand)', marginLeft: 4 }}>去群友管理补录 →</Link>
+              </p>
+            );
+          })()}
           <div style={{ overflowX: 'auto' }}>
             <table className="adm-table" style={{ width: '100%' }}>
               <thead>
-                <tr><th>群昵称</th><th>SteamID</th><th>绑定账号</th><th>注册时间</th></tr>
+                <tr><th>群昵称</th><th>SteamID</th><th>绑定账号</th><th>资料</th><th>注册时间</th></tr>
               </thead>
               <tbody>
                 {newPlayers.length === 0 && (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无注册记录</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无注册记录</td></tr>
                 )}
-                {newPlayers.map((p) => (
-                  <tr key={p.id}>
-                    <td style={{ fontWeight: 600 }}>{p.group_nickname || p.nickname || '未命名'}</td>
-                    <td style={{ fontFamily: 'monospace' }}>{p.game_id || '—'}</td>
-                    <td>{p.account || <span style={{ color: 'var(--text-3)' }}>未绑定</span>}</td>
-                    <td style={{ whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtDate(p.created_at)}</td>
-                  </tr>
-                ))}
+                {newPlayers.map((p) => {
+                  const miss = missingOf(p);
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ fontWeight: 600 }}>{p.group_nickname || p.nickname || '未命名'}</td>
+                      <td style={{ fontFamily: 'monospace' }}>{p.game_id || '—'}</td>
+                      <td>{p.account || <span style={{ color: 'var(--text-3)' }}>未绑定</span>}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {miss.length === 0 ? (
+                          <span style={{ color: 'var(--ok, #16a34a)', fontSize: 12 }}>齐全</span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '1px 8px',
+                              borderRadius: 999,
+                              fontSize: 12,
+                              background: 'var(--accent-soft, #fdecea)',
+                              color: 'var(--accent, #c23c2a)',
+                            }}
+                          >
+                            缺 {miss.join('、')}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtDate(p.created_at)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -311,12 +352,15 @@ export async function getServerSideProps({ req }) {
          WHERE created_at >= now() - interval '30 days'
          GROUP BY 1 ORDER BY 1
       `),
-      // 最近注册的选手 + 绑定账号：匿名访客注册后第一时间在这里可见
+      // 最近注册的选手 + 绑定账号：匿名访客注册后第一时间在这里可见。
+      // 排序必须用 id 而不是 created_at —— created_at 是 varchar 且只到「天」，
+      // 同一天注册的人全部并列，LIMIT 8 会随机截断，刚落地的账号可能被挤出去。
       pool.query(`
-        SELECT p.id, p.nickname, p.group_nickname, p.game_id, p.created_at, s.name AS account
+        SELECT p.id, p.nickname, p.group_nickname, p.game_id, p.created_at,
+               p.score, p.positions, p.region, s.name AS account
           FROM public.players p
           LEFT JOIN public.play_score s ON s.player_id = p.id
-         ORDER BY p.created_at DESC NULLS LAST
+         ORDER BY p.id DESC
          LIMIT 8
       `),
     ]);

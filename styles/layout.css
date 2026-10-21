@@ -867,6 +867,26 @@ a { text-decoration: none; color: inherit; }
 }
 .adm-tab:hover { border-color: var(--brand); color: var(--brand); }
 .adm-tab.active { background: var(--brand-solid); border-color: var(--brand); color: #fff; }
+
+/* 「需要你处理」概览：有新注册 / 待补资料 / 未处理反馈时出现在后台首屏 */
+.adm-todo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  padding: 13px 16px; margin-bottom: 18px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-left: 3px solid var(--gold); border-radius: var(--radius);
+}
+.adm-todo-title { font-size: .8rem; font-weight: 600; color: var(--text-3); margin-right: 2px; }
+.adm-todo-item {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  background: var(--bg-subtle); border: 1px solid transparent;
+  text-decoration: none; transition: border-color .15s ease;
+}
+.adm-todo-item:hover { border-color: var(--brand); }
+.adm-todo-n { font-size: 1rem; font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.adm-todo-label { font-size: .84rem; color: var(--text-2); }
+.adm-todo-item:hover .adm-todo-label { color: var(--brand); }
+
 .adm-create {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
   padding: 18px; margin-bottom: 18px;

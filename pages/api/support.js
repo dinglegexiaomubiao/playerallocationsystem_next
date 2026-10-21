@@ -169,8 +169,14 @@ export default async function handler(req, res) {
     try {
       if (notify.ok) {
         await updateSupportReport(saved.id, { notified_at: new Date().toISOString() });
-      } else if (!notify.skipped) {
-        await updateSupportReport(saved.id, { notify_error: notify.error || '通知失败' });
+      } else {
+        // 「跳过」也要落痕：SUPPORT_SMTP_* / SUPPORT_WEBHOOK_URL 没配时，
+        // 之前这里什么都不写，工单表里 notified_at 与 notify_error 双双为空，
+        // 管理员只会看到「没人通知我」却查不出原因。加上 [跳过] 前缀就能自解释。
+        const reason = notify.skipped
+          ? `[跳过] 通知渠道未配置（SUPPORT_SMTP_* / SUPPORT_WEBHOOK_URL）${notify.error ? '：' + notify.error : ''}`
+          : notify.error || '通知失败';
+        await updateSupportReport(saved.id, { notify_error: reason.slice(0, 500) });
       }
     } catch (e) {
       /* 状态回写失败可忽略 */

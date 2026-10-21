@@ -7,12 +7,34 @@ import {
 } from '../../lib/db';
 import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { hashPasswordWithSalt } from '../../lib/password';
+import { getClientIp } from '../../lib/rate-limit';
+import { notifySignup } from '../../lib/notify';
 
 let dbInitialized = false;
 
 const MAX_NAME_LEN = 40;
 const MAX_GAME_ID_LEN = 64;
 const MAX_PASSWORD_LEN = 64;
+
+/* 通知里只需要「什么系统 + 什么浏览器」，不用完整的 UA 串 */
+function uaBrief(ua) {
+  const s = String(ua || '');
+  if (!s) return null;
+  let os = '未知系统';
+  if (/Windows NT 10\.0/.test(s)) os = 'Windows 10/11';
+  else if (/Windows/.test(s)) os = 'Windows';
+  else if (/Android/.test(s)) os = 'Android';
+  else if (/iPhone|iPad|iPod/.test(s)) os = 'iOS';
+  else if (/Mac OS X|Macintosh/.test(s)) os = 'macOS';
+  else if (/Linux/.test(s)) os = 'Linux';
+  let br = '未知浏览器';
+  if (/MicroMessenger/i.test(s)) br = '微信内置浏览器';
+  else if (/Edg\//.test(s)) br = 'Edge';
+  else if (/Chrome\//.test(s)) br = 'Chrome';
+  else if (/Safari\//.test(s)) br = 'Safari';
+  else if (/Firefox\//.test(s)) br = 'Firefox';
+  return `${os} / ${br}`;
+}
 
 /**
  * 注册接口 —— 全站唯一的建号入口
@@ -131,14 +153,34 @@ export default async function handler(req, res) {
     }
 
     setSessionCookie(res, username);
-    return res.status(200).json({
+
+    const payload = {
       success: true,
       name: username,
       count: inserted.rows[0].count,
       playerId,
       message: '注册成功',
       isAdmin: isAdminName(username),
-    });
+    };
+    res.status(200).json(payload);
+
+    // 先把响应发出去，再推送注册通知：
+    // 邮件服务器/机器人连不上时，不能让新用户卡在「注册中…」。
+    // 未配置 SUPPORT_SMTP_* / SUPPORT_WEBHOOK_URL 时内部直接跳过，不会有副作用。
+    try {
+      await notifySignup({
+        account: username,
+        group_nickname: groupNickname,
+        game_id: gameId,
+        ip: getClientIp(req),
+        platform: uaBrief(req.headers['user-agent']),
+        created_at: new Date().toISOString(),
+      });
+    } catch (e) {
+      /* 通知失败绝不影响注册结果，只留日志 */
+      console.error('新用户注册通知发送失败:', e.message || e);
+    }
+    return;
   } catch (error) {
     console.error('注册错误:', error);
     return res.status(500).json({ error: '服务器内部错误' });
