@@ -8,9 +8,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* 页面间高度不同：滚动条出现/消失会让整个版心横向抖一下。
-   scrollbar-gutter 常驻预留滚动条槽位，切页时不再位移（老浏览器自动忽略）。 */
+   实测：无此设置时 1440 视口下内容区在 1440 / 1432 之间跳，居中容器左右各移 4px。
+   scrollbar-gutter 常驻预留 8px 槽位，切页时不再位移。 */
 html {
   scrollbar-gutter: stable;
+}
+/* 老浏览器（不支持 scrollbar-gutter）兜底：强制常驻垂直滚动条，同样占住 8px。
+   注意：中文标签在 400/600 字重下宽度完全相同，改字重并不能解决抖动。 */
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
 }
 
 :root {
