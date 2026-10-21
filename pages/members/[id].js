@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import useAIAnalysis from '../../hooks/useAIAnalysis';
 import useSession from '../../hooks/useSession';
 import Avatar from '../../components/Avatar';
 import HeroAvatar from '../../components/HeroAvatar';
+import MatchHistory from '../../components/member/MatchHistory';
+import AiPanel from '../../components/member/AiPanel';
 import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
 import { backLabelOf, memberHref } from '../../lib/member-href';
 
@@ -54,9 +55,6 @@ export default function MemberDetail() {
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [stats, setStats] = useState(null);
-  const [loadingStats, setLoadingStats] = useState(false);
-  const { analyzing, analysis, error: aiError, runAnalysis } = useAIAnalysis();
   const { me, ready: sessionReady } = useSession();
 
   useEffect(() => {
@@ -124,28 +122,6 @@ export default function MemberDetail() {
     });
     return result;
   }, [player, players]);
-
-  const handleAI = async () => {
-    if (!player) return;
-    let s = stats;
-    if (!s && player.game_id) {
-      setLoadingStats(true);
-      try {
-        const r = await fetch('/api/player-stats?playerId=' + player.game_id);
-        const d = await r.json();
-        if (d.stats) {
-          s = d.stats;
-          setStats(d.stats);
-        }
-      } catch (e) {
-        // ignore
-      } finally {
-        setLoadingStats(false);
-      }
-    }
-    const synergyNames = (player.synergy_players || []).map((x) => nameMap.get(String(x)) || x);
-    runAnalysis('player', { player: { ...player, synergy_names: synergyNames }, stats: s }, player.id);
-  };
 
   if (loading) return <div className="empty" style={{ padding: '110px 0' }}>加载中…</div>;
   if (notFound || !player) {
@@ -236,8 +212,22 @@ export default function MemberDetail() {
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
           <div className="detail-grid">
-            <div>
-              <div className="side-card">
+            {/* 主区：最近比赛（模式 / 版本筛选都在这一块里） */}
+            <div className="detail-main">
+              <MatchHistory accountId={player.game_id} />
+            </div>
+
+            {/* 侧栏：AI 分析（可收起）+ 本人填写的资料 */}
+            <div className="detail-aside">
+              <AiPanel
+                player={player}
+                nameMap={nameMap}
+                me={me}
+                sessionReady={sessionReady}
+                loginHref={'/login?from=' + encodeURIComponent(router.asPath || '/members/' + id)}
+              />
+
+              <div className="side-card" style={{ marginTop: 18 }}>
                 <h4>基本信息</h4>
                 <div className="kv">
                   <span className="k">所处地区</span>
@@ -313,57 +303,6 @@ export default function MemberDetail() {
                   </div>
                 )}
               </div>
-            </div>
-
-            <div>
-              <div className="side-card">
-                <h4>🤖 AI 战力分析</h4>
-                {!sessionReady && <div className="empty" style={{ padding: '20px 0' }}>加载中…</div>}
-                {sessionReady && !me && (
-                  <div className="ai-locked">
-                    <p>AI 分析会消耗接口额度，登录后即可使用。</p>
-                    <Link
-                      href={'/login?from=' + encodeURIComponent(router.asPath || '/members/' + id)}
-                      className="btn btn-primary"
-                    >
-                      登录后使用
-                    </Link>
-                  </div>
-                )}
-                {sessionReady && me && !analysis && !analyzing && !loadingStats && (
-                  <button className="btn btn-primary" onClick={handleAI}>
-                    生成 AI 分析
-                  </button>
-                )}
-                {loadingStats && <div className="empty" style={{ padding: '20px 0' }}>正在获取 OpenDota 战绩…</div>}
-                {analyzing && <div className="empty" style={{ padding: '20px 0' }}>AI 分析中…</div>}
-                {aiError && <div className="empty" style={{ padding: '20px 0' }}>{aiError}</div>}
-                {analysis && <div className="ai-text">{analysis}</div>}
-              </div>
-
-              {stats && (
-                <div className="side-card" style={{ marginTop: 18 }}>
-                  <h4>近期数据</h4>
-                  <div className="stats-grid">
-                    <div className="stats-item">
-                      <div className="v">{stats.recentWinRate ?? '-'}%</div>
-                      <div className="l">近{stats.recentTotal || 0}场胜率</div>
-                    </div>
-                    <div className="stats-item">
-                      <div className="v">{stats.avgGpm || '-'}</div>
-                      <div className="l">平均 GPM</div>
-                    </div>
-                    <div className="stats-item">
-                      <div className="v">{stats.avgKda || '-'}</div>
-                      <div className="l">KDA</div>
-                    </div>
-                    <div className="stats-item">
-                      <div className="v">{stats.avgHeroDamage || '-'}</div>
-                      <div className="l">均英雄伤害</div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
