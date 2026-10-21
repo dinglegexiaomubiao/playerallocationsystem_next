@@ -217,10 +217,6 @@ body {
   overflow: hidden;
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .btn::before {
   content: '';
@@ -237,11 +233,6 @@ body {
   left: 100%;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
-  color: white;
-  box-shadow: var(--shadow-primary);
-}
 
 .btn-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
@@ -261,11 +252,6 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.btn-danger {
-  background: linear-gradient(135deg, var(--color-danger-light) 0%, var(--color-danger) 100%);
-  color: white;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-}
 
 .btn-danger:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--color-danger) 0%, var(--color-danger-dark) 100%);
@@ -1277,11 +1263,6 @@ body {
   gap: 24px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
 
 .form-group {
   display: flex;
@@ -2405,7 +2386,6 @@ body {
   font-weight: 700;
 }
 
-.login-header p { color: var(--color-text-secondary); font-size: 1rem; }
 
 .login-hint {
   color: var(--color-text-muted);
@@ -2428,11 +2408,6 @@ body {
   box-shadow: var(--shadow-primary);
 }
 
-.login-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-primary-hover);
-}
 
 .login-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -2673,7 +2648,6 @@ body {
   .tournament-controls { margin-left: 0; margin-top: 10px; justify-content: center; }
   .section-actions { margin-top: 10px; justify-content: center; }
   .search-container { margin-top: 10px; }
-  .form-row { grid-template-columns: 1fr; }
   .position-checkboxes { grid-template-columns: repeat(2, 1fr); }
   .heroes-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   .modal-players-list { grid-template-columns: repeat(2, 1fr); }
