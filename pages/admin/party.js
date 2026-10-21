@@ -354,7 +354,7 @@ export default function AdminPartyPage({ denied }) {
               <button className="modal-close" onClick={() => setEditing(null)}>×</button>
             </div>
 
-            <div style={{ padding: '4px 2px 8px', maxHeight: '62vh', overflowY: 'auto' }}>
+            <div className="modal-body" style={{ padding: '4px 2px 8px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {EDIT_FIELDS.map((f) => (
                   <div key={f.k}>

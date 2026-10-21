@@ -330,7 +330,7 @@ export default function AdminFoodPage({ denied }) {
               <button className="modal-close" onClick={() => setEditing(null)}>×</button>
             </div>
 
-            <div style={{ padding: '4px 2px 8px' }}>
+            <div className="modal-body" style={{ padding: '4px 2px 8px' }}>
               {FIELD_DEFS.map((f) => (
                 <div key={f.k} style={{ marginBottom: 11 }}>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>

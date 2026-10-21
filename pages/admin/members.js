@@ -452,7 +452,7 @@ export default function AdminMembersPage({ denied }) {
               <button className="modal-close" onClick={() => setEditing(null)}>×</button>
             </div>
 
-            <div style={{ padding: '4px 2px 8px' }}>
+            <div className="modal-body" style={{ padding: '4px 2px 8px' }}>
               {[
                 { k: 'nickname', label: '昵称', ph: '正式昵称' },
                 { k: 'score', label: '天梯分', ph: '0', type: 'number' },
