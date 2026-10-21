@@ -72,18 +72,38 @@ export default async function handler(req, res) {
       }
 
       // 只允许更新资料字段，game_id / nickname 等标识由注册时确定
-      // 天梯分量级校验：Dota 顶分约 1.2 万，超过 2 万必然是误填
-      // （历史导入里就有一条 peak_score=99999 的占位）。允许留空。
-      const scoreFields = { score: '当前天梯分', peak_score: '历史最高分' };
-      for (const [key, label] of Object.entries(scoreFields)) {
-        if (body[key] === undefined || body[key] === null || body[key] === '') continue;
-        const n = Number(body[key]);
-        if (!Number.isFinite(n) || n < 0 || n > 20000) {
+      //
+      // 注意：score / peak_score / win_rate 在库里都是 integer。
+      // 只校验范围是不够的 —— 小数（线上实测有人填 49.5）会被原样传给 Postgres，
+      // 触发 22P02 invalid input syntax for type integer 直接 500，
+      // 用户只看到一句「个人信息操作失败」。所以这里必须显式拒绝小数，
+      // 并且不要静默四舍五入（填 49.5 的人多半想填 4950，四舍五入成 50 更误导）。
+      const numericFields = [
+        { key: 'score', label: '当前天梯分', max: 20000 },
+        { key: 'peak_score', label: '历史最高分', max: 20000 },
+        { key: 'win_rate', label: '自报胜率', max: 100 },
+      ];
+      for (const { key, label, max } of numericFields) {
+        const raw = body[key];
+        if (raw === undefined) continue; // 没传这个字段，保留库里原值
+        if (raw === null || raw === '') {
+          body[key] = null; // 明确清空
+          continue;
+        }
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0 || n > max) {
           return res.status(400).json({
             success: false,
-            error: `${label}请填 0 ~ 20000 之间的数字`,
+            error: `${label}请填 0 ~ ${max} 之间的数字`,
           });
         }
+        if (!Number.isInteger(n)) {
+          return res.status(400).json({
+            success: false,
+            error: `${label}请填整数（例如 ${key === 'win_rate' ? 55 : 4950}），不能带小数点`,
+          });
+        }
+        body[key] = n; // 统一成 number，避免字符串形式的数字进 SQL
       }
 
       const updated = await updatePlayer(playerId, {

@@ -102,6 +102,27 @@ export default function Profile() {
   };
 
   const save = async () => {
+    // 天梯分 / 最高分 / 胜率在库里都是整数列，小数会让接口 500。
+    // 先在本地拦下并给出可读提示，别让用户对着「个人信息操作失败」发懵。
+    const intFields = [
+      { key: 'score', label: '当前天梯分', max: 20000 },
+      { key: 'peak_score', label: '历史最高分', max: 20000 },
+      { key: 'win_rate', label: '自报胜率', max: 100 },
+    ];
+    for (const { key, label, max } of intFields) {
+      const v = form[key];
+      if (v === '' || v === null || v === undefined) continue;
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || n > max) {
+        setMsg(`${label}请填 0 ~ ${max} 之间的数字`);
+        return;
+      }
+      if (!Number.isInteger(n)) {
+        setMsg(`${label}请填整数（例如 ${key === 'win_rate' ? 55 : 4950}），不能带小数点`);
+        return;
+      }
+    }
+
     setSaving(true);
     setMsg('');
     const body = {
@@ -210,12 +231,12 @@ export default function Profile() {
               <div className="form-row" style={{ marginBottom: 14 }}>
                 <div className="form-field">
                   <label>当前天梯分</label>
-                  <input type="number" min="0" max="20000" value={form.score ?? ''} onChange={(e) => setForm({ ...form, score: e.target.value })} />
+                  <input type="number" step="1" min="0" max="20000" value={form.score ?? ''} onChange={(e) => setForm({ ...form, score: e.target.value })} />
                   <span className="field-note">填现在的分数，掉了就跟着改</span>
                 </div>
                 <div className="form-field">
                   <label>历史最高分</label>
-                  <input type="number" min="0" max="20000" value={form.peak_score ?? ''} onChange={(e) => setForm({ ...form, peak_score: e.target.value })} />
+                  <input type="number" step="1" min="0" max="20000" value={form.peak_score ?? ''} onChange={(e) => setForm({ ...form, peak_score: e.target.value })} />
                   <span className="field-note">填打上过的最好成绩，不随掉分变化</span>
                   {Number(form.peak_score) > 0 &&
                     Number(form.score) > 0 &&
@@ -227,7 +248,7 @@ export default function Profile() {
               <div className="form-row" style={{ marginBottom: 14 }}>
                 <div className="form-field">
                   <label>自报胜率（%）</label>
-                  <input type="number" value={form.win_rate ?? ''} onChange={(e) => setForm({ ...form, win_rate: e.target.value })} />
+                  <input type="number" step="1" min="0" max="100" value={form.win_rate ?? ''} onChange={(e) => setForm({ ...form, win_rate: e.target.value })} />
                 </div>
               </div>
               <div className="form-field" style={{ marginBottom: 16 }}>
