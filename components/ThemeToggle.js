@@ -24,8 +24,10 @@ export default function ThemeToggle({ className = '' }) {
   };
 
   const isLight = theme === THEME_LIGHT;
+  // aria-label 写「点击后会变成什么」，因为读屏是按操作语义播报的；
+  // 可见文案写「当前是什么」，与图标（太阳=日间 / 月亮=夜间）保持一致。
   const label = isLight ? '切换到夜间模式' : '切换到日间模式';
-  const shortLabel = isLight ? '夜间模式' : '日间模式';
+  const shortLabel = isLight ? '日间模式' : '夜间模式';
 
   return (
     <button
