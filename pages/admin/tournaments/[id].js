@@ -425,6 +425,42 @@ export default function AdminTournament({ denied }) {
   const dirtyCount = plan.groups.reduce((n, g) => n + g.count, 0);
   const dirty = dirtyCount > 0;
 
+  /* ---------- 从「赛事待补录」跳进来的定位 ----------
+   * 链接形如 /admin/tournaments/9?tab=teams&focus=12：
+   *   tab   —— 自动切到对应分区
+   *   focus —— 队伍 id 或选手 id，滚到那一行并高亮 3 秒
+   * 这样管理员在后台首页看到「第九届 / 红队 / 2/5 人」，点一下就到那一队，不用再翻。
+   */
+  const focus = typeof router.query.focus === 'string' ? router.query.focus : '';
+
+  useEffect(() => {
+    const q = router.query.tab;
+    if (q === 'teams' || q === 'signups' || q === 'matches') setTab(q);
+  }, [router.query.tab]);
+
+  useEffect(() => {
+    if (!draft || !focus) return undefined;
+    // 延后一帧：等分区内容真的挂到 DOM 上再找节点
+    const locate = setTimeout(() => {
+      const el = document.querySelector(`[data-focus="${focus}"]`);
+      if (!el) {
+        setMsg({ type: 'ok', text: '这条待补录可能已经处理过（队伍满员 / 资料已补），没找到对应行' });
+        return;
+      }
+      // 用 auto 而不是 smooth：从后台跳过来时页面结构刚变，平滑滚动会把目标甩偏
+      // （实测截图能看到滚动中途的画面），瞬间定位更准也更快
+      el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      el.classList.add('adm-focus-hit');
+    }, 80);
+    const clear = setTimeout(() => {
+      document.querySelectorAll('.adm-focus-hit').forEach((n) => n.classList.remove('adm-focus-hit'));
+    }, 3800);
+    return () => {
+      clearTimeout(locate);
+      clearTimeout(clear);
+    };
+  }, [draft, focus, tab]);
+
   // 有未保存改动时离开页面给个提示，避免辛苦改半天被一次误点清空
   useEffect(() => {
     if (!dirty) return undefined;
@@ -922,7 +958,7 @@ export default function AdminTournament({ denied }) {
                     base.is_captain !== s.is_captain;
                   const miss = signupIssues(s);
                   return (
-                    <div className={'adm-row adm-row-signup' + (rowDirty ? ' adm-dirty-row' : '')} key={s.player_id}>
+                    <div className={'adm-row adm-row-signup' + (rowDirty ? ' adm-dirty-row' : '')} key={s.player_id} data-focus={s.player_id}>
                       <div className="adm-name">
                         {s.nickname}
                         {s._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
@@ -1022,7 +1058,7 @@ export default function AdminTournament({ denied }) {
                 const rankDirty = base ? String(base.rank ?? '') !== String(t.rank ?? '') : t._new;
                 const pool = availableForTeam(t.id);
                 return (
-                  <div className="side-card" key={t.id} style={{ marginBottom: 16 }}>
+                  <div className="side-card" key={t.id} style={{ marginBottom: 16 }} data-focus={t.id}>
                     <div className="adm-team-head">
                       <input
                         className={'adm-input' + (nameDirty ? ' adm-dirty-field' : '')}

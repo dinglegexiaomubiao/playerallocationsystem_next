@@ -104,7 +104,227 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function Admin({ denied, todo }) {
+/**
+ * 赛事待补录明细：把「N 支队伍不满 5 人」摊开成
+ * 「哪个赛事 / 哪支队伍 / 缺几个 / 现在有谁」「哪个赛事 / 谁 / 缺什么字段」。
+ *
+ * 和 loadAdminTodo 的计数口径必须一致（这里用同一套 WHERE），
+ * 否则会出现「概览说 2 支，明细列了 3 支」的对不上。
+ */
+async function loadPending() {
+  const safe = async (label, sql) => {
+    try {
+      const r = await pool.query(sql);
+      return r.rows || [];
+    } catch (e) {
+      console.error(`赛事待补录查询失败（${label}）:`, e.message);
+      return [];
+    }
+  };
+
+  // 未完结的赛事排前面：finished 的补录优先级最低，不该占首屏
+  const FINISHED_LAST = `(coalesce(tr.status, '') = 'finished') ASC`;
+
+  const shortRows = await safe(
+    '不满员队伍',
+    `SELECT tr.id::text AS tournament_id,
+            tr.name     AS tournament_name,
+            coalesce(tr.status, '') AS status,
+            t.id::text  AS team_id,
+            coalesce(nullif(btrim(t.name), ''), '未命名队伍') AS team_name,
+            count(DISTINCT tp.player_id)::int AS member_count,
+            coalesce(string_agg(DISTINCT p.nickname, '、' ORDER BY p.nickname), '') AS members
+       FROM public.teams t
+       JOIN public.tournaments tr ON tr.id = t.tournament_id
+       LEFT JOIN public.team_players tp ON tp.team_id = t.id
+       LEFT JOIN public.players p ON p.id = tp.player_id
+      GROUP BY tr.id, tr.name, tr.status, t.id, t.name
+     HAVING count(DISTINCT tp.player_id) < 5
+      ORDER BY ${FINISHED_LAST}, tr.id DESC, t.id ASC`
+  );
+
+  const missRows = await safe(
+    '报名资料缺漏',
+    `SELECT tr.id::text AS tournament_id,
+            tr.name     AS tournament_name,
+            coalesce(tr.status, '') AS status,
+            tp.player_id::text AS player_id,
+            coalesce(nullif(btrim(p.nickname), ''),
+                     nullif(btrim(p.group_nickname), ''),
+                     '未命名 #' || tp.player_id) AS nickname,
+            (tp.score IS NULL OR tp.score = 0)              AS no_score,
+            (coalesce(btrim(tp.positions), '') = '')        AS no_positions,
+            (coalesce(btrim(tp.region), '') = '')           AS no_region,
+            -- 这个人在这届比赛里属于哪支队：补录时最常需要的信息
+            (SELECT string_agg(DISTINCT coalesce(nullif(btrim(t2.name), ''), '未命名队伍'), '、'
+                               ORDER BY coalesce(nullif(btrim(t2.name), ''), '未命名队伍'))
+               FROM public.team_players tp2
+               JOIN public.teams t2 ON t2.id = tp2.team_id
+              WHERE tp2.player_id = tp.player_id
+                AND tp2.tournament_id = tp.tournament_id) AS team_names
+       FROM public.tournament_players tp
+       JOIN public.tournaments tr ON tr.id = tp.tournament_id
+       JOIN public.players p ON p.id = tp.player_id
+      WHERE tp.score IS NULL OR tp.score = 0
+         OR coalesce(btrim(tp.positions), '') = ''
+         OR coalesce(btrim(tp.region), '') = ''
+      ORDER BY ${FINISHED_LAST}, tr.id DESC, p.nickname ASC`
+  );
+
+  const teams = shortRows.map((r) => ({
+    tournamentId: r.tournament_id,
+    tournamentName: r.tournament_name,
+    status: r.status,
+    teamId: r.team_id,
+    teamName: r.team_name,
+    memberCount: Number(r.member_count || 0),
+    members: r.members || '',
+  }));
+
+  const signups = missRows.map((r) => {
+    const missing = [];
+    if (r.no_score) missing.push('分数');
+    if (r.no_positions) missing.push('位置');
+    if (r.no_region) missing.push('地区');
+    return {
+      tournamentId: r.tournament_id,
+      tournamentName: r.tournament_name,
+      status: r.status,
+      playerId: r.player_id,
+      nickname: r.nickname,
+      missing,
+      teamNames: r.team_names || '',
+    };
+  });
+
+  const ids = new Set([...teams, ...signups].map((x) => x.tournamentId));
+  return { teams, signups, tournaments: ids.size };
+}
+
+/**
+ * 赛事待补录明细面板。
+ *
+ * 为什么要这块：原来「需要你处理」只写「2 支队伍不满 5 人」，点不动也看不出是哪支队，
+ * 管理员得自己一个个赛季点进去翻。这里直接摊到「赛事 → 队伍/选手 → 缺什么」，
+ * 每条都带一个直达链接，跳到详情页的对应 tab 并把那一行高亮出来。
+ */
+function PendingPanel({ pending }) {
+  const [open, setOpen] = useState(true);
+  const [expanded, setExpanded] = useState({}); // `${赛事id}:teams|signups` → 是否展开全部
+  const SHOW_MAX = 5; // 单个赛事单类先平铺 5 条，多的点「展开全部」
+
+  const groups = useMemo(() => {
+    const map = new Map();
+    const ensure = (id, name, status) => {
+      if (!map.has(id)) map.set(id, { id, name, status, teams: [], signups: [] });
+      return map.get(id);
+    };
+    (pending.teams || []).forEach((t) => ensure(t.tournamentId, t.tournamentName, t.status).teams.push(t));
+    (pending.signups || []).forEach((s) => ensure(s.tournamentId, s.tournamentName, s.status).signups.push(s));
+    return [...map.values()];
+  }, [pending]);
+
+  const total = (pending.teams || []).length + (pending.signups || []).length;
+  if (total === 0) return null;
+
+  const detailLink = (g, tab, focus, text) => (
+    <Link className="adm-pending-go" href={{ pathname: '/admin/tournaments/' + g.id, query: { tab, focus } }}>
+      {text} →
+    </Link>
+  );
+
+  // 一个赛事下的一类明细（队伍缺人 / 资料缺漏）：先平铺 SHOW_MAX 条，超出折成按钮原地展开
+  const renderRows = (g, kind, rows) => {
+    const key = g.id + ':' + kind;
+    const isOpen = !!expanded[key];
+    const shown = isOpen ? rows : rows.slice(0, SHOW_MAX);
+
+    return (
+      <div className="adm-pending-block" key={kind}>
+        <div className="adm-pending-label">{kind === 'teams' ? '队伍不满 5 人' : '报名资料缺漏'}</div>
+
+        {shown.map((r) =>
+          kind === 'teams' ? (
+            <div className="adm-pending-row" key={'t' + r.teamId}>
+              <span className="adm-pending-name">{r.teamName}</span>
+              <span className="adm-pending-miss">
+                {r.memberCount}/5 · 缺 {5 - r.memberCount} 人
+              </span>
+              <span className="adm-pending-detail" title={r.members || '暂无队员'}>
+                {r.members ? '队员：' + r.members : '暂无队员'}
+              </span>
+              {detailLink(g, 'teams', r.teamId, '去补人')}
+            </div>
+          ) : (
+            <div className="adm-pending-row" key={'s' + r.playerId}>
+              <span className="adm-pending-name">{r.nickname}</span>
+              <span className="adm-pending-miss">缺 {r.missing.join('、')}</span>
+              <span className="adm-pending-detail">{r.teamNames ? '队伍：' + r.teamNames : '未分队'}</span>
+              {detailLink(g, 'signups', r.playerId, '去补录')}
+            </div>
+          )
+        )}
+
+        {rows.length > SHOW_MAX && (
+          <button
+            type="button"
+            className="adm-pending-more"
+            onClick={() => setExpanded((p) => ({ ...p, [key]: !p[key] }))}
+          >
+            {isOpen
+              ? '收起'
+              : `还有 ${rows.length - SHOW_MAX} 条，展开全部 ${rows.length} 条`}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="adm-pending" id="adm-pending">
+      <div className="adm-pending-head">
+        <span className="adm-pending-title">赛事待补录</span>
+        <span className="adm-pending-sum">
+          {pending.tournaments} 个赛事 · {pending.teams.length} 支队伍缺人 · {pending.signups.length} 人资料缺漏
+        </span>
+        <div style={{ flex: 1 }} />
+        <button type="button" className="adm-link-btn" onClick={() => setOpen(!open)}>
+          {open ? '收起明细' : '展开明细'}
+        </button>
+      </div>
+
+      {open &&
+        groups.map((g) => (
+          <div className="adm-pending-group" key={g.id}>
+            <div className="adm-pending-tour">
+              <Link className="adm-pending-tour-name" href={'/admin/tournaments/' + g.id}>
+                {g.name}
+              </Link>
+              <StatusBadge status={g.status} />
+              <span className="adm-pending-dep">
+                {g.teams.length > 0 && `队伍缺人 ${g.teams.length}`}
+                {g.teams.length > 0 && g.signups.length > 0 && ' · '}
+                {g.signups.length > 0 && `资料缺漏 ${g.signups.length} 人`}
+              </span>
+              {detailLink(g, g.teams.length > 0 ? 'teams' : 'signups', '', '打开该赛事')}
+            </div>
+
+            {g.teams.length > 0 && renderRows(g, 'teams', g.teams)}
+            {g.signups.length > 0 && renderRows(g, 'signups', g.signups)}
+          </div>
+        ))}
+
+      {open && (
+        <div className="adm-pending-foot">
+          点「去补人 / 去补录」会跳到该赛事的对应分区并自动定位高亮那一行；改完点页面顶部「保存修改」生效。
+          已完赛的赛事排在后面。
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Admin({ denied, todo, pending }) {
   const { me, isAdmin, ready } = useSession();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -356,10 +576,10 @@ export default function Admin({ denied, todo }) {
                 </Link>
               )}
               {todo.short > 0 && (
-                <span className="adm-todo-item" title="在各赛季的「管理」页里可以补人">
+                <a className="adm-todo-item" href="#adm-pending" title="下面「赛事待补录」里有具体是哪个赛事、哪支队、缺几个人">
                   <span className="adm-todo-n">{todo.short}</span>
                   <span className="adm-todo-label">支队伍不满 5 人</span>
-                </span>
+                </a>
               )}
               {todo.feedback > 0 && (
                 <Link className="adm-todo-item" href="/admin/support">
@@ -369,6 +589,9 @@ export default function Admin({ denied, todo }) {
               )}
             </div>
           )}
+
+          {/* 待补录明细：摊到「赛事 → 队伍/选手 → 缺什么」，每条可直达编辑 */}
+          <PendingPanel pending={pending} />
 
           {showCreate && (
             <div className="adm-create">
@@ -488,11 +711,13 @@ async function loadAdminTodo() {
     ),
     count(
       '不满员队伍',
+      // count(DISTINCT ...) 与「赛事待补录」明细口径保持一致：
+      // team_players 里同一人重复插入过时，不去重会出现「概览 2 支、明细列 1 支」的对不上
       `SELECT count(*)::int AS n FROM (
          SELECT t.id FROM public.teams t
            LEFT JOIN public.team_players tp ON tp.team_id = t.id
           GROUP BY t.id
-         HAVING count(tp.player_id) < 5
+         HAVING count(DISTINCT tp.player_id) < 5
        ) s`
     ),
   ]);
@@ -506,7 +731,7 @@ export async function getServerSideProps({ req }) {
     return { redirect: { destination: '/login?from=/admin', permanent: false } };
   }
   const denied = !isAdmin(req);
-  if (denied) return { props: { denied: true, todo: null } };
+  if (denied) return { props: { denied: true, todo: null, pending: null } };
 
   // 这两张表可能是新库首次访问时还没建，先确保存在再统计
   try {
@@ -515,5 +740,6 @@ export async function getServerSideProps({ req }) {
     /* 自举失败不影响计数，count() 内部会兜底为 0 */
   }
 
-  return { props: { denied: false, todo: await loadAdminTodo() } };
+  const [todo, pending] = await Promise.all([loadAdminTodo(), loadPending()]);
+  return { props: { denied: false, todo, pending } };
 }
