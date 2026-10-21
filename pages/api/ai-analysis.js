@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { denyIfNotLoggedIn } from '../../lib/auth';
+import { requestMessages, isAIConfigured } from '../../lib/ai';
 
 // Simple in-memory cache (TTL: 30 minutes)
 const cache = new Map();
@@ -144,8 +144,10 @@ export default async function handler(req, res) {
   // 该接口会真实消耗 Anthropic 额度，必须登录后才能触发
   if (denyIfNotLoggedIn(req, res, '请先登录后再使用 AI 分析')) return;
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'AI API key not configured' });
+  if (!isAIConfigured()) {
+    return res.status(500).json({
+      error: 'AI 分析暂未配置：服务器 .env.local 缺少 ANTHROPIC_API_KEY',
+    });
   }
 
   const { type, data } = req.body;
@@ -161,6 +163,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, analysis: cached.analysis, cached: true });
   }
 
+  const startedAt = Date.now();
   try {
     let prompt;
     if (type === 'player') {
@@ -171,37 +174,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid type. Use "player" or "team".' });
     }
 
-    const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-      baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.deepseek.com/anthropic',
-    });
-
-    const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2048,
+    const analysis = await requestMessages({
       system: '你是一个专业的Dota2比赛数据分析师。你的分析基于数据、客观、简洁。使用中文输出，使用emoji作为维度标记。',
-      messages: [{ role: 'user', content: prompt }],
-      thinking: { type: 'disabled' },
+      prompt,
+      maxTokens: 2048,
     });
-
-    // Extract text from content blocks (skip non-text blocks like thinking)
-    const analysis = message.content
-      .filter(block => block.type === 'text')
-      .map(block => block.text)
-      .join('\n');
-
-    // If no text content found (e.g., all output went to thinking blocks), return error
-    if (!analysis || analysis.trim().length === 0) {
-      console.error('AI returned no text content. Content blocks:', JSON.stringify(message.content.map(b => ({ type: b.type }))));
-      return res.status(500).json({ error: 'AI 返回了空内容，请稍后重试' });
-    }
 
     // Store in cache
     cache.set(cacheKey, { analysis, timestamp: Date.now() });
 
+    console.log(`AI 分析完成 type=${type} 耗时=${Date.now() - startedAt}ms 长度=${analysis.length}`);
     return res.status(200).json({ success: true, analysis });
   } catch (error) {
-    console.error('AI analysis error:', error);
-    return res.status(500).json({ error: 'AI analysis failed', details: error.message });
+    console.error(`AI 分析失败 type=${type} 耗时=${Date.now() - startedAt}ms:`, error.message);
+    return res.status(500).json({ error: error.message || 'AI 分析失败，请稍后重试' });
   }
 }

@@ -41,11 +41,21 @@ export default function useAIAnalysis() {
     setAnalysis(null);
 
     try {
-      const response = await fetch('/api/ai-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, data }),
-      });
+      // 服务端已限制 90 秒，这里再兜一层：网络半断时也不会让按钮无限转圈
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 100000);
+
+      let response;
+      try {
+        response = await fetch('/api/ai-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, data }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
 
       const result = await response.json();
 
@@ -58,7 +68,11 @@ export default function useAIAnalysis() {
         setError(result.error || '分析失败');
       }
     } catch (err) {
-      setError('网络错误，请稍后重试');
+      if (err.name === 'AbortError') {
+        setError('分析超时（超过 100 秒），请稍后重试');
+      } else {
+        setError('网络错误，请稍后重试');
+      }
       console.error('AI analysis error:', err);
     } finally {
       setAnalyzing(false);

@@ -168,8 +168,26 @@ health() {
 }
 
 # 5.1 解压新代码
+# tar 解压只覆盖、不删除：本地删掉的文件（尤其是 pages/api 下的路由）会继续留在服务器上，
+# 照样被构建进产物、照样能被外部访问。
+# 注意：`tar -tzf .` 列出的路径带 `./` 前缀，必须先剥掉再和 find 的结果比，
+# 否则清单匹配为空 —— 会把源码目录整个清空（2026-10-21 踩过一次，站点直接 500）。
+tar -tzf "/tmp/$TAR_NAME" | sed 's|^\./||' | grep -E '^(pages|lib|components|hooks|styles|utils)/' | sort -u > /tmp/laroja-manifest.txt
+MANIFEST_COUNT=$(wc -l < /tmp/laroja-manifest.txt)
 tar -xzf "/tmp/$TAR_NAME"
 rm -f "/tmp/$TAR_NAME"
+if [ "$MANIFEST_COUNT" -lt 20 ]; then
+  echo "  ⚠ 源码清单只有 $MANIFEST_COUNT 条，疑似解析异常，跳过残留清理"
+else
+  for d in pages lib components hooks styles utils; do
+    [ -d "$d" ] || continue
+    find "$d" -type f | sort > /tmp/laroja-disk.txt
+    comm -13 /tmp/laroja-manifest.txt /tmp/laroja-disk.txt | while read -r f; do
+      [ -n "$f" ] && rm -f "$f" && echo "  → 删除本地已移除的残留 $f"
+    done
+  done
+fi
+rm -f /tmp/laroja-manifest.txt /tmp/laroja-disk.txt
 echo "  → 代码已更新"
 
 # 5.2 依赖
