@@ -120,6 +120,9 @@
   --gold-soft: rgba(224, 184, 120, 0.12);
   --green-soft: rgba(111, 191, 115, 0.14);
   --ok: #6fbf73;
+  /* 淡绿底（green-soft）上的绿字：和 --brand-on-soft 同理，底色被染绿后
+     --ok 只剩 4.4:1，压到 AA 线下 */
+  --ok-on-soft: #9edda2;
 
   /* 主 CTA：亮底深字。
      旧的暗红实底 #c0392f 在暗底上存在感很弱，用户找不到按钮。
@@ -276,6 +279,7 @@
   --gold-soft: rgba(131, 89, 15, 0.10);
   --green-soft: rgba(26, 114, 64, 0.10);
   --ok: #1a7240;
+  --ok-on-soft: #17693b;
 
   /* 主 CTA 反向：白底上深红实底 + 白字 6.5:1 */
   --btn-primary-bg: #b02b25;

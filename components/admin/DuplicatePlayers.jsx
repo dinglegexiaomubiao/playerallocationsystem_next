@@ -193,6 +193,7 @@ export default function DuplicatePlayers({ onChanged }) {
                   <span>分数</span>
                   <span>位置</span>
                   <span>关联</span>
+                  <span>出现赛事</span>
                   <span>登录账号</span>
                 </div>
                 {g.members.map((m) => (
@@ -213,6 +214,36 @@ export default function DuplicatePlayers({ onChanged }) {
                     </span>
                     <span className="unreg-muted">
                       报名 {m.signups} · 入队 {m.teams} · 场次 {m.matches}
+                    </span>
+                    {/* 只给总数时两条同名记录长得一模一样，看不出该不该合；
+                        列出赛事名并能点进去核对，才是判断依据 */}
+                    <span className="dup-tours">
+                      {(m.tournaments || []).length === 0 ? (
+                        <span className="unreg-muted">—</span>
+                      ) : (
+                        m.tournaments.map((t, i) => {
+                          // 三项全 0 说明这条只来自「参赛记录」表（老赛事没有报名/入队/明细），
+                          // 不说清楚会让人以为取数出错
+                          const onlyRoster = !t.signups && !t.teams && !t.games;
+                          return (
+                            <span key={t.id}>
+                              {i > 0 && <span className="dup-tour-sep">、</span>}
+                              <a
+                                className="dup-tour"
+                                href={`/tournaments/${t.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`${t.name}｜报名 ${t.signups} · 入队 ${t.teams} · 比赛 ${t.games} 场${
+                                  onlyRoster ? '（仅参赛记录）' : ''
+                                }`}
+                              >
+                                {t.name}
+                                {t.games > 0 && <i className="dup-tour-n">{t.games} 场</i>}
+                              </a>
+                            </span>
+                          );
+                        })
+                      )}
                     </span>
                     <span className="unreg-muted">{m.accounts.length ? m.accounts.join('、') : '无'}</span>
                   </div>

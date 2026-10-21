@@ -133,7 +133,50 @@ async function loadGroups(client) {
             (SELECT count(*)::int FROM public.tournament_players tp WHERE tp.player_id = p.id) AS signups,
             (SELECT count(*)::int FROM public.team_players tp WHERE tp.player_id = p.id) AS teams,
             (SELECT count(*)::int FROM public.dota_match_players mp WHERE mp.player_id = p.id) AS matches,
-            (SELECT coalesce(string_agg(s.name, '、'), '') FROM public.play_score s WHERE s.player_id = p.id) AS accounts
+            (SELECT coalesce(string_agg(s.name, '、'), '') FROM public.play_score s WHERE s.player_id = p.id) AS accounts,
+            -- 出现在哪些赛事：报名 / 入队 / 比赛明细三处一并算。
+            -- 只给「关联 N」计数时，两条同名记录看起来一模一样，管理员没法判断该不该合；
+            -- 列出赛事名（并附每届的报名/入队/场次）才能点进去核对。
+            (SELECT coalesce(
+                      json_agg(
+                        json_build_object(
+                          'id', x.tid::text,
+                          'name', x.name,
+                          'signups', x.signups,
+                          'teams', x.teams,
+                          'games', x.games
+                        ) ORDER BY x.tid DESC
+                      ), '[]'::json)
+               FROM (
+                 SELECT t.id AS tid, t.name,
+                        count(DISTINCT tp.player_id)::int AS signups,
+                        count(DISTINCT tpl.player_id)::int AS teams,
+                        -- 数 m 而不是 mp：mp 那一侧没按赛事过滤，只有 m 命中才算这届的场次
+                        count(DISTINCT m.dota_match_id)::int AS games
+                   FROM public.tournaments t
+                   LEFT JOIN public.tournament_players tp
+                          ON tp.tournament_id = t.id AND tp.player_id = p.id
+                   LEFT JOIN public.team_players tpl
+                          ON tpl.tournament_id = t.id AND tpl.player_id = p.id
+                   LEFT JOIN public.dota_match_players mp ON mp.player_id = p.id
+                   LEFT JOIN public.matches m
+                          ON m.dota_match_id = mp.match_id AND m.tournament_id = t.id
+                  WHERE t.id IN (
+                          SELECT tp2.tournament_id FROM public.tournament_players tp2
+                           WHERE tp2.player_id = p.id
+                          UNION
+                          SELECT tpl2.tournament_id FROM public.team_players tpl2
+                           WHERE tpl2.player_id = p.id AND tpl2.tournament_id IS NOT NULL
+                          UNION
+                          SELECT m2.tournament_id FROM public.dota_match_players mp2
+                            JOIN public.matches m2 ON m2.dota_match_id = mp2.match_id
+                           WHERE mp2.player_id = p.id
+                          UNION
+                          SELECT ptp.tournament_id FROM public.player_tournament_participations ptp
+                           WHERE ptp.player_id = p.id
+                        )
+                  GROUP BY t.id, t.name
+               ) x) AS tournaments
        FROM public.players p
       WHERE p.id = ANY($1::bigint[])`,
     [allIds]
@@ -159,6 +202,7 @@ async function loadGroups(client) {
           teams: r.teams,
           matches: r.matches,
           accounts: r.accounts ? String(r.accounts).split('、') : [],
+          tournaments: Array.isArray(r.tournaments) ? r.tournaments : [],
         })),
     }))
     .filter((g) => g.members.length > 1);

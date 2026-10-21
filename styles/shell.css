@@ -1433,7 +1433,7 @@ button.back-link:hover {
 }
 .dup-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) 104px 58px minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 0.8fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.8fr) 96px 54px minmax(0, 0.8fr) minmax(0, 0.9fr) minmax(0, 1.7fr) minmax(0, 0.8fr);
   align-items: center;
   gap: 12px;
   padding: 7px 8px;
@@ -1477,11 +1477,43 @@ button.back-link:hover {
 }
 .dup-tag.keep {
   background: var(--green-soft);
-  color: var(--ok, #7aa874);
+  color: var(--ok-on-soft, #7aa874);
 }
 .dup-tag.drop {
   background: var(--accent-soft);
   color: var(--brand-on-soft);
+}
+/* 出现赛事：单行省略，一行放不下就截断，靠 title 看完整的
+   —— 分组行高必须稳定，否则两组对比时眼睛对不齐 */
+/* 这两行有淡红 / 淡绿底色，「保留 / 并入」本身就是靠它区分的，
+   所以行内的次级文字不能再用 --text-3 —— 底色一染，它就掉到 4.1~4.5:1 */
+.dup-row .unreg-muted {
+  color: var(--text-2);
+}
+.dup-tours {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.dup-tour {
+  color: var(--brand-on-soft);
+  text-decoration: none;
+}
+.dup-tour:hover {
+  text-decoration: underline;
+}
+.dup-tour-sep {
+  margin: 0 2px;
+  color: var(--text-3);
+}
+.dup-tour-n {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--text-3);
 }
 @media (max-width: 1100px) {
   .dup-row {
@@ -1493,6 +1525,10 @@ button.back-link:hover {
   }
   .dup-name {
     grid-column: 1;
+  }
+  /* 窄屏上赛事名最容易挤，单独占一行让它可读 */
+  .dup-tours {
+    grid-column: 1 / -1;
   }
 }
 
