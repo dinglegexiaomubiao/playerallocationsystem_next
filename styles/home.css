@@ -48,8 +48,8 @@
   padding: 2px 9px;
   border-radius: var(--radius-sm);
   background: var(--brand-soft);
-  border: 1px solid rgba(142, 58, 53, 0.42);
-  color: var(--brand);
+  border: 1px solid rgba(226, 99, 90, 0.42);
+  color: var(--brand-on-soft);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -95,7 +95,7 @@
   margin-top: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  background: var(--bg-sunk, #12100c);
+  background: var(--bg-sunk, #0f1114);
   /* 图的高度按比例算，并居中于左栏 —— 之前 min-height + stretch
      会让图片按固有 16:9 撑到 250px，把整张卡顶高。 */
   aspect-ratio: 16 / 7;
@@ -240,13 +240,13 @@
   align-items: baseline;
   gap: 16px;
   padding: 13px 0;
-  border-bottom: 1px solid var(--line-soft, rgba(240, 232, 220, 0.06));
+  border-bottom: 1px solid var(--line-soft, rgba(238, 241, 244, 0.06));
   color: inherit;
   text-decoration: none;
   transition: background 0.12s ease;
 }
 .home-trow:hover {
-  background: rgba(240, 232, 220, 0.018);
+  background: rgba(238, 241, 244, 0.018);
   color: inherit;
 }
 .home-trow-name {

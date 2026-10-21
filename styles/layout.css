@@ -245,12 +245,12 @@ a { text-decoration: none; color: inherit; }
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px;
   box-shadow: var(--shadow-sm); display: flex; gap: 14px; align-items: flex-start;
 }
-.post .av { width: 42px; height: 42px; border-radius: 11px; background: var(--brand-soft); color: var(--brand);
+.post .av { width: 42px; height: 42px; border-radius: 11px; background: var(--brand-soft); color: var(--brand-on-soft);
   display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
 .post .meta { font-size: .8rem; color: var(--text-3); }
 .post .tag { display: inline-block; font-size: .72rem; font-weight: 600; padding: 2px 9px; border-radius: 20px; margin-right: 8px; }
-.tag-tour { background: var(--accent-soft); color: var(--accent); }
-.tag-member { background: var(--brand-soft); color: var(--brand); }
+.tag-tour { background: var(--accent-soft); color: var(--brand-on-soft); }
+.tag-member { background: var(--brand-soft); color: var(--brand-on-soft); }
 .tag-food { background: var(--gold-soft); color: #b8860b; }
 .post h4 { font-size: 1rem; font-weight: 700; margin: 4px 0 4px; }
 .post p { color: var(--text-2); font-size: .88rem; }
@@ -386,21 +386,25 @@ a { text-decoration: none; color: inherit; }
 .p-copy:hover { background: var(--brand-solid); border-color: var(--brand); color: #fff; }
 .p-copy:active { transform: scale(.96); }
 .p-copy.is-done { background: var(--brand-solid); border-color: var(--brand); color: #fff; }
-.score-immortal { background: var(--accent-soft); color: #c23c2a; }
-.score-divine { background: var(--brand-soft); color: #6d28d9; }
-.score-ancient { background: var(--brand-soft); color: #1e5fa8; }
-.score-legend { background: var(--gold-soft); color: #b8860b; }
-.score-archon { background: var(--green-soft); color: #15803d; }
-.score-others { background: var(--bg-subtle); color: #64748b; }
+/* 段位徽标：原先是浅色主题遗留的深色字（#6d28d9 紫 / #1e5fa8 蓝 /
+   #b8860b 暗金 / #15803d 暗绿），放到深色卡片上全部糊成一团，
+   紫蓝还直接违反设计约束。改为「红 → 白金 → 冷银 → 古铜 → 灰」的
+   金属梯度，越靠前越亮，靠色相 + 明度双维度区分。 */
+.score-immortal { background: var(--color-score-master-bg); color: var(--color-score-master-text); }
+.score-divine { background: var(--color-score-diamond-bg); color: var(--color-score-diamond-text); }
+.score-ancient { background: var(--color-score-platinum-bg); color: var(--color-score-platinum-text); }
+.score-legend { background: var(--color-score-gold-bg); color: var(--color-score-gold-text); }
+.score-archon { background: var(--color-score-silver-bg); color: var(--color-score-silver-text); }
+.score-others { background: var(--bg-subtle); color: var(--text-2); }
 .p-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
 .p-tag { font-size: .74rem; padding: 3px 9px; border-radius: 7px; background: var(--bg-subtle); color: var(--text-2); font-weight: 500; }
 .p-heroes { margin-top: 12px; font-size: .8rem; color: var(--text-2); }
 .p-heroes .lbl { color: var(--text-3); font-size: .74rem; margin-bottom: 5px; }
-.p-heroes .h { display: inline-flex; align-items: center; gap: 4px; background: var(--brand-soft); color: var(--brand); padding: 2px 8px; border-radius: 6px; font-size: .74rem; margin: 0 4px 4px 0; }
+.p-heroes .h { display: inline-flex; align-items: center; gap: 4px; background: var(--brand-soft); color: var(--brand-on-soft); padding: 2px 8px; border-radius: 6px; font-size: .74rem; margin: 0 4px 4px 0; }
 /* 带头像的标签用负 margin 抵消左侧内距；纯文字标签（默契队友/仇人/+N）保持原样 */
 .p-heroes .h .h-avatar { margin-left: -4px; }
-.p-heroes .h-synergy { background: var(--brand-soft); color: var(--brand); }
-.p-heroes .h-enemy { background: var(--accent-soft); color: var(--accent); }
+.p-heroes .h-synergy { background: var(--brand-soft); color: var(--brand-on-soft); }
+.p-heroes .h-enemy { background: var(--accent-soft); color: var(--brand-on-soft); }
 /* 荣誉徽章：冠军 / 亚军数量是群友页最常看的两项，单独一行给足空间 */
 .p-honors { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 .p-honor {
@@ -410,8 +414,11 @@ a { text-decoration: none; color: inherit; }
 }
 .p-honor b { font-size: .9rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .p-honor-icon { font-size: .8rem; line-height: 1; }
-.p-honor.gold { background: var(--gold-soft); color: #8a6408; border-color: #f2e3b8; }
-.p-honor.silver { background: var(--bg-subtle); color: #4e5d73; border-color: #dfe6ef; }
+/* 荣誉徽标：原本是浅色主题的字色（暗金 #8a6408 / 暗蓝灰 #4e5d73）
+   配浅色描边（#f2e3b8 / #dfe6ef），在深底上只有 2.2~2.4:1，等于看不见。
+   改走古铜金与冷银令牌，描边也换成深色系。 */
+.p-honor.gold { background: var(--gold-soft); color: var(--gold); border-color: var(--color-warning-border); }
+.p-honor.silver { background: var(--bg-subtle); color: var(--color-score-platinum-text); border-color: var(--border-strong); }
 .p-foot {
   margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--bg-subtle);
   display: flex; align-items: center; justify-content: space-between; font-size: .8rem; color: var(--text-2);
@@ -966,9 +973,9 @@ a { text-decoration: none; color: inherit; }
 
 /* 名次徽标 */
 .rank-badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; white-space: nowrap; }
-.rank-gold { background: var(--gold-soft); color: #8a6d00; }
-.rank-silver { background: var(--bg-subtle); color: #4b5563; }
-.rank-bronze { background: var(--gold-soft); color: #9a5b22; }
+.rank-gold { background: var(--gold-soft); color: var(--gold); }
+.rank-silver { background: var(--bg-subtle); color: var(--color-score-platinum-text); }
+.rank-bronze { background: var(--gold-soft); color: var(--color-score-gold-text); }
 .rank-plain { background: var(--bg-subtle); color: var(--text-2); }
 
 /* 可点击的行（参赛履历） */
@@ -1212,8 +1219,8 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* --- 危险操作按钮 --- */
-.btn-danger { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(194,60,42,.24); }
-.btn-danger:hover { background: #a83325; transform: translateY(-1px); }
+.btn-danger { background: var(--color-danger-dark); color: #fff; box-shadow: 0 4px 12px rgba(194, 60, 42, 0.24); }
+.btn-danger:hover { background: #a52f27; transform: translateY(-1px); }
 
 /* --- 列表网格 --- */
 .party-grid {
@@ -2131,7 +2138,7 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
   transition: border-color .15s, transform .15s;
 }
 .mh-tile .mh-hero { width: 100%; height: 100%; border-radius: 0; flex: none; }
-.mh-tile.win { border-color: rgba(147, 168, 126, .45); box-shadow: inset 0 -3px 0 var(--ok); }
+.mh-tile.win { border-color: rgba(111, 191, 115, .45); box-shadow: inset 0 -3px 0 var(--ok); }
 .mh-tile.lose { border-color: rgba(208, 80, 68, .42); box-shadow: inset 0 -3px 0 var(--color-danger); }
 .mh-tile:hover { border-color: var(--brand); transform: translateY(-1px); }
 .mh-tile i {

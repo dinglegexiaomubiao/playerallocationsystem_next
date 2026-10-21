@@ -13,31 +13,32 @@
    ============================================================ */
 
 .t-dark {
-  /* —— 底色：炭黑偏暖，不是冷蓝灰 —— */
-  --t-bg: #17130f;
-  --t-bg-2: #1e1915;
-  --t-sunk: #12100c; /* 比底色更深，用于凹陷区（表头、代码段） */
+  /* —— 底色：中性深灰，四级明度阶梯 —— */
+  --t-bg: #15171a;
+  --t-bg-2: #1c1f24;
+  --t-sunk: #0f1114; /* 比底色更深，用于凹陷区（表头、代码段） */
 
-  /* —— 品牌：低饱和深红 —— */
-  --t-red: #8e3a35;
-  --t-red-deep: #6d2b27;
-  --t-red-ink: #c9867c; /* 深色底上的可读红，用于文字 */
-  --t-red-dim: rgba(142, 58, 53, 0.14);
+  /* —— 品牌：深红打底，文字用提纯后的亮红 —— */
+  --t-red: #c0392f;
+  --t-red-deep: #a52f27;
+  --t-red-ink: #e2635a; /* 深色底上的可读红，用于文字（4.9:1） */
+  --t-red-ink-soft: #f28a81; /* 淡红底（red-dim）上的文字要再亮一档 */
+  --t-red-dim: rgba(226, 99, 90, 0.14);
 
   /* —— 荣誉：古铜金，只给名次与奖赏 —— */
-  --t-bronze: #b08d57;
-  --t-bronze-ink: #d6b47b;
-  --t-bronze-dim: rgba(176, 141, 87, 0.12);
+  --t-bronze: #c79a5a;
+  --t-bronze-ink: #e0b878;
+  --t-bronze-dim: rgba(224, 184, 120, 0.12);
 
-  /* —— 文字：暖白灰阶 —— */
-  --t-text: #f0eae2;
-  --t-text-2: #ada298;
-  --t-text-3: #7b716a;
+  /* —— 文字：中性灰阶，不再带暖色 —— */
+  --t-text: #eef1f4;
+  --t-text-2: #a8b0ba;
+  --t-text-3: #8b939e;
 
   /* —— 分隔线：一根头发丝，页面大部分结构靠它 —— */
-  --t-line: #352d26;
-  --t-line-soft: rgba(240, 232, 220, 0.06);
-  --t-line-strong: #4a3f36;
+  --t-line: #2b3038;
+  --t-line-soft: rgba(238, 241, 244, 0.07);
+  --t-line-strong: #3a4149;
 
   /* —— 圆角：克制 —— */
   --t-r-1: 2px;
@@ -252,12 +253,12 @@
   color: var(--t-text-3);
 }
 .t-badge.live {
-  border-color: rgba(142, 58, 53, 0.5);
+  border-color: rgba(226, 99, 90, 0.5);
   color: var(--t-red-ink);
   background: var(--t-red-dim);
 }
 .t-badge.open {
-  border-color: rgba(176, 141, 87, 0.45);
+  border-color: rgba(224, 184, 120, 0.45);
   color: var(--t-bronze-ink);
   background: var(--t-bronze-dim);
 }
@@ -627,14 +628,14 @@
   border-radius: var(--t-r-1);
 }
 .t-team-tag.radiant {
-  color: #8fa87a;
-  background: rgba(143, 168, 122, 0.14);
-  border: 1px solid rgba(143, 168, 122, 0.3);
+  color: #8ed492;
+  background: rgba(111, 191, 115, 0.14);
+  border: 1px solid rgba(111, 191, 115, 0.3);
 }
 .t-team-tag.dire {
-  color: var(--t-red-ink);
+  color: var(--t-red-ink-soft);
   background: var(--t-red-dim);
-  border: 1px solid rgba(142, 58, 53, 0.38);
+  border: 1px solid rgba(226, 99, 90, 0.38);
 }
 .t-team-bar-name {
   font-family: var(--t-serif);
@@ -652,7 +653,7 @@
   font-size: 9.5px;
   letter-spacing: 0.14em;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(176, 141, 87, 0.45);
+  border: 1px solid rgba(224, 184, 120, 0.45);
   background: var(--t-bronze-dim);
   border-radius: var(--t-r-1);
   padding: 0 5px;
@@ -671,7 +672,9 @@
 }
 .t-team-bar-stats .sep {
   margin: 0 7px;
-  color: var(--t-line-strong);
+  /* 装饰性分隔符不走 AA（不是正文），但 --t-line-strong 只有 1.7:1，
+     等于没有，提亮到能看见又不抢正文的程度 */
+  color: #55606d;
 }
 
 /* 列头 */
@@ -813,7 +816,7 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--t-red-dim);
-  border: 1px solid rgba(142, 58, 53, 0.35);
+  border: 1px solid rgba(226, 99, 90, 0.35);
   color: var(--t-red-ink);
   font-size: 10px;
   font-weight: 700;
@@ -855,7 +858,7 @@
   transition: background 0.12s ease;
 }
 .t-trow:hover {
-  background: rgba(240, 232, 220, 0.018);
+  background: rgba(238, 241, 244, 0.018);
 }
 .t-num {
   text-align: right;
@@ -901,7 +904,7 @@
 }
 .t-team-rank.gold {
   color: var(--t-bronze-ink);
-  border-color: rgba(176, 141, 87, 0.5);
+  border-color: rgba(224, 184, 120, 0.5);
   background: var(--t-bronze-dim);
 }
 .t-team-rank.silver {
@@ -973,7 +976,7 @@
   line-height: 1.5;
   vertical-align: 1px;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(176, 141, 87, 0.45);
+  border: 1px solid rgba(224, 184, 120, 0.45);
 }
 .t-rp-pos {
   font-size: 10px;
@@ -1031,7 +1034,7 @@
   font-family: var(--t-mono);
   font-size: 10.5px;
   font-weight: 600;
-  color: #93a87e;
+  color: #6fbf73;
 }
 .t-vs-l {
   font-family: var(--t-mono);
@@ -1114,7 +1117,7 @@
   transition: background 0.12s ease;
 }
 .t-tr:hover {
-  background: rgba(240, 232, 220, 0.018);
+  background: rgba(238, 241, 244, 0.018);
 }
 .t-tr-name {
   font-weight: 600;
@@ -1156,12 +1159,12 @@
 }
 .t-chip.brand {
   color: var(--t-red-ink);
-  border-color: rgba(142, 58, 53, 0.45);
+  border-color: rgba(226, 99, 90, 0.45);
   background: var(--t-red-dim);
 }
 .t-chip.gold {
   color: var(--t-bronze-ink);
-  border-color: rgba(176, 141, 87, 0.45);
+  border-color: rgba(224, 184, 120, 0.45);
   background: var(--t-bronze-dim);
 }
 .t-chip.muted {
@@ -1327,7 +1330,7 @@
   font-size: 9.5px;
   letter-spacing: 0.1em;
   color: var(--t-bronze-ink);
-  border: 1px solid rgba(176, 141, 87, 0.45);
+  border: 1px solid rgba(224, 184, 120, 0.45);
   background: var(--t-bronze-dim);
   border-radius: var(--t-r-1);
   padding: 0 5px;
@@ -1349,7 +1352,7 @@
 }
 .t-honor.minor {
   background: none;
-  border-left-color: var(--t-line-strong, #4a3f36);
+  border-left-color: var(--t-line-strong, #3a4149);
   padding-top: 0;
   padding-bottom: 0;
 }
