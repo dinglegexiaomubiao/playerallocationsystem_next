@@ -312,7 +312,13 @@ export default function MemberDetail() {
             {records.length > 0 ? `（${records.length} 届）` : ''}
           </h2>
           {records.length === 0 ? (
-            <div className="empty">还没有参加过群内比赛。</div>
+            /* 替补、临时顶替的人没有队籍，上面这张表永远是空的，
+               但下面「出战记录」里确实有他上过的局 —— 别写成「没参加过比赛」自相矛盾 */
+            <div className="empty">
+              {appear && appear.total > 0
+                ? '没有以固定队伍参赛的记录，替补 / 临时上场见下方「出战记录」。'
+                : '还没有参加过群内比赛。'}
+            </div>
           ) : (
             <div className="adm-table">
               <div className="adm-row adm-row-rec adm-head">
