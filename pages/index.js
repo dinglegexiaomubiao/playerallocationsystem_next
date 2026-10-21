@@ -131,42 +131,44 @@ export default function Home() {
         <div className="wrap">
           {/* ==================== Hero ==================== */}
           <section className="home-hero">
-            <div className="home-hero-eyebrow">
-              <span className="home-chip">{hot ? '正在进行' : '今晚开黑'}</span>
-              <span className="home-live">
-                {loaded
-                  ? rooms > 0
-                    ? '社区活跃中'
-                    : '暂无开黑房间'
-                  : '加载中'}
-              </span>
-            </div>
+            <div className="home-hero-copy">
+              <div className="home-hero-eyebrow">
+                <span className="home-chip">{hot ? '正在进行' : '今晚开黑'}</span>
+                <span className="home-live">
+                  {loaded
+                    ? rooms > 0
+                      ? '社区活跃中'
+                      : '暂无开黑房间'
+                    : '加载中'}
+                </span>
+              </div>
 
-            <h1 className="home-title">今晚谁来守高地？</h1>
-            <p className="home-lede">比赛、开黑、闲聊和美食，群友的快乐据点。</p>
+              <h1 className="home-title">今晚谁来守高地？</h1>
+              <p className="home-lede">比赛、开黑、闲聊和美食，群友的快乐据点。</p>
 
-            <div className="home-shot">
-              {/* 群友自备的 Dota 地图截图，纯氛围图，不带外链标签 */}
-              <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
-            </div>
-
-            <div className="home-hero-foot">
-              <span className="home-rooms">
-                {loaded ? (
-                  rooms > 0 ? (
-                    <>
-                      <b>{rooms}</b> 个房间正在招募队友
-                    </>
+              <div className="home-hero-foot">
+                <span className="home-rooms">
+                  {loaded ? (
+                    rooms > 0 ? (
+                      <>
+                        <b>{rooms}</b> 个房间正在招募队友
+                      </>
+                    ) : (
+                      '现在还没有开黑房间，来开第一个'
+                    )
                   ) : (
-                    '现在还没有开黑房间，来开第一个'
-                  )
-                ) : (
-                  '正在读取开黑房间…'
-                )}
-              </span>
-              <Link href="/party" className="home-cta">
-                寻找队友 →
-              </Link>
+                    '正在读取开黑房间…'
+                  )}
+                </span>
+                <Link href="/party" className="home-cta">
+                  寻找队友 →
+                </Link>
+              </div>
+            </div>
+
+            {/* 氛围图放右栏做配图，不再全宽铺满 —— 首页第一屏要留给信息 */}
+            <div className="home-shot">
+              <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
             </div>
           </section>
 

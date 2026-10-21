@@ -12,11 +12,30 @@
 }
 
 /* ==================== Hero ==================== */
+/* ============================================================
+   首页 Hero
+   ------------------------------------------------------------
+   左文右图，不再让配图全宽铺满。
+   之前 16/6.4 的全宽图在 1440 下高约 460px，把第一屏吃掉了，
+   而首屏真正该露出来的是四个入口和近期赛事。
+   现在图只占右栏，高度跟左栏内容走（约 200px）。
+   ============================================================ */
 .home-hero {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px 24px 20px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.6fr);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.home-hero-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
 }
 
 .home-hero-eyebrow {
@@ -73,11 +92,14 @@
 /* 引图：宽幅，圆角只到 8px，不加边框和阴影 */
 .home-shot {
   position: relative;
-  margin-top: 18px;
+  margin-top: 0;
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--bg-sunk, #12100c);
-  aspect-ratio: 16 / 6.4;
+  /* 图的高度按比例算，并居中于左栏 —— 之前 min-height + stretch
+     会让图片按固有 16:9 撑到 250px，把整张卡顶高。 */
+  aspect-ratio: 16 / 7;
+  align-self: center;
 }
 .home-shot img {
   display: block;
@@ -91,10 +113,12 @@
 .home-hero-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  /* 按钮紧跟文案，不用 space-between ——
+     左栏变宽后按钮会被推到图片边上，看着像脱离了标题区 */
+  justify-content: flex-start;
+  gap: 18px;
   flex-wrap: wrap;
-  margin-top: 16px;
+  margin-top: 20px;
 }
 .home-rooms {
   font-size: 13px;
@@ -258,8 +282,14 @@
   .home-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* 窄屏没有右侧栏了，图落回标题下方，用比例约束高度 */
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
   .home-shot {
-    aspect-ratio: 16 / 9;
+    min-height: 0;
+    aspect-ratio: 16 / 7;
   }
 }
 
