@@ -1443,3 +1443,121 @@
     margin-left: 0;
   }
 }
+
+/* ============================================================
+   对阵树
+   ------------------------------------------------------------
+   列 = 轮次，卡片 = 系列赛（同对手的多局聚合成一张）。
+   布局是绝对定位：每列卡片中心均分在统一列高上，
+   这样 1 张卡的列居中对齐、11 张卡的列铺满，连线才不会错位。
+   连线只画「上一轮唯一匹配」的，循环赛不画。
+   ============================================================ */
+.bk-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 6px 0 10px;
+}
+.bk-canvas {
+  position: relative;
+}
+.bk-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+/* 线条要看得见：1px + 深棕在深色底上几乎不可见 */
+.bk-line {
+  stroke: #5d5044;
+  stroke-width: 1.5;
+}
+.bk-line.win {
+  stroke: var(--t-bronze);
+  stroke-opacity: 0.75;
+  stroke-width: 1.5;
+}
+/* 决赛那张卡是结果，用左侧金line拉出来 */
+.bk-col:last-child .bk-card {
+  border-left: 2px solid var(--t-bronze);
+}
+.bk-col {
+  position: absolute;
+  top: 0;
+  width: 208px;
+  height: 100%;
+  z-index: 1;
+}
+.bk-col-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--t-line);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--t-text-3);
+}
+.bk-col-head i {
+  font-family: var(--t-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  letter-spacing: 0;
+}
+.bk-card {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--t-bg-2);
+  border: 1px solid var(--t-line);
+  padding: 7px 9px 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.bk-team {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  font-size: 12px;
+  color: var(--t-text-2);
+}
+.bk-team.win {
+  color: var(--t-text);
+}
+.bk-team.win .bk-name {
+  font-weight: 600;
+}
+.bk-team.win .bk-score {
+  color: var(--t-bronze-ink);
+  font-weight: 700;
+}
+.bk-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--t-serif);
+}
+.bk-score {
+  flex-shrink: 0;
+  font-family: var(--t-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.bk-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid var(--t-line-soft);
+  font-family: var(--t-mono);
+  font-size: 9.5px;
+  color: var(--t-text-3);
+}
+.bk-pending {
+  color: var(--t-bronze);
+}

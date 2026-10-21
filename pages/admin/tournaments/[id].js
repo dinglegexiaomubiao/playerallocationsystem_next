@@ -7,6 +7,17 @@ import { getSession, isAdmin } from '../../../lib/auth';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../lib/api-client.mjs';
 import { dateOnly } from '../../../lib/excel';
 import TournamentPackageIO from '../../../components/TournamentPackageIO';
+import MultiSelectFilter from '../../../components/MultiSelectFilter';
+import { POSITIONS } from '../../../lib/options.mjs';
+
+/* 库里的位置是逗号分隔字符串，编辑时转数组 */
+const splitList = (v) =>
+  Array.isArray(v)
+    ? v
+    : String(v || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
 
 const STATUS_LIST = [
   { value: 'planning', label: '筹办中' },
@@ -865,11 +876,14 @@ export default function AdminTournament({ denied }) {
                         />
                       </div>
                       <div>
-                        <input
-                          className="adm-input"
-                          value={s.positions}
-                          placeholder="如 中单,优势路"
-                          onChange={(e) => patchSignup(s.player_id, 'positions', e.target.value)}
+                        {/* 位置用多选下拉：行内空间有限，平铺 6 个 chip 会撑破列宽 */}
+                        <MultiSelectFilter
+                          label="本届位置"
+                          allLabel="未标注"
+                          unit="人"
+                          options={POSITIONS.map((p) => ({ value: p }))}
+                          value={splitList(s.positions)}
+                          onChange={(next) => patchSignup(s.player_id, 'positions', next.join(','))}
                         />
                       </div>
                       <div>

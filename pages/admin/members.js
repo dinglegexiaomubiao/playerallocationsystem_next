@@ -3,6 +3,25 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
+import PositionPicker from '../../components/PositionPicker';
+import MultiSelectFilter from '../../components/MultiSelectFilter';
+import UnregisteredAccounts from '../../components/admin/UnregisteredAccounts';
+import heroIdToName from '../../lib/heroMapping';
+
+/* 全英雄选项：后台改资料时要能选任意英雄，不能只限已有数据里出现过的 */
+const ALL_HEROES = [...new Set(Object.values(heroIdToName))].sort((a, b) =>
+  a.localeCompare(b, 'zh')
+);
+const ALL_HERO_OPTIONS = ALL_HEROES.map((value) => ({ value }));
+
+/* 库里的位置/英雄是逗号分隔字符串，编辑时转数组 */
+const splitList = (v) =>
+  Array.isArray(v)
+    ? v
+    : String(v || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean);
 
 // 缺漏检测：返回该选手缺失/异常的项。high 用红、mid 用橙、low 用灰
 function issuesOf(p) {
@@ -107,8 +126,9 @@ export default function AdminMembersPage({ denied }) {
           game_id: rest.game_id || null,
           group_nickname: rest.group_nickname || null,
           score: rest.score === '' ? 0 : Number(rest.score),
-          positions: rest.positions || '',
-          heroes: rest.heroes || '',
+          // 弹窗里是数组，写库要还原成逗号分隔字符串
+          positions: Array.isArray(rest.positions) ? rest.positions.join(',') : (rest.positions || ''),
+          heroes: Array.isArray(rest.heroes) ? rest.heroes.join(',') : (rest.heroes || ''),
           win_rate: rest.win_rate,
           championships: rest.championships,
           synergy_players: rest.synergy_players || '',
@@ -156,8 +176,9 @@ export default function AdminMembersPage({ denied }) {
       key={label}
       style={{
         flex: '1 1 140px',
-        background: '#fff',
-        border: '1px solid var(--border, #e5e5e5)',
+        // 深色页面：不能再用白底（原来写死 #fff，四个白块很刺眼）
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
         borderRadius: 10,
         padding: '14px 16px',
       }}
@@ -199,6 +220,9 @@ export default function AdminMembersPage({ denied }) {
             {statBox(stats.unbound, '未绑账号', '#B9770E')}
             {statBox(stats.hasIssue, '存在缺漏', '#B9770E')}
           </div>
+
+          {/* 打了比赛但没绑定群友的账号：补录后赛程里的裸账号立刻变成昵称 */}
+          <UnregisteredAccounts onChanged={load} />
 
           <div className="adm-bar" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
             <input
@@ -313,7 +337,12 @@ export default function AdminMembersPage({ denied }) {
                           )}
                         </td>
                         <td>
-                          <button className="btn btn-ghost btn-sm" onClick={() => setEditing({ ...p })}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditing({
+                            ...p,
+                            // 位置与英雄在库里是逗号分隔字符串，弹窗里用数组编辑
+                            positions: splitList(p.positions),
+                            heroes: splitList(p.heroes),
+                          })}>
                             编辑
                           </button>
                           <button
@@ -360,7 +389,6 @@ export default function AdminMembersPage({ denied }) {
                 { k: 'group_nickname', label: '群昵称', ph: '微信群昵称，用于导入匹配' },
                 { k: 'game_id', label: 'SteamID', ph: '纯数字，用于同步头像与天梯分' },
                 { k: 'score', label: '天梯分', ph: '0', type: 'number' },
-                { k: 'positions', label: '擅长位置', ph: '劣势路,半辅助,纯辅助' },
                 { k: 'region', label: '地区', ph: '深圳' },
               ].map((f) => (
                 <div key={f.k} style={{ marginBottom: 12 }}>
@@ -385,6 +413,33 @@ export default function AdminMembersPage({ denied }) {
                   />
                 </div>
               ))}
+
+              {/* 位置：多选 + 排序（顺序决定群友卡片上先展示哪个） */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
+                  擅长位置
+                </label>
+                <PositionPicker
+                  value={Array.isArray(editing.positions) ? editing.positions : []}
+                  onChange={(next) => setEditing({ ...editing, positions: next })}
+                  hint="可多选，第 1 位是主位置。"
+                />
+              </div>
+
+              {/* 英雄：选项多，用可滚动下拉，不平铺 */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
+                  擅长英雄
+                </label>
+                <MultiSelectFilter
+                  label="擅长英雄"
+                  allLabel="未填写"
+                  unit="位群友"
+                  options={ALL_HERO_OPTIONS}
+                  value={Array.isArray(editing.heroes) ? editing.heroes : []}
+                  onChange={(next) => setEditing({ ...editing, heroes: next })}
+                />
+              </div>
 
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>

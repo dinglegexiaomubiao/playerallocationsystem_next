@@ -8,6 +8,7 @@ import MatchCard from '../../components/tournament/MatchCard';
 import TeamTable from '../../components/tournament/TeamTable';
 import PlayerTable from '../../components/tournament/PlayerTable';
 import MatchFilterBar from '../../components/tournament/MatchFilterBar';
+import BracketView from '../../components/tournament/BracketView';
 
 const TABS = [
   { key: 'overview', label: '赛事概览' },
@@ -170,6 +171,8 @@ export default function TournamentDetail() {
 
   /* 赛程 Tab 的筛选状态。和概览里的「赛果」无关，只作用在 matches Tab。 */
   const [mf, setMf] = useState({ rounds: [], team: '', onlyParsed: false });
+  /* 列表 / 对阵树两种看法：列表适合逐局看数据，树适合看晋级路径 */
+  const [view, setView] = useState('list');
 
   /* 「有完整逐人数据」的判定：kills 全为 null 说明这局回放过期、解析不回来 */
   const isParsed = (m) =>
@@ -420,50 +423,91 @@ export default function TournamentDetail() {
               <div className="t-empty">暂无赛程数据</div>
             ) : (
               <>
-                <MatchFilterBar
-                  rounds={matchFacets.roundList}
-                  teams={matchFacets.teamList}
-                  value={mf}
-                  onChange={setMf}
-                  total={filteredGroupedMatches.reduce((s, g) => s + g.items.length, 0)}
-                  unparsed={matchFacets.unparsed}
-                />
+                <div className="t-viewbar">
+                  <button
+                    type="button"
+                    className={`t-viewbtn ${view === 'list' ? 'is-on' : ''}`}
+                    onClick={() => setView('list')}
+                  >
+                    列表
+                  </button>
+                  <button
+                    type="button"
+                    className={`t-viewbtn ${view === 'bracket' ? 'is-on' : ''}`}
+                    onClick={() => setView('bracket')}
+                  >
+                    对阵树
+                  </button>
+                  <span className="t-viewbar-hint">
+                    {view === 'list'
+                      ? '逐局看阵容与赛后数据'
+                      : '按轮次看晋级路径，连线由队伍名反推'}
+                  </span>
+                </div>
 
-                {filteredGroupedMatches.length === 0 ? (
-                  <div className="t-empty">
-                    没有符合条件的对局
-                    <button
-                      type="button"
-                      className="t-mfilter-clear"
-                      style={{ marginLeft: 10 }}
-                      onClick={() => setMf({ rounds: [], team: '', onlyParsed: false })}
-                    >
-                      清除筛选
-                    </button>
-                  </div>
+                {view === 'bracket' ? (
+                  <>
+                    <MatchFilterBar
+                      rounds={matchFacets.roundList}
+                      teams={matchFacets.teamList}
+                      value={mf}
+                      onChange={setMf}
+                      total={filteredGroupedMatches.reduce((s, g) => s + g.items.length, 0)}
+                      unparsed={matchFacets.unparsed}
+                    />
+                    <BracketView
+                      matches={filteredGroupedMatches.flatMap((g) => g.items)}
+                      rounds={rounds}
+                    />
+                  </>
                 ) : (
-                  filteredGroupedMatches.map((g, gi) => (
-                    <section key={g.round.id || 'ungrouped'} style={{ marginTop: gi === 0 ? 0 : 34 }}>
-                      <div className="t-section-title">
-                        {g.round.name}
-                        <span
-                          style={{
-                            marginLeft: 4,
-                            fontFamily: 'var(--t-mono)',
-                            fontSize: 10.5,
-                            letterSpacing: 0,
-                            color: 'var(--t-text-3)',
-                            fontWeight: 400,
-                          }}
+                  <>
+                    <MatchFilterBar
+                      rounds={matchFacets.roundList}
+                      teams={matchFacets.teamList}
+                      value={mf}
+                      onChange={setMf}
+                      total={filteredGroupedMatches.reduce((s, g) => s + g.items.length, 0)}
+                      unparsed={matchFacets.unparsed}
+                    />
+
+                    {filteredGroupedMatches.length === 0 ? (
+                      <div className="t-empty">
+                        没有符合条件的对局
+                        <button
+                          type="button"
+                          className="t-mfilter-clear"
+                          style={{ marginLeft: 10 }}
+                          onClick={() => setMf({ rounds: [], team: '', onlyParsed: false })}
                         >
-                          {g.items.length} 场
-                        </span>
+                          清除筛选
+                        </button>
                       </div>
-                      {g.items.map((m) => (
-                        <MatchCard key={m.id} match={m} roundName={g.round.name} />
-                      ))}
-                    </section>
-                  ))
+                    ) : (
+                      filteredGroupedMatches.map((g, gi) => (
+                        <section key={g.round.id || 'ungrouped'} style={{ marginTop: gi === 0 ? 0 : 34 }}>
+                          <div className="t-section-title">
+                            {g.round.name}
+                            <span
+                              style={{
+                                marginLeft: 4,
+                                fontFamily: 'var(--t-mono)',
+                                fontSize: 10.5,
+                                letterSpacing: 0,
+                                color: 'var(--t-text-3)',
+                                fontWeight: 400,
+                              }}
+                            >
+                              {g.items.length} 场
+                            </span>
+                          </div>
+                          {g.items.map((m) => (
+                            <MatchCard key={m.id} match={m} roundName={g.round.name} />
+                          ))}
+                        </section>
+                      ))
+                    )}
+                  </>
                 )}
               </>
             )}
