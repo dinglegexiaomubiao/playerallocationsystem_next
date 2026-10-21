@@ -6,10 +6,11 @@ import useSession from '../../hooks/useSession';
 import Avatar from '../../components/Avatar';
 import AvatarSync from '../../components/AvatarSync';
 import HeroAvatar from '../../components/HeroAvatar';
+import MultiSelectFilter from '../../components/MultiSelectFilter';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 import { TIERS, tierOf } from '../../lib/tier.mjs';
-
-const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
+/* 位置选项走唯一来源，别再各页抄一份 */
+import { POSITIONS } from '../../lib/options.mjs';
 
 // 天梯分区间。min/max 为 null 表示该侧不设限；none 表示「未填写分数」
 const SCORE_RANGES = [
@@ -54,9 +55,12 @@ const EMPTY_FILTERS = {
   keyword: '',
   tier: 'all',
   score: 'all',
-  position: '全部',
+  // 位置与英雄支持多选：一个人会多个位置、多个绝活，
+  // 单选时只能一个个看完，多选才能问「谁会打 1 或 5」。
+  // 同组内是 OR —— 命中任意一个就算。
+  position: [],
   region: '全部',
-  hero: '全部',
+  hero: [],
   sort: 'score',
 };
 
@@ -223,12 +227,18 @@ export default function MembersPage() {
           if (score.max !== null && v >= score.max) return false;
         }
       }
-      // 擅长位置
-      if (filters.position !== '全部' && !(p.positions || []).includes(filters.position)) return false;
+      // 擅长位置（多选，OR）
+      if (filters.position.length > 0) {
+        const mine = p.positions || [];
+        if (!filters.position.some((x) => mine.includes(x))) return false;
+      }
       // 地区
       if (filters.region !== '全部' && String(p.region || '').trim() !== filters.region) return false;
-      // 擅长英雄
-      if (filters.hero !== '全部' && !(p.heroes || []).includes(filters.hero)) return false;
+      // 擅长英雄（多选，OR）
+      if (filters.hero.length > 0) {
+        const mine = p.heroes || [];
+        if (!filters.hero.some((x) => mine.includes(x))) return false;
+      }
       return true;
     });
 
@@ -242,9 +252,9 @@ export default function MembersPage() {
     (String(filters.keyword || '').trim() ? 1 : 0) +
     (filters.tier !== 'all' ? 1 : 0) +
     (filters.score !== 'all' ? 1 : 0) +
-    (filters.position !== '全部' ? 1 : 0) +
+    (filters.position.length > 0 ? 1 : 0) +
     (filters.region !== '全部' ? 1 : 0) +
-    (filters.hero !== '全部' ? 1 : 0);
+    (filters.hero.length > 0 ? 1 : 0);
 
   const handleImport = async (rows, onProgress) => {
     const list = rows
@@ -386,18 +396,17 @@ export default function MembersPage() {
 
             <div className="filter-field">
               <label>位置</label>
-              <select
-                className={filters.position !== '全部' ? 'is-active' : ''}
+              <MultiSelectFilter
+                label="擅长位置"
+                allLabel="全部位置"
+                unit="位群友"
+                options={POSITIONS.map((p) => ({
+                  value: p,
+                  count: players.filter((x) => (x.positions || []).includes(p)).length,
+                }))}
                 value={filters.position}
-                onChange={(e) => setFilters({ ...filters, position: e.target.value })}
-              >
-                <option value="全部">全部位置（{players.length}）</option>
-                {POSITIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}（{players.filter((x) => (x.positions || []).includes(p)).length}）
-                  </option>
-                ))}
-              </select>
+                onChange={(next) => setFilters({ ...filters, position: next })}
+              />
             </div>
 
             <div className="filter-field">
@@ -418,18 +427,14 @@ export default function MembersPage() {
 
             <div className="filter-field">
               <label>擅长英雄</label>
-              <select
-                className={filters.hero !== '全部' ? 'is-active' : ''}
+              <MultiSelectFilter
+                label="擅长英雄"
+                allLabel="全部英雄"
+                unit="位群友"
+                options={facets.hero.map(([k, n]) => ({ value: k, count: n }))}
                 value={filters.hero}
-                onChange={(e) => setFilters({ ...filters, hero: e.target.value })}
-              >
-                <option value="全部">全部英雄（{facets.hero.length}）</option>
-                {facets.hero.map(([k, n]) => (
-                  <option key={k} value={k}>
-                    {k}（{n}）
-                  </option>
-                ))}
-              </select>
+                onChange={(next) => setFilters({ ...filters, hero: next })}
+              />
             </div>
 
             <div className="filter-field">

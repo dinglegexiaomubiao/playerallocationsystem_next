@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import { memberHref } from '../../lib/member-href';
+import MultiSelectFilter from '../MultiSelectFilter';
 
 function PlayerAvatar({ playerId, name, size = 28 }) {
   const [failed, setFailed] = useState(false);
@@ -27,7 +28,8 @@ function PlayerAvatar({ playerId, name, size = 28 }) {
   );
 }
 
-const POSITIONS = ['优势路', '中单', '劣势路', '半辅助', '纯辅助', '全才'];
+/* 位置选项走 lib/options.mjs 的唯一来源，不再各文件抄一份 */
+import { POSITIONS } from '../../lib/options.mjs';
 
 /* 报名时间：只显示月-日 时:分，年份对单届赛事没意义 */
 const fmtSigned = (v) => {
@@ -51,7 +53,9 @@ export default function PlayerTable({ signups = [], teams = [] }) {
   const router = useRouter();
   const from = String(router.asPath || '').split('?')[0];
   const [kw, setKw] = useState('');
-  const [pos, setPos] = useState('all');
+  // 位置与英雄都支持多选：同组内 OR（选了中单+劣势路 = 会打任一个都算）
+  const [pos, setPos] = useState([]);
+  const [hero, setHero] = useState([]);
   const [sort, setSort] = useState('score_desc');
   const [onlyUnassigned, setOnlyUnassigned] = useState(false);
 
@@ -79,6 +83,11 @@ export default function PlayerTable({ signups = [], teams = [] }) {
         .map((x) => x.trim())
         .filter(Boolean)
         .join(','),
+      // 擅长英雄（报名快照里的），多个用逗号分隔
+      heroList: String(s.heroes || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean),
     }));
 
     if (k) {
@@ -88,7 +97,12 @@ export default function PlayerTable({ signups = [], teams = [] }) {
           String(s.group_nickname || '').toLowerCase().includes(k)
       );
     }
-    if (pos !== 'all') list = list.filter((s) => s.posList.includes(pos));
+    if (pos.length > 0) {
+      list = list.filter((s) => pos.some((p) => s.posList.includes(p)));
+    }
+    if (hero.length > 0) {
+      list = list.filter((s) => hero.some((h) => s.heroList.includes(h)));
+    }
     if (onlyUnassigned) list = list.filter((s) => !s.teamName);
 
     list.sort((a, b) => {
@@ -97,11 +111,40 @@ export default function PlayerTable({ signups = [], teams = [] }) {
       return String(a.nickname || '').localeCompare(String(b.nickname || ''), 'zh');
     });
     return list;
-  }, [signups, kw, pos, sort, onlyUnassigned, teamOf]);
+  }, [signups, kw, pos, hero, sort, onlyUnassigned, teamOf]);
 
   const assignedCount = useMemo(
     () => (signups || []).filter((s) => teamOf.has(String(s.player_id))).length,
     [signups, teamOf]
+  );
+
+  /* 英雄选项从报名数据里统计，按人数降序 —— 英雄池太大，写死会漏 */
+  const heroFacets = useMemo(() => {
+    const m = new Map();
+    (signups || []).forEach((s) => {
+      String(s.heroes || '')
+        .split(',')
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .forEach((h) => m.set(h, (m.get(h) || 0) + 1));
+    });
+    return [...m.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'))
+      .map(([value, count]) => ({ value, count }));
+  }, [signups]);
+
+  const posFacets = useMemo(
+    () =>
+      POSITIONS.map((p) => ({
+        value: p,
+        count: (signups || []).filter((s) =>
+          String(s.positions || '')
+            .split(',')
+            .map((x) => x.trim())
+            .includes(p)
+        ).length,
+      })),
+    [signups]
   );
 
   return (
@@ -113,14 +156,22 @@ export default function PlayerTable({ signups = [], teams = [] }) {
           value={kw}
           onChange={(e) => setKw(e.target.value)}
         />
-        <select className="t-select" value={pos} onChange={(e) => setPos(e.target.value)}>
-          <option value="all">全部位置</option>
-          {POSITIONS.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+        <MultiSelectFilter
+          label="本届位置"
+          allLabel="全部位置"
+          unit="人"
+          options={posFacets}
+          value={pos}
+          onChange={setPos}
+        />
+        <MultiSelectFilter
+          label="擅长英雄"
+          allLabel="全部英雄"
+          unit="人"
+          options={heroFacets}
+          value={hero}
+          onChange={setHero}
+        />
         <select className="t-select" value={sort} onChange={(e) => setSort(e.target.value)}>
           <option value="score_desc">天梯分 从高到低</option>
           <option value="score_asc">天梯分 从低到高</option>
@@ -131,8 +182,8 @@ export default function PlayerTable({ signups = [], teams = [] }) {
           className="t-select"
           onClick={() => setOnlyUnassigned((v) => !v)}
           style={{
-            borderColor: onlyUnassigned ? 'var(--t-brand)' : 'var(--t-line)',
-            color: onlyUnassigned ? 'var(--t-brand)' : 'var(--t-text-2)',
+            borderColor: onlyUnassigned ? 'var(--t-red)' : 'var(--t-line)',
+            color: onlyUnassigned ? 'var(--t-red-ink)' : 'var(--t-text-2)',
           }}
         >
           仅未组队
