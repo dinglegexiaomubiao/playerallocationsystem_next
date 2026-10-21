@@ -7,6 +7,7 @@ import TournamentHero from '../../components/tournament/TournamentHero';
 import MatchCard from '../../components/tournament/MatchCard';
 import TeamTable from '../../components/tournament/TeamTable';
 import PlayerTable from '../../components/tournament/PlayerTable';
+import MatchFilterBar from '../../components/tournament/MatchFilterBar';
 
 const TABS = [
   { key: 'overview', label: '赛事概览' },
@@ -167,6 +168,39 @@ export default function TournamentDetail() {
       .map((p) => ({ label: NAME[p], names: fromTable[p] }));
   }, [t, teams]);
 
+  /* 赛程 Tab 的筛选状态。和概览里的「赛果」无关，只作用在 matches Tab。 */
+  const [mf, setMf] = useState({ rounds: [], team: '', onlyParsed: false });
+
+  /* 「有完整逐人数据」的判定：kills 全为 null 说明这局回放过期、解析不回来 */
+  const isParsed = (m) =>
+    (m.dota_players || []).some((p) => p.kills !== null && p.kills !== undefined);
+
+  /* 赛程筛选用的轮次与队伍清单，都从真实数据里取，不写死 */
+  const matchFacets = useMemo(() => {
+    const orderedRounds = [...rounds].sort((a, b) => {
+      const ra = ROUND_ORDER[a.name] ?? 50;
+      const rb = ROUND_ORDER[b.name] ?? 50;
+      if (ra !== rb) return ra - rb;
+      return (Number(a.order_no) || 0) - (Number(b.order_no) || 0);
+    });
+    const roundList = orderedRounds
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        count: matches.filter((m) => String(m.round_id) === String(r.id)).length,
+      }))
+      .filter((r) => r.count > 0);
+
+    const teamSet = new Set();
+    matches.forEach((m) => {
+      if (m.team_a_name) teamSet.add(m.team_a_name);
+      if (m.team_b_name) teamSet.add(m.team_b_name);
+    });
+
+    const unparsed = matches.filter((m) => !isParsed(m)).length;
+    return { roundList, teamList: [...teamSet].sort((a, b) => a.localeCompare(b, 'zh')), unparsed };
+  }, [rounds, matches]);
+
   /* 按轮次分组（没有轮次时归到「对阵」） */
   const groupedMatches = useMemo(() => {
     const list = rounds.length > 0 ? rounds : [{ id: null, name: '对阵' }];
@@ -188,6 +222,25 @@ export default function TournamentDetail() {
       }))
       .filter((g) => g.items.length > 0);
   }, [rounds, matches]);
+
+  /* 筛完再分组，保证「轮次标题里的场次」和实际渲染条数一致。
+     必须放在 groupedMatches 之后 —— 它依赖分组结果，不能自己再分一遍。 */
+  const filteredGroupedMatches = useMemo(() => {
+    const sel = new Set(mf.rounds.map(String));
+    const hitIds = new Set(
+      matches
+        .filter((m) => {
+          if (sel.size > 0 && !sel.has(String(m.round_id))) return false;
+          if (mf.team && m.team_a_name !== mf.team && m.team_b_name !== mf.team) return false;
+          if (mf.onlyParsed && !isParsed(m)) return false;
+          return true;
+        })
+        .map((m) => String(m.id))
+    );
+    return groupedMatches
+      .map((g) => ({ ...g, items: g.items.filter((m) => hitIds.has(String(m.id))) }))
+      .filter((g) => g.items.length > 0);
+  }, [matches, groupedMatches, mf]);
 
   if (loading) {
     return (
@@ -363,31 +416,56 @@ export default function TournamentDetail() {
         {/* ==================== 赛程与对阵 ==================== */}
         {tab === 'matches' && (
           <div style={{ marginTop: 22 }}>
-            {groupedMatches.length === 0 ? (
+            {matches.length === 0 ? (
               <div className="t-empty">暂无赛程数据</div>
             ) : (
-              groupedMatches.map((g, gi) => (
-                <section key={g.round.id || 'ungrouped'} style={{ marginTop: gi === 0 ? 0 : 34 }}>
-                  <div className="t-section-title">
-                    {g.round.name}
-                    <span
-                      style={{
-                        marginLeft: 4,
-                        fontFamily: 'var(--t-mono)',
-                        fontSize: 10.5,
-                        letterSpacing: 0,
-                        color: 'var(--t-text-3)',
-                        fontWeight: 400,
-                      }}
+              <>
+                <MatchFilterBar
+                  rounds={matchFacets.roundList}
+                  teams={matchFacets.teamList}
+                  value={mf}
+                  onChange={setMf}
+                  total={filteredGroupedMatches.reduce((s, g) => s + g.items.length, 0)}
+                  unparsed={matchFacets.unparsed}
+                />
+
+                {filteredGroupedMatches.length === 0 ? (
+                  <div className="t-empty">
+                    没有符合条件的对局
+                    <button
+                      type="button"
+                      className="t-mfilter-clear"
+                      style={{ marginLeft: 10 }}
+                      onClick={() => setMf({ rounds: [], team: '', onlyParsed: false })}
                     >
-                      {g.items.length} 场
-                    </span>
+                      清除筛选
+                    </button>
                   </div>
-                  {g.items.map((m) => (
-                    <MatchCard key={m.id} match={m} roundName={g.round.name} />
-                  ))}
-                </section>
-              ))
+                ) : (
+                  filteredGroupedMatches.map((g, gi) => (
+                    <section key={g.round.id || 'ungrouped'} style={{ marginTop: gi === 0 ? 0 : 34 }}>
+                      <div className="t-section-title">
+                        {g.round.name}
+                        <span
+                          style={{
+                            marginLeft: 4,
+                            fontFamily: 'var(--t-mono)',
+                            fontSize: 10.5,
+                            letterSpacing: 0,
+                            color: 'var(--t-text-3)',
+                            fontWeight: 400,
+                          }}
+                        >
+                          {g.items.length} 场
+                        </span>
+                      </div>
+                      {g.items.map((m) => (
+                        <MatchCard key={m.id} match={m} roundName={g.round.name} />
+                      ))}
+                    </section>
+                  ))
+                )}
+              </>
             )}
           </div>
         )}

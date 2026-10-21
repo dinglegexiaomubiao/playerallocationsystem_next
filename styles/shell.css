@@ -756,3 +756,236 @@ button.back-link:hover {
   gap: 10px;
   flex-wrap: wrap;
 }
+
+/* ============================================================
+   赛事列表筛选栏
+   ------------------------------------------------------------
+   一组 chip 多选 + 搜索 + 快捷预设。
+   同组内是 OR、跨组是 AND，所以两组之间留一条分隔线，
+   让「状态」和「我的」看起来是两个维度，而不是一堆并列条件。
+   ============================================================ */
+.tf-bar {
+  margin: 0 0 18px;
+  padding: 14px 0 12px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tf-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.tf-row-sub {
+  gap: 14px;
+}
+.tf-search {
+  flex: 0 1 260px;
+  min-width: 180px;
+  padding: 7px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+}
+.tf-search::placeholder {
+  color: var(--text-3);
+}
+.tf-search:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+}
+.tf-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tf-group-label {
+  margin-right: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+/* 组与组之间一条竖线，强调是不同维度 */
+.tf-group + .tf-group {
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
+}
+.tf-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.tf-chip:hover {
+  border-color: var(--brand);
+  color: var(--text);
+}
+.tf-chip.is-on {
+  border-color: var(--brand-solid);
+  background: var(--brand-soft);
+  color: var(--text);
+}
+.tf-chip-n {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--text-3);
+}
+.tf-chip.is-on .tf-chip-n {
+  color: var(--brand);
+}
+/* 快捷预设：一眼能看出是「组合动作」，用虚线边框区分手动 chip */
+.tf-chip-preset {
+  border-style: dashed;
+}
+.tf-summary {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.tf-summary b {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--text);
+}
+.tf-clear {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--brand);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.tf-warn {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--gold);
+}
+
+/* ============================================================
+   赛事信息页的两个 Tab
+   ============================================================ */
+.lr-tabs {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.lr-tab {
+  position: relative;
+  padding: 10px 0 9px;
+  border: 0;
+  background: none;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.lr-tab:hover {
+  color: var(--text-2);
+}
+.lr-tab.is-on {
+  color: var(--text);
+}
+.lr-tab.is-on::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--brand-solid);
+}
+.lr-tab-n {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+/* 我的赛事概览：一行小指标，不做四张等宽卡 */
+.my-stats {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.my-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+}
+.my-stat:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.my-stat b {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.my-stat.gold b {
+  color: var(--gold);
+}
+
+@media (max-width: 820px) {
+  .tf-group + .tf-group {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .tf-summary {
+    margin-left: 0;
+  }
+  .my-stat {
+    padding: 0 12px;
+  }
+}
+
+/* 列表里标出「我在这届的参与情况」，跟在赛事名后面，不单独占一列 */
+.lr-mine-flag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  vertical-align: 2px;
+}

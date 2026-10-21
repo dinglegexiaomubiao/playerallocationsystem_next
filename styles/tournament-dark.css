@@ -1361,3 +1361,85 @@
   font-weight: 600;
   color: var(--t-text-2);
 }
+
+/* ============================================================
+   赛程筛选栏（详情页 · 赛程与对阵）
+   ------------------------------------------------------------
+   和列表页的 .tf-* 是两套：这里在 .t-dark 作用域内，
+   颜色走 --t-* 令牌，不能混用全局 --brand。
+   ============================================================ */
+.t-mfilter {
+  align-items: center;
+  gap: 10px 14px;
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--t-line);
+}
+.t-mfilter-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.t-mfilter-k {
+  margin-right: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--t-text-3);
+}
+.t-mchip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 9px;
+  border: 1px solid var(--t-line);
+  border-radius: var(--t-r-1);
+  background: transparent;
+  color: var(--t-text-2);
+  font-family: var(--t-sans);
+  font-size: 11.5px;
+  line-height: 1.6;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+.t-mchip:hover {
+  border-color: var(--t-red);
+  color: var(--t-text);
+}
+.t-mchip.is-on {
+  border-color: var(--t-red);
+  background: var(--t-red-dim);
+  color: var(--t-text);
+}
+.t-mchip i {
+  font-family: var(--t-mono);
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--t-text-3);
+}
+.t-mfilter-sum {
+  margin-left: auto;
+  font-family: var(--t-mono);
+  font-size: 11px;
+  color: var(--t-text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.t-mfilter-clear {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: var(--t-sans);
+  font-size: 11.5px;
+  color: var(--t-red-ink);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+@media (max-width: 720px) {
+  .t-mfilter-sum {
+    margin-left: 0;
+  }
+}

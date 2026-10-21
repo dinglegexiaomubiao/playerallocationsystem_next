@@ -41,7 +41,7 @@ export default async function handler(req, res) {
             (SELECT string_agg(pt.name, ' / ' ORDER BY pt.name)
                FROM public.tournament_placements pl
                JOIN public.teams pt ON pt.id = pl.team_id AND pt.tournament_id = pl.tournament_id
-              WHERE pl.tournament_id = t.id AND pl.place = 1) AS champions_text,
+              WHERE pl.tournament_id = t.id AND pl.place = 1) AS champions_text
           FROM public.tournaments t
           -- 只认本赛事的队伍：库里存在指向别的赛事队伍的历史脏数据
           LEFT JOIN public.teams tc ON tc.id = t.champion_team_id AND tc.tournament_id = t.id
