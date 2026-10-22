@@ -1,7 +1,10 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Avatar from '../../components/Avatar';
 import MemberMap from '../../components/MemberMap';
+import { memberHref } from '../../lib/member-href';
 
 /**
  * 群友分布（/map）
@@ -14,14 +17,42 @@ import MemberMap from '../../components/MemberMap';
  * ⚠ 「悬停高亮」和「点击选中」是两个独立状态，别合并：
  *   一开始两者共用一个 state，鼠标一移开就 onHover(null) 把点击的结果也清掉了，
  *   于是右侧明细刚出来就消失。现在 hovered 只管描边高亮，active 只管右侧明细。
+ *
+ * ⚠ 选区要跟着地址栏走（?dist=南山区）：群友详情的「返回分布图」带上这个参数回来，
+ *   否则从详情返回后右栏又是一片空白，用户得重新点一次区。
+ *   读它必须放在 useEffect 里 —— 首帧读 router.query 会让 SSR 出来的 HTML 和
+ *   客户端首次渲染不一致（hydrate 报错），而且 getServerSideProps 并不知道这个参数。
  */
 export default function MapPage({ data, initialError }) {
+  const router = useRouter();
   const [selected, setSelected] = useState([]);
   const [showHeat, setShowHeat] = useState(true);
   const [showFoods, setShowFoods] = useState(true);
   const [active, setActive] = useState(null); // 点击选中的区（决定右侧明细）
   const [hovered, setHovered] = useState(null); // 悬停的区（只影响描边）
   const [kw, setKw] = useState('');
+
+  const distParam = Array.isArray(router.query.dist) ? router.query.dist[0] : router.query.dist;
+
+  // 从群友详情返回时带着 ?dist=，用它把右栏还原回去
+  useEffect(() => {
+    if (typeof distParam === 'string' && distParam) setActive(distParam);
+  }, [distParam]);
+
+  // 反过来把选区写回地址栏（shallow：不重跑 getServerSideProps，不新增历史记录）。
+  // 这样刷新、复制链接、从详情返回都能落回同一个区。
+  // ⚠ 首帧必须跳过：上面那个 effect 的 setActive 是异步的，此刻 active 还是 null，
+  //   一跑就会把 /map?dist=南山区 改写成 /map，然后又被还原、再改写 —— 地址栏来回跳。
+  const urlSyncReady = useRef(false);
+  useEffect(() => {
+    if (!urlSyncReady.current) {
+      urlSyncReady.current = true;
+      return;
+    }
+    const cur = typeof distParam === 'string' ? distParam : '';
+    if (cur === (active || '')) return;
+    router.replace(active ? `/map?dist=${encodeURIComponent(active)}` : '/map', undefined, { shallow: true });
+  }, [active]); // 故意只跟 active：跟着 distParam 会和自己打架
 
   const districts = data?.districts || [];
   const stats = data?.stats || { players: 0, filled: 0, missing: 0, foods: 0 };
@@ -47,6 +78,24 @@ export default function MapPage({ data, initialError }) {
   );
 
   const activeData = active ? districts.find((d) => d.name === active) : null;
+
+  /**
+   * 右栏只列 14 家，排序按「有群友评价的优先 → 星级高 → 新的」。
+   * ⚠ 不要直接 slice(0,14) 拿原顺序：数据层是按 id 倒序出来的，
+   *   排在前面的都是最新录入、一条评价都还没有的新店，右栏会整片「暂无评价」，
+   *   看起来像评价功能没做。真正有内容的店全被挤在后面。
+   */
+  const sideFoods = useMemo(() => {
+    if (!activeData) return [];
+    return [...activeData.foods]
+      .sort(
+        (a, b) =>
+          (b.reviewCount || 0) - (a.reviewCount || 0) ||
+          (Number(b.rating) || 0) - (Number(a.rating) || 0) ||
+          String(b.id).localeCompare(String(a.id))
+      )
+      .slice(0, 14);
+  }, [activeData]);
 
   const toggleMember = (id) => {
     const key = String(id);
@@ -255,78 +304,142 @@ export default function MapPage({ data, initialError }) {
 
             {/* ---- 右侧：当前点击的区 ---- */}
             <aside className="map-side">
-              <div className="map-panel">
-                {activeData ? (
-                  <>
-                    <h2>
-                      {activeData.name}
-                      <button
-                        type="button"
-                        className="map-panel-close"
-                        onClick={() => setActive(null)}
-                        aria-label="关闭"
-                      >
-                        ×
-                      </button>
-                    </h2>
-                    <h3 className="map-sub-h">群友 {activeData.playerCount} 人</h3>
-                    {activeData.players.length ? (
-                      <ul className="map-list">
-                        {activeData.players.map((p) => (
-                          <li key={p.id}>
-                            <Link href={`/members/${p.id}`}>{p.nickname}</Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="map-panel-hint">这个区还没有群友填。</p>
-                    )}
-
-                    <h3 className="map-sub-h">美食 {activeData.foodCount} 家</h3>
-                    {activeData.foods.length ? (
-                      <ul className="map-list">
-                        {activeData.foods.slice(0, 14).map((f) => (
-                          <li key={f.id}>
-                            <span className="map-food-name">{f.name}</span>
-                            {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
-                            {f.rating ? <span className="map-food-star">{f.rating} 星</span> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="map-panel-hint">这个区还没有美食记录。</p>
-                    )}
-                    {activeData.foods.length > 14 && (
-                      <p className="map-panel-hint">
-                        还有 {activeData.foods.length - 14} 家，去<Link href="/food">群友美食</Link>看全部。
+              {activeData ? (
+                <div className="map-panel">
+                  <header className="map-panel-head">
+                    <div className="map-panel-head-main">
+                      <h2 className="map-panel-name">{activeData.name}</h2>
+                      <p className="map-panel-stat">
+                        <b>{activeData.playerCount}</b> 位群友 · <b>{activeData.foodCount}</b> 家美食
                       </p>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <h2>选一个区</h2>
-                    <p className="map-panel-hint">
-                      点地图上的区块，或上面「各区人数」里的任意一个区，这里会列出该区的群友和美食。
-                    </p>
-                    <ul className="map-side-stats">
-                      <li>
-                        <span>已定位群友</span>
-                        <strong>{placeable.length} 人</strong>
-                      </li>
-                      <li>
-                        <span>已落区美食</span>
-                        <strong>{stats.foods - (data?.foodsUnplaced || 0)} 家</strong>
-                      </li>
-                      <li>
-                        <span>覆盖区数</span>
-                        <strong>
-                          {districts.filter((d) => d.playerCount || d.foodCount).length} / {districts.length}
-                        </strong>
-                      </li>
-                    </ul>
-                  </>
-                )}
-              </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="map-panel-close"
+                      onClick={() => setActive(null)}
+                      aria-label="取消选中"
+                      title="取消选中"
+                    >
+                      ×
+                    </button>
+                  </header>
+
+                  {/* 群友：可折叠。标题条整条是一条色带，和下面的美食一眼分得开 */}
+                  <details className="map-group map-group-member" open>
+                    <summary>
+                      <span className="map-group-title">群友</span>
+                      <span className="map-group-count">{activeData.playerCount}</span>
+                      <span className="map-group-tip">点名字看资料</span>
+                    </summary>
+                    <div className="map-group-body">
+                      {activeData.players.length ? (
+                        <ul className="map-member-list">
+                          {activeData.players.map((p) => (
+                            <li key={p.id}>
+                              {/* 带上 ?dist=，详情页的「返回分布图」才能把右栏还原 */}
+                              <Link
+                                href={memberHref(p.id, '/map', { dist: activeData.name })}
+                                className="map-member"
+                              >
+                                <Avatar className="map-member-avatar" src={p.avatar} name={p.nickname} />
+                                <span className="map-member-name">{p.nickname}</span>
+                                <span className="map-member-go" aria-hidden="true">
+                                  ›
+                                </span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="map-group-empty">这个区还没有群友填地区。</p>
+                      )}
+                    </div>
+                  </details>
+
+                  {/* 美食：可折叠，每张卡带星级 + 评价条数 + 最新一条评价 */}
+                  <details className="map-group map-group-food" open>
+                    <summary>
+                      <span className="map-group-title">美食</span>
+                      <span className="map-group-count">{activeData.foodCount}</span>
+                      <span className="map-group-tip">点卡片去美食页</span>
+                    </summary>
+                    <div className="map-group-body">
+                      {activeData.foods.length ? (
+                        <div className="map-food-list">
+                          {sideFoods.map((f) => {
+                            const score = Number(f.rating);
+                            const quote = f.reviews && f.reviews[0];
+                            return (
+                              <Link
+                                key={f.id}
+                                href={'/food?focus=' + encodeURIComponent(String(f.id))}
+                                className="map-food"
+                              >
+                                <span className="map-food-head">
+                                  <span className="map-food-name">{f.name}</span>
+                                  {score > 0 ? (
+                                    <span className="map-food-score">
+                                      <i aria-hidden="true">★</i>
+                                      {score.toFixed(1)}
+                                    </span>
+                                  ) : (
+                                    <span className="map-food-score is-none">未评分</span>
+                                  )}
+                                </span>
+                                <span className="map-food-sub">
+                                  {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
+                                  {f.reviewCount ? (
+                                    <span className="map-food-rc">{f.reviewCount} 条评价</span>
+                                  ) : (
+                                    <span className="map-food-rc is-none">暂无评价</span>
+                                  )}
+                                </span>
+                                {quote ? (
+                                  <span className="map-food-quote">
+                                    {quote.content}
+                                    <em>— {quote.reviewer || '群友'}</em>
+                                  </span>
+                                ) : null}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="map-group-empty">这个区还没有美食记录。</p>
+                      )}
+                      {activeData.foods.length > 14 && (
+                        <p className="map-group-empty">
+                          还有 {activeData.foods.length - 14} 家没列出，
+                          <Link href="/food">去群友美食看全部</Link>。
+                        </p>
+                      )}
+                    </div>
+                  </details>
+                </div>
+              ) : (
+                <div className="map-panel">
+                  <h2>选一个区</h2>
+                  <p className="map-panel-hint">
+                    点地图上的区块，或上面「各区人数」里的任意一个区，这里会列出该区的群友和美食。
+                  </p>
+                  <ul className="map-side-stats">
+                    <li>
+                      <span>已定位群友</span>
+                      <strong>{placeable.length} 人</strong>
+                    </li>
+                    <li>
+                      <span>已落区美食</span>
+                      <strong>{stats.foods - (data?.foodsUnplaced || 0)} 家</strong>
+                    </li>
+                    <li>
+                      <span>覆盖区数</span>
+                      <strong>
+                        {districts.filter((d) => d.playerCount || d.foodCount).length} / {districts.length}
+                      </strong>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </aside>
           </div>
 

@@ -36,6 +36,8 @@ export default function MemberDetail() {
   // 来源页由跳转方通过 ?from= 带过来（见 lib/member-href.js）
   const from = Array.isArray(router.query.from) ? router.query.from[0] : router.query.from;
   const backLabel = backLabelOf(from);
+  // 从分布图点进来时会带 ?dist=，返回时要把它带回去，否则地图右栏又空了
+  const fromDist = Array.isArray(router.query.dist) ? router.query.dist[0] : router.query.dist;
   /* 页内跳到另一个群友（默契队友 / 仇人）时，来源要延续下去，
      否则链路一断，返回键又变回「回群友列表」 */
   const origin = from || String(router.asPath || '').split('?')[0];
@@ -45,6 +47,12 @@ export default function MemberDetail() {
      浏览器后退变成在两个页面间来回跳。
      没有来路（直接打开链接 / 从外站进来）才回群友列表。 */
   const goBack = () => {
+    // 从分布图来的：明确回到地图，并把当时选中的区带回去（地图靠 ?dist= 还原右栏）。
+    // 用 replace 而不是 push —— 否则「地图→详情→地图→详情」会把历史栈越堆越长。
+    if (from && from.startsWith('/map')) {
+      router.replace('/map' + (fromDist ? '?dist=' + encodeURIComponent(fromDist) : ''));
+      return;
+    }
     if (from && typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {
