@@ -1718,6 +1718,56 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .adm-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
 .adm-input-sm { width: 78px; }
 
+/* ===== 管理后台夜间模式：原生控件统一观感 =====
+   后台是深色页面，但 <input>/<select>/<textarea> 不写样式就是浏览器默认的白底黑字：
+   一页里会出现「白块刺眼、placeholder 灰到看不清」的割裂感。
+   历史上靠每处内联样式补，漏过好几次（群友管理的搜索框、美食/开黑统计块、访问统计卡片）。
+   这里按 .is-admin 作用域统一兜底，内联样式仍然优先，不会打架。
+   ⚠ 只作用于 .site-root.is-admin，公开页与 /main 亮色页不受影响。 */
+.site-root.is-admin input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.site-root.is-admin select,
+.site-root.is-admin textarea {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+.site-root.is-admin input::placeholder,
+.site-root.is-admin textarea::placeholder { color: var(--text-3); opacity: 1; }
+.site-root.is-admin input:focus,
+.site-root.is-admin select:focus,
+.site-root.is-admin textarea:focus {
+  outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft);
+}
+/* 下拉展开的选项沿用深色，否则部分平台会弹出一片白 */
+.site-root.is-admin select option { background: var(--bg-card); color: var(--text); }
+.site-root.is-admin select:disabled { background: var(--bg-subtle); color: var(--text-3); }
+
+/* 后台通用卡片：深色底 + 边框，替掉散落在页面里的 var(--bg-2, #fff) / '#fff' */
+.adm-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+}
+/* 表格最后一列（操作）：多个按钮要紧挨排开。
+   列窄时 inline-flex 按钮会被挤到第二行，整表行高忽高忽低。 */
+.adm-table td:last-child { white-space: nowrap; }
+.adm-table td:last-child .btn + .btn { margin-left: 6px; }
+/* 概览小卡（数字 + 标签），美食/开黑/访问统计共用 */
+.adm-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.adm-stat-n {
+  font-size: 1.45rem; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.adm-stat-l { font-size: .75rem; color: var(--text-3); margin-top: 3px; }
+
 /* 各表的列宽（列数与 .adm-head 的表头数必须一致） */
 .adm-row-signup { grid-template-columns: 1.3fr .7fr 1fr .9fr .8fr .9fr; }
 .adm-row-member { grid-template-columns: 1.6fr 1fr .9fr .7fr; }

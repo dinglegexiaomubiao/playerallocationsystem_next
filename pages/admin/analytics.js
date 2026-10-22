@@ -46,7 +46,7 @@ function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height, paddingTop: 6 }}>
       {bars.map((b, i) => (
         <div key={i} style={{ flex: 1, minWidth: 8, textAlign: 'center' }} title={`${b.label}：${b.value}${b.sub ? ' · ' + b.sub : ''}`}>
-          <div style={{ fontSize: 10, color: 'var(--text-3, #888)', marginBottom: 2 }}>{b.value || ''}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 2 }}>{b.value || ''}</div>
           <div
             style={{
               height: `${Math.max(2, (b.value / max) * (height - 34))}px`,
@@ -56,7 +56,7 @@ function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
               width: '70%',
             }}
           />
-          <div style={{ fontSize: 10, color: 'var(--text-3, #888)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.label}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.label}</div>
         </div>
       ))}
     </div>
@@ -74,7 +74,9 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
     );
   }
 
-  const card = { background: 'var(--bg-2, #fff)', border: '1px solid var(--line, #e5e5e5)', borderRadius: 12, padding: 18 };
+  // 卡片统一用 .adm-card（layout.css，深色令牌）。
+  // 原来写的是 var(--bg-2, #fff)，而 --bg-2 这个变量根本不存在 → 回退成白底，
+  // 夜间模式下七块白卡特别刺眼。顺带加了 grid，宽屏一行排 7 个。
   const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 };
 
   // 环比：今日 vs 昨日
@@ -109,28 +111,30 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
             <Link className="adm-tab" href="/admin/support">群友反馈</Link>
           </div>
 
-          {/* 概览卡片：今日 + 环比 + 周期汇总 */}
+          {/* 概览卡片：今日 + 环比 + 周期汇总。
+              每项都兜底成 '—'：某天统计表还没写入时是 undefined，
+              直接渲染会出现「只有标签、没有数字」的空卡片。 */}
           <div style={grid}>
             {[
-              { n: dPv, l: '今日浏览 (PV)', sub: `昨日 ${yPv}${diffPct === null ? '' : diff >= 0 ? ` · ↑${diffPct}%` : ` · ↓${Math.abs(diffPct)}%`}` },
-              { n: overview.uv, l: '今日访客 (IP)' },
-              { n: overview.users, l: '今日登录用户' },
-              { n: weekPv, l: '近 7 日 PV', sub: `日均 ${Math.round(weekPv / 7)}` },
-              { n: overview.active_users, l: '30 日活跃用户' },
+              { n: dPv ?? 0, l: '今日浏览 (PV)', sub: `昨日 ${yPv}${diffPct === null ? '' : diff >= 0 ? ` · ↑${diffPct}%` : ` · ↓${Math.abs(diffPct)}%`}` },
+              { n: overview.uv ?? 0, l: '今日访客 (IP)' },
+              { n: overview.users ?? 0, l: '今日登录用户' },
+              { n: weekPv ?? 0, l: '近 7 日 PV', sub: `日均 ${Math.round(weekPv / 7)}` },
+              { n: overview.active_users ?? '—', l: '30 日活跃用户' },
               { n: `${overview.anon_pct == null ? '—' : overview.anon_pct + '%'}`, l: '30 日匿名占比' },
-              { n: overview.total, l: '累计记录' },
+              { n: overview.total ?? 0, l: '累计记录' },
             ].map((s) => (
-              <div style={card} key={s.l}>
-                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--brand, #2563eb)' }}>{s.n}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-3, #888)', marginTop: 4 }}>{s.l}</div>
-                {s.sub && <div style={{ fontSize: 11, color: 'var(--text-3, #999)', marginTop: 2 }}>{s.sub}</div>}
+              <div className="adm-card" key={s.l}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>{s.n}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>{s.l}</div>
+                {s.sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{s.sub}</div>}
               </div>
             ))}
           </div>
 
           {/* 7 天趋势柱状图 + 表 */}
           <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近 7 天趋势</h3>
-          <div style={card}>
+          <div className="adm-card">
             {trend.length === 0 ? (
               <div style={{ color: 'var(--text-3)', padding: 20, textAlign: 'center' }}>暂无数据</div>
             ) : (
@@ -157,8 +161,13 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
 
           {/* 时段分布 */}
           <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>时段分布（近 30 天，按小时）</h3>
-          <div style={card}>
-            <BarChart bars={hourly.map((h) => ({ label: `${h.h}时`, value: h.pv }))} color="var(--ok, #16a34a)" height={100} />
+          <div className="adm-card">
+            {hourly.some((h) => h.pv > 0) ? (
+              <BarChart bars={hourly.map((h) => ({ label: `${h.h}时`, value: h.pv }))} color="var(--ok)" height={100} />
+            ) : (
+              // 全 0 时柱状图是一排看不见的 2px 细线，不如直接说没数据
+              <div style={{ color: 'var(--text-3)', padding: 20, textAlign: 'center' }}>暂无数据</div>
+            )}
           </div>
 
           {/* 最近注册：谁刚加入（匿名访客注册后第一时间在这里可见） */}

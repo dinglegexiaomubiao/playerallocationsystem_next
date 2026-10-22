@@ -151,19 +151,11 @@ export default function AdminFoodPage({ denied }) {
     );
   }
 
+  // 深色后台页面：白底统计块会亮得刺眼，统一走 .adm-stat（tokens 定义在 layout.css）
   const statBox = (n, label, color) => (
-    <div
-      key={label}
-      style={{
-        flex: '1 1 140px',
-        background: '#fff',
-        border: '1px solid var(--border, #e5e5e5)',
-        borderRadius: 10,
-        padding: '14px 16px',
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 700, color: color || 'inherit' }}>{n}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-3, #888)', marginTop: 2 }}>{label}</div>
+    <div key={label} className="adm-stat" style={{ flex: '1 1 140px' }}>
+      <div className="adm-stat-n" style={color ? { color } : undefined}>{n}</div>
+      <div className="adm-stat-l">{label}</div>
     </div>
   );
 
@@ -252,7 +244,7 @@ export default function AdminFoodPage({ denied }) {
                     <th style={{ textAlign: 'right' }}>评分</th>
                     <th style={{ textAlign: 'right' }}>评价</th>
                     <th>缺漏</th>
-                    <th style={{ width: 100 }}>操作</th>
+                    <th style={{ width: 128 }}>操作</th>
                   </tr>
                 </thead>
                 <tbody>

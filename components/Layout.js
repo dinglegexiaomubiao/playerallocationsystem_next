@@ -106,7 +106,7 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div className="site-root">
+    <div className={'site-root' + (pathname.startsWith('/admin') ? ' is-admin' : '')}>
       <header className="site-nav">
         <div className="wrap nav-inner">
           <Link href="/" className="logo" aria-label="深圳LaRoja Dota2社区 · 返回首页">

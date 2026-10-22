@@ -343,7 +343,7 @@ export default function AdminMembersPage({ denied }) {
                     <th>位置</th>
                     <th>绑定账号</th>
                     <th>缺漏</th>
-                    <th style={{ width: 100 }}>操作</th>
+                    <th style={{ width: 128 }}>操作</th>
                   </tr>
                 </thead>
                 <tbody>
