@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 // 设计令牌必须最先加载：其余样式表都引用这里的 CSS 变量
 import '../styles/tokens.css';
@@ -17,6 +17,11 @@ import { installErrorReporting } from '../lib/support-client.mjs';
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
 
+  // 服务端已经记过这次访问（getServerSideProps 里的服务端埋点）时，客户端这条要跳过，
+  // 否则同一次访问会被算两遍。用 ref 而非 state：render 阶段就写好，下面的 effect 立刻读得到。
+  const serverTrackedPath = useRef(null);
+  if (pageProps && pageProps.__pageViewTracked) serverTrackedPath.current = router.pathname;
+
   // 全局异常采集（加载失败 / 超时 / JS 报错 / 一直转圈），只装一次
   useEffect(() => {
     installErrorReporting();
@@ -28,6 +33,11 @@ function MyApp({ Component, pageProps }) {
   useEffect(() => {
     const report = (url) => {
       if (!url || typeof url !== 'string') return;
+      // 命中服务端已记的那一次就抵掉，之后的跳转照常上报
+      if (serverTrackedPath.current === url) {
+        serverTrackedPath.current = null;
+        return;
+      }
       try {
         const payload = JSON.stringify({ path: url });
         if (typeof navigator !== 'undefined' && navigator.sendBeacon) {

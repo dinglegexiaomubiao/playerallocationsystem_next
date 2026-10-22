@@ -1,106 +1,12 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import {
-  getAllPlayers,
-  addPlayer,
-  updatePlayer,
-  deletePlayer,
-  getPlayerById,
-  ensureAvatarColumns,
-  pool,
-} from '../../lib/db';
+import { addPlayer, updatePlayer, deletePlayer, getPlayerById } from '../../lib/db';
 import { denyIfNotAdmin } from '../../lib/auth';
-import { ensureIdentityTables, identitiesForPlayers } from '../../lib/player-identity';
-import listCache from '../../lib/list-cache';
+import { loadPlayerList, clearPlayerListCache } from '../../lib/player-list';
 
-// ===== 列表结果的内存缓存 =====
-// 这个接口要跑「全员参赛记录」的重量级聚合，而群友页每次进入都会调一次。
-// 缓存 45s：够挡住刷新/来回跳页的重复查询，又不至于让人看不到刚刚的修改。
-// 任何写操作（POST/PUT/DELETE）以及头像同步都会主动 clear，所以不会有"改完不生效"的观感。
-const CACHE_SCOPE = 'playersList';
-
-const readListCache = (key) => listCache.get(CACHE_SCOPE, key);
-const writeListCache = (key, payload) => listCache.set(CACHE_SCOPE, key, payload);
-const clearListCache = () => listCache.clear(CACHE_SCOPE);
-
-// 一次查出所有人的参赛记录，避免按人循环查库（N+1）
-//
-// 名次存在 teams.rank 上，而「谁在这支队伍里」要 join team_players；
-// 队长可能还没被写进 team_players，所以额外按 captain_id 捞一遍。
-async function getTeamRecordsByPlayer() {
-  const byPlayer = new Map();
-  const push = (playerId, rec) => {
-    const key = String(playerId);
-    if (!byPlayer.has(key)) byPlayer.set(key, []);
-    const list = byPlayer.get(key);
-    if (list.some((x) => String(x.team_id) === String(rec.team_id))) return; // 队长+队员同一支队只记一次
-    list.push(rec);
-  };
-
-  // 两次查询互不依赖，并行发出。跨区域部署下每次往返都要 200ms 量级，
-  // 串行等待是这个接口慢的主因（参见 vercel.json 的 region 说明）。
-  const [members, captains] = await Promise.all([
-    pool.query(
-      `SELECT tp.player_id, tp.position,
-              tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
-              t.id AS tournament_id, t.name AS tournament_name,
-              t.status AS tournament_status, t.start_date, t.end_date
-         FROM public.team_players tp
-         JOIN public.teams tm ON tm.id = tp.team_id
-         JOIN public.tournaments t ON t.id = tm.tournament_id`
-    ),
-    pool.query(
-      `SELECT tm.captain_id AS player_id,
-              tm.id AS team_id, tm.name AS team_name, tm.rank AS team_rank,
-              t.id AS tournament_id, t.name AS tournament_name,
-              t.status AS tournament_status, t.start_date, t.end_date
-         FROM public.teams tm
-         JOIN public.tournaments t ON t.id = tm.tournament_id
-        WHERE tm.captain_id IS NOT NULL`
-    ),
-  ]);
-
-  for (const r of members.rows) {
-    push(r.player_id, {
-      team_id: String(r.team_id),
-      team_name: r.team_name || '未命名队伍',
-      team_rank: r.team_rank === null || r.team_rank === undefined ? null : Number(r.team_rank),
-      position: r.position || null,
-      is_captain: false,
-      tournament_id: r.tournament_id === null ? null : String(r.tournament_id),
-      tournament_name: r.tournament_name || '未命名赛事',
-      tournament_status: r.tournament_status || null,
-      start_date: r.start_date || null,
-      end_date: r.end_date || null,
-    });
-  }
-
-  for (const r of captains.rows) {
-    push(r.player_id, {
-      team_id: String(r.team_id),
-      team_name: r.team_name || '未命名队伍',
-      team_rank: r.team_rank === null || r.team_rank === undefined ? null : Number(r.team_rank),
-      position: '队长',
-      is_captain: true,
-      tournament_id: r.tournament_id === null ? null : String(r.tournament_id),
-      tournament_name: r.tournament_name || '未命名赛事',
-      tournament_status: r.tournament_status || null,
-      start_date: r.start_date || null,
-      end_date: r.end_date || null,
-    });
-  }
-
-  // 已完赛的排后面，其余按开赛时间倒序
-  for (const list of byPlayer.values()) {
-    list.sort((a, b) => {
-      const w = (s) => (s === 'finished' || s === 'done' ? 1 : 0);
-      const d = w(a.tournament_status) - w(b.tournament_status);
-      if (d !== 0) return d;
-      return String(b.start_date || '').localeCompare(String(a.start_date || ''));
-    });
-  }
-
-  return byPlayer;
-}
+// 列表装配（45s 缓存 + 全员参赛记录聚合 + 多值身份）统一在 lib/player-list.js：
+// 页面 SSR 与这个接口共用同一份，避免「直出一套、接口一套」的漂移。
+// 任何写操作（POST/PUT/DELETE）以及头像同步都要主动清缓存，否则改完看不到效果。
+const clearListCache = clearPlayerListCache;
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -109,90 +15,12 @@ export default async function handler(req, res) {
     case 'GET':
       try {
         const { tournament_id } = req.query;
-        const cacheKey = tournament_id ? String(tournament_id) : 'all';
+        const { players, cached } = await loadPlayerList({ tournamentId: tournament_id });
 
-        const cached = readListCache(cacheKey);
-        if (cached) {
-          res.setHeader('X-List-Cache', 'HIT');
-          return res.status(200).json({ success: true, players: cached });
-        }
-        res.setHeader('X-List-Cache', 'MISS');
-
-        // 三件事互不依赖，并行发出 —— 避免三次串行的跨区域往返：
-        //   1. 头像列自动补齐（幂等，失败也不阻断列表）
-        //   2. 选手列表
-        //   3. 全员参赛记录聚合
-        const [, players, recordsByPlayer] = await Promise.all([
-          ensureAvatarColumns(),
-          getAllPlayers(tournament_id),
-          getTeamRecordsByPlayer(),
-        ]);
-
-        // 格式化选手数据
-        const formattedPlayers = players.map(player => {
-          const records = recordsByPlayer.get(String(player.id)) || [];
-          const titles = records.filter((r) => r.team_rank === 1).length;
-          const runnerUps = records.filter((r) => r.team_rank === 2).length;
-          const legacyTitles = player.championships ? parseInt(player.championships, 10) || 0 : 0;
-          const ranks = records.map((r) => r.team_rank).filter((n) => typeof n === 'number');
-          return {
-            ...player,
-            id: player.id?.toString(),
-            game_id: player.game_id?.toString(),
-            score: player.score ? parseInt(player.score) : 0,
-            win_rate: player.win_rate ? parseInt(player.win_rate) : 0,
-            // 冠军数不再只看写死的字段：以 teams.rank=1 实算为准，
-            // 老数据里导入过冠军数的，取两者较大值以免历史战绩"消失"
-            championships: Math.max(legacyTitles, titles),
-            championships_legacy: legacyTitles,
-            // 亚军数没有历史字段可兼容，直接按 teams.rank=2 实算
-            runner_up: runnerUps,
-            // 比赛记录（页面上的「比赛记录」直接用这份）
-            records,
-            record_count: records.length,
-            best_rank: ranks.length ? Math.min(...ranks) : null,
-            // 头像走本地代理 /api/avatar/{id}（服务端已缓存，避免直连 Steam）。
-            // 没同步到头像时给 null，前端回退成昵称首字色块。
-            avatar: player.avatar_url ? `/api/avatar/${player.id}` : null,
-            steam_name: player.steam_name || null,
-            positions: player.positions ? player.positions.split(',').filter(p => p) : [],
-            heroes: player.heroes ? player.heroes.split(',').filter(h => h) : [],
-            synergy_players: player.synergy_players ? player.synergy_players.split(',').filter(sp => sp) : [],
-            enemies: player.enemies ? player.enemies.split(',').filter(e => e) : [],
-            region: player.region || '',
-            self_intro: player.self_intro || '',
-            created_at: player.created_at || "",
-            updated_at: player.updated_at || "",
-            position_priority: {}
-          };
-        });
-
-        // 多值身份：全部 SteamID / 全部群昵称。
-        // 个人详情页要公开显示，卡片只取主号（也就是 players.game_id / group_nickname）。
-        try {
-          await ensureIdentityTables(pool);
-          const identityMap = await identitiesForPlayers(
-            pool,
-            formattedPlayers.map((p) => String(p.id))
-          );
-          formattedPlayers.forEach((p) => {
-            const id = identityMap.get(String(p.id)) || { steam: [], nicknames: [] };
-            p.steamIds = id.steam;            // [{ accountId, isPrimary }]
-            p.groupNicknames = id.nicknames;  // [{ nickname, isPrimary }]
-          });
-        } catch (e) {
-          // 身份表还没建好也不该让整个群友列表挂掉，退回单值
-          console.error('附加多值身份失败（列表仍返回单值）:', e.message);
-          formattedPlayers.forEach((p) => {
-            p.steamIds = p.game_id ? [{ accountId: String(p.game_id), isPrimary: true }] : [];
-            p.groupNicknames = p.group_nickname
-              ? [{ nickname: p.group_nickname, isPrimary: true }]
-              : [];
-          });
-        }
-
-        writeListCache(cacheKey, formattedPlayers);
-        res.status(200).json({ success: true, players: formattedPlayers });
+        res.setHeader('X-List-Cache', cached ? 'HIT' : 'MISS');
+        // 这份数据是「谁改了要立刻看到」的类型，别让手机端拿缓存里的旧结果或空结果
+        res.setHeader('Cache-Control', 'no-store');
+        return res.status(200).json({ success: true, players });
       } catch (error) {
         console.error('获取选手列表错误:', error);
         res.status(500).json({ success: false, error: '获取选手列表失败' });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import ExcelIO from '../../components/ExcelIO';
@@ -95,10 +95,12 @@ function buildHaystack(p) {
     .toLowerCase();
 }
 
-export default function MembersPage() {
-  const [players, setPlayers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function MembersPage({ initialPlayers = [], initialError = null }) {
+  // 首屏数据由 getServerSideProps 直出：弱网 / 手机端 JS 没跑起来时，
+  // 群友列表照样能看（以前全靠客户端 fetch，一旦那次请求卡住就是空白 + 永远「加载中」）。
+  const [players, setPlayers] = useState(initialPlayers);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(initialError);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   // 刚复制成功的选手 id，用来把按钮临时切成「已复制」
   const [copiedId, setCopiedId] = useState(null);
@@ -115,30 +117,33 @@ export default function MembersPage() {
     setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1600);
   };
 
-  const reload = () => {
-    fetch('/api/players')
-      .then((r) => r.json())
-      .then((d) => setPlayers(d.players || []))
-      .catch(() => {});
-  };
-
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/players')
-      .then((r) => r.json())
+  // 手动刷新：导入/同步头像后调用，也用于 SSR 失败后的「重试」。
+  // 带超时（12s）——弱网下 fetch 可能一直挂着，不给超时就会永远停在加载中。
+  const reload = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    fetch('/api/players', { signal: ctrl.signal, cache: 'no-store' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`接口返回 ${r.status}`);
+        return r.json();
+      })
       .then((d) => {
-        if (!alive) return;
-        setPlayers(d.players || []);
-        setLoading(false);
+        setPlayers(Array.isArray(d && d.players) ? d.players : []);
+        setError(null);
       })
       .catch((e) => {
-        if (!alive) return;
-        setError(e.message);
+        setError(
+          e && e.name === 'AbortError'
+            ? '请求超时（12 秒没有响应），请检查网络后重试'
+            : (e && e.message) || '网络异常'
+        );
+      })
+      .finally(() => {
+        clearTimeout(timer);
         setLoading(false);
       });
-    return () => {
-      alive = false;
-    };
   }, []);
 
   // 选手 id -> 昵称，用于把「默契选手」里的 id 显示成昵称
@@ -478,7 +483,16 @@ export default function MembersPage() {
           </div>
 
           {loading && <div className="empty">加载中…</div>}
-          {error && <div className="empty">加载失败：{error}</div>}
+          {error && (
+            <div className="empty">
+              <div>加载失败：{error}</div>
+              <div style={{ marginTop: 10 }}>
+                <button className="btn btn-ghost btn-sm" onClick={reload} disabled={loading}>
+                  重试
+                </button>
+              </div>
+            </div>
+          )}
           {!loading && !error && filtered.length === 0 && (
             activeCount > 0 ? (
               <div className="empty">
@@ -620,4 +634,47 @@ export default function MembersPage() {
       </section>
     </>
   );
+}
+
+/**
+ * 服务端直出首屏数据。
+ *
+ * 背景：此前这一页完全靠 useEffect 里 fetch('/api/players')，一旦客户端 JS 没跑起来
+ * （微信内置浏览器、弱网、脚本被拦、水合失败），用户看到的就是「空白 + 永远加载中」，
+ * 而且 _app 里的埋点也不会发，管理后台访问统计里查无此人。
+ * 改成 SSR 后：即使一行 JS 都不执行，HTML 里也已经带着群友列表。
+ *
+ * 这里用动态 import，确保 lib/player-list（依赖 pg）不会被打进客户端产物。
+ */
+export async function getServerSideProps(ctx) {
+  // 埋点先落：手机端 JS 完全不执行时，管理后台至少还能看到这个人来过。
+  // 数据请求（Link 预取 / 客户端跳转）不记，那种情况前端会自己上报。
+  const tracked = await (async () => {
+    try {
+      const { trackServerPageView } = await import('../../lib/server-track');
+      return await trackServerPageView(ctx.req, '/members');
+    } catch (e) {
+      return false;
+    }
+  })();
+
+  try {
+    const { loadPlayerList } = await import('../../lib/player-list');
+    const { players } = await loadPlayerList({});
+    return {
+      props: {
+        initialPlayers: players || [],
+        initialError: null,
+        __pageViewTracked: tracked,
+      },
+    };
+  } catch (e) {
+    return {
+      props: {
+        initialPlayers: [],
+        initialError: (e && e.message) || '服务端读取群友列表失败',
+        __pageViewTracked: tracked,
+      },
+    };
+  }
 }
