@@ -13,6 +13,7 @@ const PRIMARY_NAV = [
   { href: '/party', label: '开黑组队' },
   { href: '/tournaments', label: '赛事信息' },
   { href: '/members', label: '群友信息' },
+  { href: '/map', label: '群友分布' },
   { href: '/food', label: '群友美食' },
 ];
 

@@ -2317,3 +2317,210 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .ai-head:hover .ai-title { color: var(--brand); }
 .ai-body { margin-top: 12px; }
 .ai-hint { margin: 8px 0 0; font-size: .74rem; color: var(--text-3); }
+
+/* ==================== 群友分布地图（/map） ====================
+   地图是纯 SVG（components/MemberMap.js），几何来自
+   public/data/shenzhen.geo.json 里已经投影好的 path，这里只管配色与排版。
+   所有颜色走令牌，深色/浅色主题自动跟随。 */
+
+.map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--gutter);
+  align-items: start;
+}
+
+.map-canvas-card {
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--card-pad);
+}
+
+.map-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  margin-bottom: 8px;
+}
+.map-switch {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .8rem; color: var(--text-2); cursor: pointer; white-space: nowrap;
+}
+.map-switch input { accent-color: var(--brand); cursor: pointer; }
+
+/* 手机上整幅地图被压到 300px 宽时，区名和圆点会小到看不清（缩放比只有 0.3），
+   所以窄屏改成「保底宽度 + 横向滑动」：缩放到 0.6 左右，字和点都能认。
+   ⚠ 不要用 min-height 硬撑，preserveAspectRatio=meet 会留出上下黑边。 */
+.map-canvas { position: relative; }
+.mmap-svg { display: block; width: 100%; height: auto; }
+.map-pan-hint { display: none; }
+
+/* 行政区：底色透明度即「人数热度」，悬停/选中时描边变品牌色 */
+.mmap-district {
+  stroke: var(--bg-card);
+  stroke-width: 1.6;
+  cursor: pointer;
+  transition: fill-opacity .16s ease, stroke .16s ease;
+}
+.mmap-district:hover { stroke: var(--brand); stroke-width: 2.4; }
+.mmap-district.is-active { stroke: var(--brand); stroke-width: 2.8; }
+
+.mmap-food { stroke: rgba(0, 0, 0, .35); stroke-width: .8; cursor: help; }
+.mmap-member-ring { fill: var(--bg-card); stroke: var(--brand); stroke-width: 2.4; }
+.mmap-member-initial { font-size: 14px; font-weight: 700; fill: var(--text); }
+
+/* 区名底板：有点阵压着的时候靠它兜底，否则「4 人 · 52 家」直接被圆点吃掉 */
+.mmap-label-plate { fill: var(--bg-card); fill-opacity: .88; }
+
+/* 区名压在色块上，用描边做底，任何底色都读得清 */
+.mmap-label-name {
+  font-size: 14px; font-weight: 600; fill: var(--text-2);
+  paint-order: stroke; stroke: var(--bg-card); stroke-width: 3px; stroke-linejoin: round;
+}
+.mmap-label-count {
+  font-size: 11.5px; fill: var(--brand-on-soft, #f28a81);
+  paint-order: stroke; stroke: var(--bg-card); stroke-width: 3px; stroke-linejoin: round;
+}
+
+.map-foot {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+  margin-top: 10px; font-size: .76rem; color: var(--text-3);
+}
+.map-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.map-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.map-dot-heat { background: var(--brand); }
+.map-dot-food { background: #5aa9e2; }
+.map-dot-member { background: transparent; border: 2px solid var(--brand); }
+.map-source { margin-left: auto; }
+
+/* ---- 右侧栏 ---- */
+.map-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.map-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.map-panel h2 {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 0 0 8px; font-size: .95rem;
+}
+.map-panel-close {
+  padding: 0 2px; background: none; border: 0; cursor: pointer;
+  color: var(--text-3); font-size: 1.05rem; line-height: 1;
+}
+.map-panel-close:hover { color: var(--text); }
+.map-sub-h { margin: 10px 0 6px; font-size: .78rem; font-weight: 600; color: var(--text-3); }
+.map-panel-hint { margin: 0 0 8px; font-size: .76rem; color: var(--text-3); line-height: 1.6; }
+.map-panel-hint a { color: var(--brand); text-decoration: none; }
+
+.map-search {
+  width: 100%; padding: 8px 10px; font-family: inherit; font-size: .86rem;
+  color: var(--text); background: var(--bg-subtle);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+}
+.map-search:focus { outline: none; border-color: var(--brand); }
+
+.map-hits { list-style: none; margin: 8px 0 0; padding: 0; max-height: 210px; overflow: auto; }
+.map-hit {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 6px 8px; text-align: left; cursor: pointer;
+  color: var(--text); font-size: .84rem;
+  background: none; border: 1px solid transparent; border-radius: var(--radius-sm);
+}
+.map-hit:hover { background: var(--bg-subtle); }
+.map-hit.is-on { border-color: var(--brand); background: var(--brand-soft); }
+.map-hit-district { flex: 0 0 auto; font-size: .75rem; color: var(--text-3); }
+
+.map-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.map-chip {
+  padding: 3px 9px; cursor: pointer; font-size: .78rem;
+  color: var(--brand-on-soft, #f28a81); background: var(--brand-soft);
+  border: 0; border-radius: 999px;
+}
+.map-chip:hover { filter: brightness(1.12); }
+
+.map-rank { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.map-rank-row {
+  display: grid; grid-template-columns: 62px minmax(0, 1fr) auto;
+  gap: 8px; align-items: center; width: 100%;
+  padding: 5px 6px; text-align: left; cursor: pointer;
+  color: var(--text); font-size: .8rem;
+  background: none; border: 0; border-radius: var(--radius-sm);
+}
+.map-rank-row:hover { background: var(--bg-subtle); }
+.map-rank-row.is-active { background: var(--brand-soft); }
+.map-rank-name { color: var(--text-2); white-space: nowrap; }
+.map-rank-bar { height: 6px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden; }
+.map-rank-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+.map-rank-num { font-size: .74rem; color: var(--text-3); white-space: nowrap; }
+
+.map-list { display: flex; flex-direction: column; gap: 4px; list-style: none; margin: 0; padding: 0; font-size: .82rem; }
+.map-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.map-list a { color: var(--brand); text-decoration: none; }
+.map-list a:hover { text-decoration: underline; }
+.map-food-name { color: var(--text); }
+.map-food-tag {
+  padding: 0 6px; font-size: .72rem; color: var(--text-3);
+  border: 1px solid var(--border); border-radius: 999px;
+}
+.map-food-star { font-size: .72rem; color: var(--brand-on-soft, #f28a81); }
+
+/* ---- 空态引导 ---- */
+.map-cta {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px; align-items: center;
+  margin-bottom: var(--gutter); padding: 14px 16px;
+  background: var(--brand-soft); border-radius: var(--radius-lg);
+}
+.map-cta-main { display: flex; flex-direction: column; gap: 4px; font-size: .84rem; color: var(--text-2); }
+.map-cta-main strong { font-size: .92rem; color: var(--text); }
+.map-cta-actions { flex: 0 0 auto; }
+.map-error {
+  margin-bottom: var(--gutter); padding: 12px 14px;
+  font-size: .85rem; color: var(--text);
+  background: var(--brand-soft); border-radius: var(--radius-lg);
+}
+
+/* ---- 深圳以外 / 未到区 / 未填 ---- */
+.map-outside { margin-top: calc(var(--gutter) * 1.7); }
+.map-outside h2 { margin: 0 0 6px; font-size: 1.1rem; }
+.map-outside-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px; margin-top: 8px;
+}
+.map-outside-card {
+  padding: 12px 14px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.map-outside-city { margin-bottom: 4px; font-size: .86rem; font-weight: 600; color: var(--text); }
+.map-outside-city span { margin-left: 4px; font-size: .76rem; font-weight: 400; color: var(--text-3); }
+.map-outside-names { font-size: .8rem; line-height: 1.7; color: var(--text-2); }
+
+.map-missing {
+  margin-top: calc(var(--gutter) * 1.7);
+  padding: 12px 16px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.map-missing summary { cursor: pointer; font-size: .86rem; color: var(--text-2); }
+.map-missing-names { margin-top: 8px; font-size: .8rem; line-height: 1.8; color: var(--text-3); }
+
+@media (max-width: 920px) {
+  .map-layout { grid-template-columns: minmax(0, 1fr); }
+  .map-cta { grid-template-columns: minmax(0, 1fr); }
+  .map-cta-actions .btn { width: 100%; }
+  .map-source { margin-left: 0; flex-basis: 100%; }
+
+  /* 地图保底 620px 宽，超出就横向滑动（svg 不能只放大字号，字号是用户单位） */
+  .map-canvas-card { padding: 14px; }
+  .map-canvas {
+    overflow-x: auto; overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .map-canvas .mmap-svg { min-width: 620px; }
+  .map-pan-hint {
+    display: block; margin: 2px 0 0;
+    font-size: .74rem; color: var(--text-3);
+  }
+}

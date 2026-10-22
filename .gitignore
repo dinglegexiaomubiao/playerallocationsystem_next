@@ -79,3 +79,9 @@ shots/
 
 # 内部截图（含测试数据，只在本机看，不外发）
 docs/screenshots/_internal/
+
+# 根目录的临时验证脚本与中间产物（_verify.cjs / _mapshot.cjs / _sz_cache.json …）
+/_*.cjs
+/_*.html
+/_*.png
+/_*_cache.json
