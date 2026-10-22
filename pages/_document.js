@@ -58,6 +58,47 @@ const BOOT_PROBE_SCRIPT = `
 (function () {
   var sent = 0, MAX = 3, ENDPOINT = '/api/support';
 
+  // ---- 1. 老引擎垫片（必须最先装，早于任何 _next 脚本执行）----
+  // 站点有真实用户在用 iOS 16.0/16.2 与微信内置的 Chrome 86（XWEB 4433）。
+  // 语法问题由 scripts/patch-next-syntax.cjs 在构建前解决，这里补的是「语法过了但
+  // API 不存在」的那一类：Object.hasOwn(Chrome 93) / Array.at(Chrome 92) /
+  // structuredClone(Chrome 98)。缺一个就是运行到那行才 TypeError，比语法错更难查。
+  try {
+    if (!Object.hasOwn) {
+      Object.hasOwn = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+    }
+    var atFn = function (n) {
+      var i = n < 0 ? this.length + n : n;
+      return (i < 0 || i >= this.length) ? undefined : this[i];
+    };
+    if (!Array.prototype.at) Array.prototype.at = atFn;
+    if (!String.prototype.at) String.prototype.at = atFn;
+    var typed = [window.Uint8Array, window.Int8Array, window.Uint16Array, window.Int16Array,
+                 window.Uint32Array, window.Int32Array, window.Float32Array, window.Float64Array];
+    for (var ti = 0; ti < typed.length; ti++) {
+      if (typed[ti] && !typed[ti].prototype.at) typed[ti].prototype.at = atFn;
+    }
+    // 注意：JSON 往返只保真普通对象/数组。Next 用它克隆路由状态（纯数据），够用；
+    // 真克隆 Date/Map 会退化，但总好过硬崩。
+    if (typeof window.structuredClone !== 'function') {
+      window.structuredClone = function (v) {
+        try { return JSON.parse(JSON.stringify(v)); } catch (e) { return v; }
+      };
+    }
+  } catch (e0) {}
+
+  // 老引擎判定：只给这批设备上报「启动成功」，避免健康设备的正常访问刷库。
+  function isOldEngine() {
+    var ua = String(navigator.userAgent || '');
+    var m = ua.match(/OS (\\d+)_\\d+/);                    // iOS
+    if (m && parseInt(m[1], 10) < 17) return true;
+    m = ua.match(/Chrome\\/(\\d+)/);                        // 微信内置 XWEB / 老 Chrome
+    if (m && parseInt(m[1], 10) < 100) return true;
+    m = ua.match(/Version\\/(\\d+)\\./);                    // macOS Safari
+    if (m && /Safari/.test(ua) && parseInt(m[1], 10) < 17) return true;
+    return false;
+  }
+
   function send(category, message, detail) {
     if (sent >= MAX) return;
     sent++;
@@ -139,6 +180,10 @@ const BOOT_PROBE_SCRIPT = `
     } catch (e) { ok = false; }
     if (!ok) {
       send('boot', '水合未完成：6 秒后 React 仍未接管页面', { name: 'HydrationTimeout' });
+    } else if (isOldEngine()) {
+      // 老引擎上「没报错」不等于「修好了」：只有明确收到这一条，才能证明
+      // static 块降级补丁真的让 iOS 16 / Chrome 86 把 React 跑起来了。
+      send('boot-ok', 'JS 启动正常（老引擎）', { name: 'BootOK' });
     }
   }, 6000);
 })();

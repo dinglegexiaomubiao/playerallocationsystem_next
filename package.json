@@ -3,8 +3,10 @@
   "version": "2.4.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/patch-next-syntax.cjs",
     "dev": "next dev -H 0.0.0.0",
-    "build": "next build",
+    "prebuild": "node scripts/patch-next-syntax.cjs",
+    "build": "next build && node scripts/check-browser-syntax.cjs",
     "start": "next start",
     "lint": "next lint",
     "warm:heroes": "node scripts/warm-hero-icons.mjs",
