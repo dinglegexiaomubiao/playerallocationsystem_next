@@ -454,11 +454,18 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 0 0 3px var(--brand-soft), var(--shadow-md);
   transform: translateY(-2px);
 }
+/* 吸顶：滚到那一家之后说明条和「回分布图」还得在，否则用户找不到出口。
+   背景必须是不透明的（brand-soft 是半透明的，卡片会透出来）。 */
 .f-focus-note {
+  position: sticky; top: 72px; z-index: 6;
   display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
-  margin: 0 0 14px; padding: 10px 14px;
+  margin: 0 0 14px; padding: 9px 14px;
   font-size: .84rem; color: var(--text-2);
-  background: var(--brand-soft); border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--brand);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 .f-focus-note b { color: var(--text); font-weight: 600; }
 .f-focus-back { flex: 0 0 auto; font-size: .8rem; color: var(--brand-on-soft); text-decoration: none; }
