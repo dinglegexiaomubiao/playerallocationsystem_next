@@ -33,9 +33,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const APPLY = process.argv.includes('--apply');
 
-// 9 个区从地图数据里读，别再抄一份（抄了就会和地图漂移）
-const GEO = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/shenzhen.geo.json'), 'utf8'));
-const SZ_DISTRICTS = GEO.districts.map((d) => d.name);
+// 9 个区从地图数据里读，别再抄一份（抄了就会和地图漂移）。
+// 2026-10-22 地图扩成全国三级后，深圳的几何从 shenzhen.geo.json 换成了
+// public/data/cn/440300.json（同一个数据源，只是改成按 adcode 组织）。
+const GEO = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/cn/440300.json'), 'utf8'));
+const SZ_DISTRICTS = GEO.features.map((d) => d.name);
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 

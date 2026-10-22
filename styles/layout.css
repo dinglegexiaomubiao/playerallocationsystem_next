@@ -2516,6 +2516,61 @@ a.mh-row:hover { background: var(--bg-subtle); }
   align-items: start;
 }
 
+/* ---- 面包屑：全国 › 广东省 › 深圳市 ----
+   做成一排不带底色的小字，层级之间用 ::after 的 ›── 不用列表项目符号，
+   因为这里表达的是「路径」，不是「一组并列项」。 */
+.map-crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+  font-size: .82rem; color: var(--text-3);
+}
+.map-crumb ol {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 0; margin: 0; padding: 0; list-style: none;
+}
+.map-crumb li { display: inline-flex; align-items: center; }
+.map-crumb li + li::before {
+  content: '›';
+  margin: 0 7px;
+  color: var(--text-3);
+  opacity: .7;
+}
+.map-crumb-link {
+  padding: 2px 0;
+  background: none; border: 0; cursor: pointer;
+  font-family: inherit; font-size: inherit; color: var(--text-3);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+}
+.map-crumb-link:hover { color: var(--brand); }
+.map-crumb-link:disabled { cursor: default; text-decoration: none; color: var(--text-3); }
+.map-crumb-now { font-weight: 600; color: var(--text); }
+.map-crumb-me {
+  padding: 1px 8px;
+  font-size: .74rem; color: var(--brand-on-soft);
+  background: var(--brand-soft);
+  border-radius: 999px;
+}
+.map-crumb-loading { font-size: .74rem; color: var(--brand); }
+
+/* 下钻失败/无下级的提示条：品牌红左边线，不用整块红底（太重） */
+.map-note {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  font-size: .8rem; color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius-sm);
+}
+.map-inline-link {
+  padding: 0; background: none; border: 0; cursor: pointer;
+  font: inherit; color: var(--brand);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.map-drill-btn { width: 100%; margin-top: 10px; }
+
 /* 左栏：两个折叠面板 + 地图，竖着排 */
 .map-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
@@ -2570,6 +2625,9 @@ a.mh-row:hover { background: var(--bg-subtle); }
 }
 .map-rank-chip-num { font-size: .74rem; color: var(--text-3); }
 .map-rank-chip.is-active .map-rank-chip-num { color: inherit; opacity: .8; }
+/* 0 人的区块降到次要层级：34 个省里有 28 个是 0 人，全一样重会看不清重点 */
+.map-rank-chip.is-empty { color: var(--text-3); }
+.map-rank-chip.is-empty .map-rank-chip-num { opacity: .7; }
 
 /* ---- 地图卡 ---- */
 .map-canvas-card {
@@ -2595,6 +2653,7 @@ a.mh-row:hover { background: var(--bg-subtle); }
    所以窄屏改成「保底宽度 + 横向滑动」：缩放到 0.6 左右，字和点都能认。
    ⚠ 不要用 min-height 硬撑，preserveAspectRatio=meet 会留出上下黑边。 */
 .map-canvas { position: relative; }
+.map-canvas.is-loading { opacity: .45; pointer-events: none; transition: opacity .12s ease; }
 .mmap-svg { display: block; width: 100%; height: auto; }
 .map-pan-hint { display: none; }
 
@@ -2613,22 +2672,50 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .mmap-district.lv3 { fill: var(--map-l3); }
 .mmap-district.is-hover { stroke: var(--brand); stroke-width: 2.6; }
 .mmap-district.is-active { stroke: var(--brand); stroke-width: 3.4; }
+/* 能下钻的区块给放大镜光标，和「点了只是选中」的叶子区块区分开 */
+.mmap-district.is-drill { cursor: zoom-in; }
+/* 「我」所在的那块：虚线描边，不抢选中态的实线 */
+.mmap-district.is-mine { stroke: var(--gold); stroke-width: 2; stroke-dasharray: 5 4; }
 
 .mmap-food { stroke: rgba(0, 0, 0, .35); stroke-width: .8; cursor: help; }
 .mmap-member-ring { fill: var(--bg-card); stroke: var(--brand); stroke-width: 2.4; }
-.mmap-member-initial { font-size: 14px; font-weight: 700; fill: var(--text); }
+/* 字号跟 --mmap-scale 走：全国图 0.42 倍，一屏 34 个省也读得下 */
+.mmap-member-initial { font-size: calc(14px * var(--mmap-scale, 1)); font-weight: 700; fill: var(--text); }
 
 /* 区名底板：有点阵压着的时候靠它兜底，否则「4 人 · 52 家」直接被圆点吃掉 */
 .mmap-label-plate { fill: var(--bg-card); fill-opacity: .9; }
 
 /* 区名压在色块上，用描边做底，任何底色都读得清 */
 .mmap-label-name {
-  font-size: 14px; font-weight: 600; fill: var(--text-2);
+  font-size: calc(14px * var(--mmap-scale, 1)); font-weight: 600; fill: var(--text-2);
   paint-order: stroke; stroke: var(--bg-card); stroke-width: 3px; stroke-linejoin: round;
 }
 .mmap-label-count {
-  font-size: 11.5px; fill: var(--brand-on-soft, #f28a81);
+  font-size: calc(11.5px * var(--mmap-scale, 1)); fill: var(--brand-on-soft, #f28a81);
   paint-order: stroke; stroke: var(--bg-card); stroke-width: 3px; stroke-linejoin: round;
+}
+
+/* ---- 南海诸岛插图 ----
+   全国图主图只画到海南岛，南海诸岛与断续线放右下角独立小图。
+   这是标准地图的常规排法，也是领土表达的一部分，别当成可选的装饰去掉。 */
+.mmap-nanhai-box {
+  fill: var(--bg-page);
+  fill-opacity: .82;
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.mmap-nanhai-path {
+  fill: var(--map-l1);
+  stroke: var(--text-3);
+  stroke-width: .6;
+  stroke-linejoin: round;
+}
+.mmap-nanhai-label {
+  font-size: 8px;
+  fill: var(--text-3);
+  paint-order: stroke;
+  stroke: var(--bg-page);
+  stroke-width: 2px;
 }
 
 .map-foot {
