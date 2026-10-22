@@ -76,3 +76,6 @@ backups/
 
 # 本地截图产物（scripts/check-diag.cjs 等生成）
 shots/
+
+# 内部截图（含测试数据，只在本机看，不外发）
+docs/screenshots/_internal/

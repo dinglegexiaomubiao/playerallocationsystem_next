@@ -505,6 +505,15 @@ a { text-decoration: none; color: inherit; }
 .kv .k { color: var(--text-3); min-width: 72px; }
 .kv .v { color: var(--text); }
 
+/* 地区标注：只用一次（群友详情页），明确写出是否在深圳 */
+.region-badge {
+  display: inline-block; margin-left: 8px; padding: 1px 8px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg-subtle); color: var(--text-2);
+  font-size: .74rem; line-height: 1.6; white-space: nowrap; vertical-align: middle;
+}
+.region-badge.is-in-sz { background: var(--brand-soft); color: var(--brand); border-color: transparent; }
+
 /* ===== 赛事详情：比赛结果 ===== */
 .result-box {
   margin-top: 16px; padding: 14px; border-radius: var(--radius-sm);
@@ -751,6 +760,18 @@ a { text-decoration: none; color: inherit; }
   outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft);
 }
 .form-field textarea { resize: vertical; }
+
+/* 地区选择器：国 → 省 → 市 → 区 四级并排，窄屏自动换行到下一行。
+   内距自己给一份：这个组件同时用在 /profile 的 .form-field 里和后台弹窗里，
+   后台那套兜底样式只给颜色和边框、没有 padding。 */
+.region-picker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.region-picker select,
+.region-picker input {
+  flex: 1 1 140px; min-width: 0;
+  padding: 8px 10px; font-size: .88rem; font-family: inherit;
+}
+.region-picker-clear { flex: 0 0 auto; }
+.region-picker-note { flex: 1 1 100%; font-size: .78rem; color: var(--text-3); line-height: 1.5; }
 .register-error {
   padding: 10px 14px; border-radius: var(--radius-sm);
   background: var(--accent-soft); color: var(--brand-on-soft); font-size: .88rem;

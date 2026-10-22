@@ -992,7 +992,8 @@ export default function AdminTournament({ denied }) {
                         <input
                           className="adm-input"
                           value={s.region}
-                          placeholder="地区"
+                          placeholder="国家 省 市 区"
+                          title="格式：国家 省 市 区，例如「中国 广东省 深圳市 南山区」。点上方「从档案补全缺漏」可直接沿用档案里的值。"
                           onChange={(e) => patchSignup(s.player_id, 'region', e.target.value)}
                         />
                       </div>

@@ -8,6 +8,7 @@ import MultiSelectFilter from '../../components/MultiSelectFilter';
 import UnregisteredAccounts from '../../components/admin/UnregisteredAccounts';
 import DuplicatePlayers from '../../components/admin/DuplicatePlayers';
 import IdentityEditor from '../../components/IdentityEditor';
+import RegionPicker from '../../components/RegionPicker';
 import heroIdToName from '../../lib/heroMapping';
 
 /* 全英雄选项：后台改资料时要能选任意英雄，不能只限已有数据里出现过的 */
@@ -469,7 +470,6 @@ export default function AdminMembersPage({ denied }) {
               {[
                 { k: 'nickname', label: '昵称', ph: '正式昵称' },
                 { k: 'score', label: '天梯分', ph: '0', type: 'number' },
-                { k: 'region', label: '地区', ph: '深圳' },
               ].map((f) => (
                 <div key={f.k} style={{ marginBottom: 12 }}>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
@@ -490,6 +490,16 @@ export default function AdminMembersPage({ denied }) {
                   />
                 </div>
               ))}
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--text-3, #888)', marginBottom: 4 }}>
+                  地区
+                </label>
+                <RegionPicker
+                  value={editing.region || ''}
+                  onChange={(next) => setEditing((prev) => ({ ...prev, region: next }))}
+                />
+              </div>
 
               {/* ===== 登录账号与重置密码 =====
                   密码在库里是加盐散列，查不到原文，只能「作废 + 发一个一次性临时密码」。

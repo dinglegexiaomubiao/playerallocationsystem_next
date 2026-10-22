@@ -10,7 +10,9 @@ import OrderedChips from '../components/OrderedChips';
 import PositionPicker from '../components/PositionPicker';
 import IdentityEditor from '../components/IdentityEditor';
 import HeroPicker from '../components/HeroPicker';
+import RegionPicker from '../components/RegionPicker';
 import { mergeMyTournaments } from '../lib/tournament-format.mjs';
+import { regionFull } from '../lib/regions';
 
 export default function Profile() {
   const router = useRouter();
@@ -19,7 +21,6 @@ export default function Profile() {
   const [bound, setBound] = useState(true);
   const [profile, setProfile] = useState(null);
   const [tournaments, setTournaments] = useState([]);
-  const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,7 +54,6 @@ export default function Profile() {
           setBound(d.bound !== false);
           setProfile(d.profile || null);
           setTournaments(mergeMyTournaments(d.tournaments || [], mine.tournaments || []));
-          setRegions(d.regions || []);
           if (d.profile) {
             setForm({
               group_nickname: d.profile.group_nickname || '',
@@ -271,13 +271,12 @@ export default function Profile() {
 
               <div className="form-row" style={{ marginBottom: 14 }}>
                 <div className="form-field">
-                  <label>所处地区（可选已有或新增）</label>
-                  <input list="region-options" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="选择或输入新地区" />
-                  <datalist id="region-options">
-                    {regions.map((r) => (
-                      <option key={r} value={r} />
-                    ))}
-                  </datalist>
+                  <label>所处地区</label>
+                  <RegionPicker
+                    value={form.region || ''}
+                    onChange={(next) => setForm((prev) => ({ ...prev, region: next }))}
+                    hint="选到区一级更准 —— 同城约线下局、找队友都靠它"
+                  />
                 </div>
               </div>
               <div className="form-row" style={{ marginBottom: 14 }}>
@@ -358,7 +357,7 @@ export default function Profile() {
             <div className="profile-cards">
               <div className="side-card">
                 <h4>基本信息</h4>
-                <div className="kv"><span className="k">所处地区</span><span className="v">{profile.region || '未填写'}</span></div>
+                <div className="kv"><span className="k">所处地区</span><span className="v">{regionFull(profile.region) || '未填写'}</span></div>
                 <div className="kv"><span className="k">当前天梯分</span><span className="v">{profile.score || '未填写'}</span></div>
                 <div className="kv"><span className="k">历史最高分</span><span className="v">{profile.peak_score || '未填写'}</span></div>
                 <div className="kv"><span className="k">擅长位置</span><span className="v">{(profile.positions || []).join(' / ') || '未填写'}</span></div>

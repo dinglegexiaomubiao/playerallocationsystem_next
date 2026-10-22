@@ -9,6 +9,7 @@ import MatchHistory from '../../components/member/MatchHistory';
 import AiPanel from '../../components/member/AiPanel';
 import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
 import { backLabelOf, memberHref } from '../../lib/member-href';
+import { isShenzhen, regionFull, regionIsEmpty } from '../../lib/regions';
 
 // 只到「日」，比赛时间不需要精确到分
 function fmtDay(v) {
@@ -231,7 +232,17 @@ export default function MemberDetail() {
                 <h4>基本信息</h4>
                 <div className="kv">
                   <span className="k">所处地区</span>
-                  <span className="v">{player.region || '未填写'}</span>
+                  <span className="v">
+                    {regionFull(player.region) || '未填写'}
+                    {!regionIsEmpty(player.region) && (
+                      <span
+                        className={'region-badge' + (isShenzhen(player.region) ? ' is-in-sz' : '')}
+                        title={isShenzhen(player.region) ? '常驻深圳，可以约线下局' : '不在深圳'}
+                      >
+                        {isShenzhen(player.region) ? '在深圳' : '不在深圳'}
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="kv">
                   <span className="k">擅长位置</span>

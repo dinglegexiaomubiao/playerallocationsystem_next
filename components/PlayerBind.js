@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { tierOf } from '../lib/tier.mjs';
+import { regionShort } from '../lib/regions';
 
 /**
  * 补填选手资料面板
@@ -131,7 +132,7 @@ export default function PlayerBind({ onBound }) {
                     <div className="bind-hit-meta">
                       SteamID {c.game_id}
                       {c.group_nickname && c.group_nickname !== c.nickname ? ` · 群昵称 ${c.group_nickname}` : ''}
-                      {c.region ? ` · ${c.region}` : ''}
+                      {c.region ? ` · ${regionShort(c.region)}` : ''}
                     </div>
                   </div>
                   {c.score ? (

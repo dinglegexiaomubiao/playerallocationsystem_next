@@ -9,6 +9,7 @@ import HeroAvatar from '../../components/HeroAvatar';
 import MultiSelectFilter from '../../components/MultiSelectFilter';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 import { TIERS, tierOf } from '../../lib/tier.mjs';
+import { regionFull, regionShort } from '../../lib/regions';
 /* 位置选项走唯一来源，别再各页抄一份 */
 import { POSITIONS } from '../../lib/options.mjs';
 
@@ -166,7 +167,9 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
       return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
     };
     return {
-      region: build((p) => [p.region]),
+      // 地区按「市 · 区」归组：同城的归到一项，否则下拉里会出现一堆
+      // 「中国 广东省 深圳市 南山区」「中国 广东省 深圳市 龙岗区」这样的长选项
+      region: build((p) => [regionShort(p.region)]),
       hero: build((p) => p.heroes || []),
     };
   }, [players]);
@@ -250,8 +253,8 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
         const mine = p.positions || [];
         if (!filters.position.some((x) => mine.includes(x))) return false;
       }
-      // 地区
-      if (filters.region !== '全部' && String(p.region || '').trim() !== filters.region) return false;
+      // 地区（按「市 · 区」归组，与 facets 口径一致）
+      if (filters.region !== '全部' && regionShort(p.region) !== filters.region) return false;
       // 擅长英雄（多选，OR）
       if (filters.hero.length > 0) {
         const mine = p.heroes || [];
@@ -532,11 +535,11 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
                     <Avatar className="p-avatar" src={p.avatar} name={p.nickname} />
                     <div className="p-head-main">
                       <div className="p-name">{p.nickname || '未命名'}</div>
-                      <div className="p-region" title={p.region || '未填写地区'}>
+                      <div className="p-region" title={regionFull(p.region) || '未填写地区'}>
                         <span className="p-region-icon" aria-hidden="true">
                           📍
                         </span>
-                        <span className="p-region-val">{p.region || '未填写地区'}</span>
+                        <span className="p-region-val">{regionShort(p.region) || '未填写地区'}</span>
                       </div>
                     </div>
                     <div className={`p-score ${t.cls}`} title={t.label}>
