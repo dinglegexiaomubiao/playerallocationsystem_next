@@ -3,12 +3,15 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
+import RegionPicker from '../../components/RegionPicker';
+import { regionShort } from '../../lib/regions';
 
 // 缺漏检测：历史数据里常见「只写了店名」的情况
 function issuesOf(f) {
   const out = [];
   if (!f.recommender) out.push({ t: '缺推荐人', lv: 'mid' });
   if (!f.address) out.push({ t: '缺地址', lv: 'mid' });
+  if (!f.region && !f.area) out.push({ t: '缺区位', lv: 'mid' });
   if (!f.cuisine) out.push({ t: '缺菜系', lv: 'low' });
   if (!f.rating) out.push({ t: '无评分', lv: 'low' });
   return out;
@@ -44,7 +47,7 @@ function Tag({ children, lv = 'mid' }) {
 const FIELD_DEFS = [
   { k: 'name', label: '店名', ph: '必填', required: true },
   { k: 'cuisine', label: '菜系', ph: '川菜 / 粤菜 / 日料…' },
-  { k: 'area', label: '区域', ph: '南山 / 福田…' },
+  { k: 'area', label: '区位', picker: 'region' }, // 走 RegionPicker 级联，见下面的分支
   { k: 'address', label: '地址', ph: '详细地址' },
   { k: 'recommender', label: '推荐人', ph: '群昵称' },
   { k: 'nearby', label: '附近地标', ph: '地铁站 / 商场' },
@@ -93,6 +96,7 @@ export default function AdminFoodPage({ denied }) {
         String(f.name || '').toLowerCase().includes(kw) ||
         String(f.cuisine || '').toLowerCase().includes(kw) ||
         String(f.area || '').toLowerCase().includes(kw) ||
+        String(f.region || '').toLowerCase().includes(kw) ||
         String(f.recommender || '').toLowerCase().includes(kw)
       );
     });
@@ -111,7 +115,9 @@ export default function AdminFoodPage({ denied }) {
         id: editing.id,
         name: editing.name,
         cuisine: editing.cuisine || '',
+        // area 由服务端从 region 反推（Excel 去重键要靠它），这里把原值带上做兜底
         area: editing.area || '',
+        region: editing.region || '',
         address: editing.address || '',
         feature: editing.feature || '',
         recommender: editing.recommender || '',
@@ -262,7 +268,11 @@ export default function AdminFoodPage({ denied }) {
                         <td style={{ color: 'var(--text-3, #999)' }}>{i + 1}</td>
                         <td style={{ fontWeight: 600 }}>{f.name}</td>
                         <td>{f.cuisine || <span style={{ color: 'var(--text-3, #aaa)' }}>—</span>}</td>
-                        <td>{f.area || <span style={{ color: 'var(--text-3, #aaa)' }}>—</span>}</td>
+                        <td>
+                          {f.region
+                            ? regionShort(f.region)
+                            : f.area || <span style={{ color: 'var(--text-3, #aaa)' }}>—</span>}
+                        </td>
                         <td style={{ color: f.recommender ? 'inherit' : '#B9770E' }}>
                           {f.recommender || '未填'}
                         </td>
@@ -330,20 +340,28 @@ export default function AdminFoodPage({ denied }) {
                     {f.label}
                     {f.required && <span style={{ color: '#C0392B', marginLeft: 3 }}>*</span>}
                   </label>
-                  <input
-                    type={f.type || 'text'}
-                    step={f.step}
-                    value={editing[f.k] == null ? '' : editing[f.k]}
-                    placeholder={f.ph}
-                    onChange={(e) => setEditing({ ...editing, [f.k]: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      border: '1px solid var(--border-strong, #ddd)',
-                      borderRadius: 8,
-                      fontSize: 14,
-                    }}
-                  />
+                  {f.picker === 'region' ? (
+                    <RegionPicker
+                      value={editing.region || editing.area || ''}
+                      onChange={(v) => setEditing((prev) => ({ ...prev, region: v }))}
+                      hint="跟群友地区同一套国/省/市/区"
+                    />
+                  ) : (
+                    <input
+                      type={f.type || 'text'}
+                      step={f.step}
+                      value={editing[f.k] == null ? '' : editing[f.k]}
+                      placeholder={f.ph}
+                      onChange={(e) => setEditing({ ...editing, [f.k]: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        border: '1px solid var(--border-strong, #ddd)',
+                        borderRadius: 8,
+                        fontSize: 14,
+                      }}
+                    />
+                  )}
                 </div>
               ))}
 

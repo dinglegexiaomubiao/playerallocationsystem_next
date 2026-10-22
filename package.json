@@ -13,6 +13,7 @@
     "db:tunnel": "bash scripts/db-tunnel.sh",
     "data:regions": "node scripts/build-region-data.cjs",
     "db:regions": "node scripts/normalize-regions.mjs",
+    "db:food-regions": "node scripts/normalize-food-regions.mjs",
     "css:dup": "node scripts/css-dup-check.cjs",
     "a11y": "node scripts/a11y-contrast.cjs",
     "shoot:theme": "node scripts/shoot-theme.cjs",

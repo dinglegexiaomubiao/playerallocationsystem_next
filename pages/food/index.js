@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import ExcelIO from '../../components/ExcelIO';
+import RegionPicker from '../../components/RegionPicker';
 import useSession from '../../hooks/useSession';
 import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
+import { parseRegion, regionShort } from '../../lib/regions';
 
 // 美团人均价格区间（元）。min/max 为 null 表示该侧不设限
 const PRICE_RANGES = [
@@ -22,6 +24,7 @@ function buildHaystack(f) {
     f.name,
     f.cuisine,
     f.area,
+    f.region,
     f.address,
     f.feature,
     f.recommender,
@@ -69,6 +72,14 @@ const shopKey = (name, area) =>
     .replace(/\s+/g, '')
     .toUpperCase()}`;
 
+// 区位的唯一口径：有规范 region 就取里面的区名，否则退回老的自由文本。
+// 否则同一片区会同时出现「南山 西丽」和「南山区」两个筛选项。
+const areaOf = (f) => {
+  const p = parseRegion(f.region || '');
+  if (p.structured && !p.foreign && p.district) return p.district;
+  return String(f.area || '').trim();
+};
+
 const reviewKey = (reviewer, content) =>
   `${String(reviewer || '').trim()}|${String(content || '').trim()}`;
 
@@ -80,6 +91,7 @@ const EMPTY_FORM = {
   name: '',
   cuisine: '',
   area: '',
+  region: '',
   address: '',
   feature: '',
   recommender: '',
@@ -145,7 +157,15 @@ export default function FoodPage() {
       });
       return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
     };
-    return { cuisine: build('cuisine'), area: build('area'), recommender: build('recommender') };
+    const buildBy = (fn) => {
+      const m = new Map();
+      foods.forEach((f) => {
+        const v = String(fn(f) || '').trim();
+        if (v) m.set(v, (m.get(v) || 0) + 1);
+      });
+      return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
+    };
+    return { cuisine: build('cuisine'), area: buildBy(areaOf), recommender: build('recommender') };
   }, [foods]);
 
   // 各价格区间命中数（只统计有标价的店）
@@ -186,7 +206,7 @@ export default function FoodPage() {
         if (!kws.every((k) => hay.includes(k))) return false;
       }
       if (filters.cuisine !== '全部' && String(f.cuisine || '').trim() !== filters.cuisine) return false;
-      if (filters.area !== '全部' && String(f.area || '').trim() !== filters.area) return false;
+      if (filters.area !== '全部' && areaOf(f) !== filters.area) return false;
       if (filters.recommender !== '全部' && String(f.recommender || '').trim() !== filters.recommender) return false;
       if (price && price.value !== 'all') {
         const v = f.avg_price;
@@ -216,6 +236,7 @@ export default function FoodPage() {
       name: f.name || '',
       cuisine: f.cuisine || '',
       area: f.area || '',
+      region: f.region || '',
       address: f.address || '',
       feature: f.feature || '',
       recommender: f.recommender || '',
@@ -477,20 +498,17 @@ export default function FoodPage() {
                 </div>
               </div>
               <div className="row" style={{ marginTop: 12 }}>
-                <div>
+                <div style={{ flex: '1 1 100%' }}>
                   <label>区位</label>
-                  <input
-                    list="food-area-options"
-                    value={form.area}
-                    onChange={(e) => setForm({ ...form, area: e.target.value })}
-                    placeholder="可输入新区位，或从已有中选"
+                  {/* 跟群友地区同一套国/省/市/区，这样分布图才能把美食按区画上去 */}
+                  <RegionPicker
+                    value={form.region}
+                    onChange={(v) => setForm((prev) => ({ ...prev, region: v }))}
+                    hint="跟群友地区一样选到区；深圳以外也能选"
                   />
-                  <datalist id="food-area-options">
-                    {facets.area.map(([k]) => (
-                      <option key={k} value={k} />
-                    ))}
-                  </datalist>
                 </div>
+              </div>
+              <div className="row" style={{ marginTop: 12 }}>
                 <div>
                   <label>详细地址</label>
                   <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="具体到门牌号" />
@@ -674,7 +692,12 @@ export default function FoodPage() {
                   <Stars n={f.rating} />
 
                   <div className="f-meta">
-                    {f.area && <div><span className="k">区位</span>{f.area}</div>}
+                    {(f.region || f.area) && (
+                      <div>
+                        <span className="k">区位</span>
+                        {f.region ? regionShort(f.region) : f.area}
+                      </div>
+                    )}
                     {f.address && <div><span className="k">地址</span>{f.address}</div>}
                   </div>
 

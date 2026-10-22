@@ -1,5 +1,6 @@
 import { pool } from '../../lib/db';
 import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
+import { parseRegion } from '../../lib/regions';
 
 let tableReady = false;
 
@@ -9,7 +10,23 @@ const ALTER_COLS = [
   'feature varchar(300)',
   'nearby varchar(200)',
   'avg_price int4',
+  // 2026-10-22：区位跟群友地区一样改成国/省/市/区四级。
+  // ⚠ `area` 不能废掉：它同时是 Excel 导入的去重键（shopKey(name, area)），
+  // 所以 area 继续只存区名，完整路径另存 region，两者由下面 areaFromRegion 对齐。
+  'region varchar(50)',
+  'lat numeric(9,6)',
+  'lng numeric(9,6)',
 ];
+
+/**
+ * 从规范地区路径里取区名，保持 `area` 与 `region` 一致。
+ * 取不到就返回 null，让调用方决定用不传。
+ */
+function areaFromRegion(region) {
+  const p = parseRegion(region);
+  if (!p.structured || p.foreign) return null;
+  return p.district || null;
+}
 
 function str(v, n) {
   return v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim().slice(0, n);
@@ -18,6 +35,12 @@ function toInt(v) {
   if (v === undefined || v === null || v === '') return null;
   const n = parseInt(v, 10);
   return isNaN(n) ? null : n;
+}
+/** 经纬度：允许小数，空串/非数字一律 null（别把 '' 塞进 numeric 列） */
+function num(v) {
+  if (v === undefined || v === null || String(v).trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 function clampRating(v) {
   const n = parseInt(v, 10);
@@ -92,18 +115,22 @@ export default async function handler(req, res) {
           return res.status(400).json({ success: false, error: '店名不能为空' });
         }
         const row = await client.query(
-          `INSERT INTO public.foods (name, cuisine, area, address, feature, recommender, nearby, avg_price, rating)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+          `INSERT INTO public.foods (name, cuisine, area, region, address, feature, recommender, nearby, avg_price, rating, lat, lng)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
           [
             str(body.name, 100),
             str(body.cuisine, 30),
-            str(body.area, 50),
+            // 传了 region 就以它为准反推 area，避免两个字段打架
+            str(areaFromRegion(body.region) || body.area, 50),
+            str(body.region, 50),
             str(body.address, 200),
             str(body.feature, 300),
             str(body.recommender, 50),
             str(body.nearby, 200),
             toInt(body.avg_price),
             clampRating(body.rating),
+            num(body.lat),
+            num(body.lng),
           ]
         );
         return res.status(201).json({ success: true, food: { ...row.rows[0], reviews: [] } });
@@ -119,18 +146,22 @@ export default async function handler(req, res) {
         }
         const row = await client.query(
           `UPDATE public.foods
-           SET name=$1, cuisine=$2, area=$3, address=$4, feature=$5, recommender=$6, nearby=$7, avg_price=$8, rating=$9
-           WHERE id=$10 RETURNING *`,
+           SET name=$1, cuisine=$2, area=$3, region=$4, address=$5, feature=$6, recommender=$7,
+               nearby=$8, avg_price=$9, rating=$10, lat=$11, lng=$12
+           WHERE id=$13 RETURNING *`,
           [
             str(body.name, 100),
             str(body.cuisine, 30),
-            str(body.area, 50),
+            str(areaFromRegion(body.region) || body.area, 50),
+            str(body.region, 50),
             str(body.address, 200),
             str(body.feature, 300),
             str(body.recommender, 50),
             str(body.nearby, 200),
             toInt(body.avg_price),
             clampRating(body.rating),
+            num(body.lat),
+            num(body.lng),
             body.id,
           ]
         );
