@@ -488,6 +488,10 @@
   gap: 12px;
   margin-bottom: 12px;
   font-size: 11.5px;
+  /* 窄屏（<420px）左侧「决赛 · 第 1 局」和右侧元信息挤一行放不下，
+     允许整块落到第二行，而不是把「收起阵容」压成逐字竖排 */
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 .t-fixture-round {
   letter-spacing: 0.14em;
@@ -498,7 +502,8 @@
 .t-fixture-meta {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   font-size: 11px;
   color: var(--t-text-3);
 }
@@ -518,9 +523,43 @@
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-color: var(--t-line-strong);
+  /* 四个字不许拆行：拆了就变成「收 起 阵 容」竖排 */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .t-fixture-toggle:hover {
   color: var(--t-text-2);
+}
+
+/* 对局编号 → OpenDota 外链
+   编号本身是次要信息，不能做成按钮抢走队名和比分的视线：
+   常态继承 meta 的灰、只加一根点线下划线表示「可点」，
+   hover / 键盘聚焦时才提到品牌红。 */
+.t-ext {
+  color: inherit;
+  text-decoration: none;
+  padding-bottom: 1px;
+  border-bottom: 1px dotted var(--t-line-strong);
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.t-ext::after {
+  content: '↗';
+  margin-left: 2px;
+  font-size: 9px;
+  opacity: 0.6;
+}
+.t-ext:hover,
+.t-ext:focus-visible {
+  color: var(--t-red-ink);
+  border-bottom-color: var(--t-red-ink);
+}
+.t-ext:hover::after,
+.t-ext:focus-visible::after {
+  opacity: 1;
+}
+.t-ext:focus-visible {
+  outline: 1px solid var(--t-red-ink);
+  outline-offset: 2px;
 }
 
 .t-fixture-body {

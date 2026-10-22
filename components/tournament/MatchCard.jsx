@@ -267,7 +267,21 @@ export default function MatchCard({ match, roundName }) {
         <span className="t-fixture-meta">
           {time && <span>{time}</span>}
           {dur && <span>{dur}</span>}
-          {m.dota_match_id && <span style={{ opacity: 0.7 }}>{m.dota_match_id}</span>}
+          {/* 对局编号直接外链 OpenDota：那边有完整的经济曲线 / 装备时间线 / 团战记录，
+              站内不必再造一遍。包一层 span 是为了保住 meta 里「span + span」的 · 分隔。 */}
+          {m.dota_match_id && (
+            <span>
+              <a
+                className="t-ext"
+                href={'https://www.opendota.com/matches/' + m.dota_match_id}
+                target="_blank"
+                rel="noreferrer"
+                title="在 OpenDota 查看这局的完整数据：经济曲线、装备时间线、团战记录"
+              >
+                {m.dota_match_id}
+              </a>
+            </span>
+          )}
           {players.length > 0 && (
             <button
               type="button"
