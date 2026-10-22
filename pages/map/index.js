@@ -10,12 +10,17 @@ import MemberMap from '../../components/MemberMap';
  *
  * 数据全部走 getServerSideProps 直出 —— 和 /members 同样的理由：手机上 JS 没跑起来时
  * 至少还能看见地图和名单，而不是一片空白。客户端只负责交互（图层开关、选人、点区）。
+ *
+ * ⚠ 「悬停高亮」和「点击选中」是两个独立状态，别合并：
+ *   一开始两者共用一个 state，鼠标一移开就 onHover(null) 把点击的结果也清掉了，
+ *   于是右侧明细刚出来就消失。现在 hovered 只管描边高亮，active 只管右侧明细。
  */
 export default function MapPage({ data, initialError }) {
   const [selected, setSelected] = useState([]);
   const [showHeat, setShowHeat] = useState(true);
   const [showFoods, setShowFoods] = useState(true);
-  const [active, setActive] = useState(null);
+  const [active, setActive] = useState(null); // 点击选中的区（决定右侧明细）
+  const [hovered, setHovered] = useState(null); // 悬停的区（只影响描边）
   const [kw, setKw] = useState('');
 
   const districts = data?.districts || [];
@@ -42,10 +47,14 @@ export default function MapPage({ data, initialError }) {
   );
 
   const activeData = active ? districts.find((d) => d.name === active) : null;
+
   const toggleMember = (id) => {
     const key = String(id);
     setSelected((prev) => (prev.some((x) => x === key) ? prev.filter((x) => x !== key) : [...prev, key]));
   };
+
+  // 点一下选中、再点一下取消；悬停不参与
+  const toggleDistrict = (name) => setActive((prev) => (prev === name ? null : name));
 
   const missingRatio = stats.players ? stats.missing / stats.players : 0;
 
@@ -67,7 +76,7 @@ export default function MapPage({ data, initialError }) {
               位置只到「区」，不显示任何人的具体住址
             </p>
           </div>
-          {/* 缺地区的人多时这块 CTA 会顶在下面，hero 里就不再放同一个按钮，免得一屏两个 */}
+          {/* 缺地区的人多时下面这块 CTA 会顶出来，hero 里就不再放同一个按钮 */}
           {missingRatio < 0.3 && (
             <div className="hero-actions">
               <Link href="/profile" className="btn btn-primary">
@@ -101,177 +110,223 @@ export default function MapPage({ data, initialError }) {
           )}
 
           <div className="map-layout">
-            <section className="map-canvas-card">
-              <div className="map-toolbar">
-                <label className="map-switch">
-                  <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} />
-                  群友热力
-                </label>
-                <label className="map-switch">
-                  <input type="checkbox" checked={showFoods} onChange={(e) => setShowFoods(e.target.checked)} />
-                  美食标注
-                </label>
-                {selected.length > 0 && (
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected([])}>
-                    清空选中的 {selected.length} 人
-                  </button>
-                )}
-              </div>
-
-              <div className="map-canvas">
-                <MemberMap
-                  geo={data?.geo}
-                  districts={districts}
-                  selectedIds={selected}
-                  showHeat={showHeat}
-                  showFoods={showFoods}
-                  active={active}
-                  onHover={setActive}
-                  onPick={setActive}
-                />
-              </div>
-              <p className="map-pan-hint">地图可左右滑动查看 · 点区块看详情</p>
-
-              <div className="map-foot">
-                <span className="map-legend-item">
-                  <i className="map-dot map-dot-heat" />
-                  区块越红人越多
-                </span>
-                <span className="map-legend-item">
-                  <i className="map-dot map-dot-food" />
-                  美食（按菜系着色）
-                </span>
-                <span className="map-legend-item">
-                  <i className="map-dot map-dot-member" />
-                  选中的群友
-                </span>
-                <span className="map-source">
-                  行政区划示意：{String((data?.geo && data.geo.source) || '').split('（')[0]}
-                </span>
-              </div>
-            </section>
-
-            <aside className="map-side">
-              {/* ---- 选中指定群友 ---- */}
-              <div className="map-panel">
-                <h2>只看这几个人</h2>
-                <p className="map-panel-hint">搜昵称，选中的人会在地图上标出来。没填地区的群友没法定位。</p>
-                <input
-                  className="map-search"
-                  value={kw}
-                  onChange={(e) => setKw(e.target.value)}
-                  placeholder={`在 ${placeable.length} 位已定位群友里搜昵称`}
-                />
-                {matches.length > 0 && (
-                  <ul className="map-hits">
-                    {matches.map((p) => {
-                      const on = selected.includes(String(p.id));
-                      return (
-                        <li key={p.id}>
+            <div className="map-main">
+              {/* ---- 折叠面板 1：只看这几个人 ---- */}
+              <details className="map-fold" open>
+                <summary>
+                  <span className="map-fold-title">只看这几个人</span>
+                  <span className="map-fold-meta">
+                    {selected.length ? `已选 ${selected.length} 人` : `可定位 ${placeable.length} 人`}
+                  </span>
+                </summary>
+                <div className="map-fold-body">
+                  <input
+                    className="map-search"
+                    value={kw}
+                    onChange={(e) => setKw(e.target.value)}
+                    placeholder="搜昵称，选中的人会在地图上标出来"
+                  />
+                  {matches.length > 0 && (
+                    <ul className="map-hits">
+                      {matches.map((p) => {
+                        const on = selected.includes(String(p.id));
+                        return (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              className={'map-hit' + (on ? ' is-on' : '')}
+                              onClick={() => toggleMember(p.id)}
+                            >
+                              <span className="map-hit-name">{p.nickname}</span>
+                              <span className="map-hit-district">{p.district}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {kw.trim() && matches.length === 0 && (
+                    <p className="map-panel-hint">没找到；只有填了地区的群友能搜到。</p>
+                  )}
+                  {selected.length > 0 && (
+                    <div className="map-chips">
+                      {selected.map((id) => {
+                        const p = placeable.find((x) => String(x.id) === id);
+                        if (!p) return null;
+                        return (
                           <button
                             type="button"
-                            className={'map-hit' + (on ? ' is-on' : '')}
-                            onClick={() => toggleMember(p.id)}
+                            key={id}
+                            className="map-chip"
+                            onClick={() => toggleMember(id)}
+                            title="点一下取消"
                           >
-                            <span className="map-hit-name">{p.nickname}</span>
-                            <span className="map-hit-district">{p.district}</span>
+                            {p.nickname}
+                            <span aria-hidden="true"> ×</span>
                           </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                {selected.length > 0 && (
-                  <div className="map-chips">
-                    {selected.map((id) => {
-                      const p = placeable.find((x) => String(x.id) === id);
-                      if (!p) return null;
-                      return (
-                        <button
-                          type="button"
-                          key={id}
-                          className="map-chip"
-                          onClick={() => toggleMember(id)}
-                          title="点一下取消"
-                        >
-                          {p.nickname}
-                          <span aria-hidden="true"> ×</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* ---- 区排行 ---- */}
-              <div className="map-panel">
-                <h2>各区人数</h2>
-                <ul className="map-rank">
-                  {ranking.map((d) => {
-                    const pct = stats.filled ? Math.round((d.playerCount / Math.max(1, stats.filled)) * 100) : 0;
-                    return (
-                      <li key={d.name}>
-                        <button
-                          type="button"
-                          className={'map-rank-row' + (active === d.name ? ' is-active' : '')}
-                          onClick={() => setActive(active === d.name ? null : d.name)}
-                        >
-                          <span className="map-rank-name">{d.name}</span>
-                          <span className="map-rank-bar">
-                            <i style={{ width: pct + '%' }} />
-                          </span>
-                          <span className="map-rank-num">
-                            {d.playerCount} 人{d.foodCount ? ` · ${d.foodCount} 家` : ''}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
-              {/* ---- 单区明细 ---- */}
-              {activeData && (
-                <div className="map-panel">
-                  <h2>
-                    {activeData.name}
-                    <button type="button" className="map-panel-close" onClick={() => setActive(null)} aria-label="关闭">
-                      ×
-                    </button>
-                  </h2>
-                  <h3 className="map-sub-h">群友 {activeData.playerCount} 人</h3>
-                  {activeData.players.length ? (
-                    <ul className="map-list">
-                      {activeData.players.map((p) => (
-                        <li key={p.id}>
-                          <Link href={`/members/${p.id}`}>{p.nickname}</Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="map-panel-hint">这个区还没有群友填。</p>
-                  )}
-                  <h3 className="map-sub-h">美食 {activeData.foodCount} 家</h3>
-                  {activeData.foods.length ? (
-                    <ul className="map-list">
-                      {activeData.foods.slice(0, 12).map((f) => (
-                        <li key={f.id}>
-                          <span className="map-food-name">{f.name}</span>
-                          {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
-                          {f.rating ? <span className="map-food-star">{f.rating} 星</span> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="map-panel-hint">这个区还没有美食记录。</p>
-                  )}
-                  {activeData.foods.length > 12 && (
-                    <p className="map-panel-hint">
-                      还有 {activeData.foods.length - 12} 家，去<Link href="/food">群友美食</Link>看全部。
-                    </p>
+                        );
+                      })}
+                      <button type="button" className="map-chip map-chip-clear" onClick={() => setSelected([])}>
+                        清空
+                      </button>
+                    </div>
                   )}
                 </div>
-              )}
+              </details>
+
+              {/* ---- 折叠面板 2：各区人数（横向铺开，占一行，比竖排列表省地方）---- */}
+              <details className="map-fold" open>
+                <summary>
+                  <span className="map-fold-title">各区人数</span>
+                  <span className="map-fold-meta">点一下看这个区的群友和美食</span>
+                </summary>
+                <div className="map-fold-body">
+                  <div className="map-rank-chips">
+                    {ranking.map((d) => (
+                      <button
+                        type="button"
+                        key={d.name}
+                        className={
+                          'map-rank-chip' + (active === d.name ? ' is-active' : '') + (hovered === d.name ? ' is-hover' : '')
+                        }
+                        onClick={() => toggleDistrict(d.name)}
+                        onMouseEnter={() => setHovered(d.name)}
+                        onMouseLeave={() => setHovered(null)}
+                      >
+                        <span className="map-rank-chip-name">{d.name}</span>
+                        <span className="map-rank-chip-num">
+                          {d.playerCount} 人{d.foodCount ? ` · ${d.foodCount} 家` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </details>
+
+              <section className="map-canvas-card">
+                <div className="map-toolbar">
+                  <label className="map-switch">
+                    <input type="checkbox" checked={showHeat} onChange={(e) => setShowHeat(e.target.checked)} />
+                    群友热力
+                  </label>
+                  <label className="map-switch">
+                    <input type="checkbox" checked={showFoods} onChange={(e) => setShowFoods(e.target.checked)} />
+                    美食标注
+                  </label>
+                  <span className="map-toolbar-hint">
+                    {active ? `已选中 ${active}` : '点区块看详情，再点一次取消'}
+                  </span>
+                </div>
+
+                <div className="map-canvas">
+                  <MemberMap
+                    geo={data?.geo}
+                    districts={districts}
+                    selectedIds={selected}
+                    showHeat={showHeat}
+                    showFoods={showFoods}
+                    active={active}
+                    hovered={hovered}
+                    onHover={setHovered}
+                    onPick={toggleDistrict}
+                  />
+                </div>
+                <p className="map-pan-hint">地图可左右滑动查看 · 点区块看详情</p>
+
+                <div className="map-foot">
+                  <span className="map-legend-item">
+                    <i className="map-dot map-dot-heat" />
+                    区块越红人越多
+                  </span>
+                  <span className="map-legend-item">
+                    <i className="map-dot map-dot-food" />
+                    美食（按菜系着色）
+                  </span>
+                  <span className="map-legend-item">
+                    <i className="map-dot map-dot-member" />
+                    选中的群友
+                  </span>
+                  <span className="map-source">
+                    行政区划示意：{String((data?.geo && data.geo.source) || '').split('（')[0]}
+                  </span>
+                </div>
+              </section>
+            </div>
+
+            {/* ---- 右侧：当前点击的区 ---- */}
+            <aside className="map-side">
+              <div className="map-panel">
+                {activeData ? (
+                  <>
+                    <h2>
+                      {activeData.name}
+                      <button
+                        type="button"
+                        className="map-panel-close"
+                        onClick={() => setActive(null)}
+                        aria-label="关闭"
+                      >
+                        ×
+                      </button>
+                    </h2>
+                    <h3 className="map-sub-h">群友 {activeData.playerCount} 人</h3>
+                    {activeData.players.length ? (
+                      <ul className="map-list">
+                        {activeData.players.map((p) => (
+                          <li key={p.id}>
+                            <Link href={`/members/${p.id}`}>{p.nickname}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="map-panel-hint">这个区还没有群友填。</p>
+                    )}
+
+                    <h3 className="map-sub-h">美食 {activeData.foodCount} 家</h3>
+                    {activeData.foods.length ? (
+                      <ul className="map-list">
+                        {activeData.foods.slice(0, 14).map((f) => (
+                          <li key={f.id}>
+                            <span className="map-food-name">{f.name}</span>
+                            {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
+                            {f.rating ? <span className="map-food-star">{f.rating} 星</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="map-panel-hint">这个区还没有美食记录。</p>
+                    )}
+                    {activeData.foods.length > 14 && (
+                      <p className="map-panel-hint">
+                        还有 {activeData.foods.length - 14} 家，去<Link href="/food">群友美食</Link>看全部。
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <h2>选一个区</h2>
+                    <p className="map-panel-hint">
+                      点地图上的区块，或上面「各区人数」里的任意一个区，这里会列出该区的群友和美食。
+                    </p>
+                    <ul className="map-side-stats">
+                      <li>
+                        <span>已定位群友</span>
+                        <strong>{placeable.length} 人</strong>
+                      </li>
+                      <li>
+                        <span>已落区美食</span>
+                        <strong>{stats.foods - (data?.foodsUnplaced || 0)} 家</strong>
+                      </li>
+                      <li>
+                        <span>覆盖区数</span>
+                        <strong>
+                          {districts.filter((d) => d.playerCount || d.foodCount).length} / {districts.length}
+                        </strong>
+                      </li>
+                    </ul>
+                  </>
+                )}
+              </div>
             </aside>
           </div>
 

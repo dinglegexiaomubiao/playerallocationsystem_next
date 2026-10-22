@@ -13,8 +13,11 @@
  * 群友位置**只精确到区**：同一区的人在该区质心周围按黄金角散开，不表示真实住址。
  * 这既是数据现状（players.region 只有四级），也是合规要求（不采集/公开个人精确位置）。
  *
- * 绘制顺序（后画压前画）：区底色 → 热力光晕 → 美食点 → 区名底板 → 选中群友。
+ * 绘制顺序（后画压前画）：区底色 → 热力光晕 → 美食点 → 区名 → 选中群友。
  * 选中群友放最后，是因为它是用户主动选出来的「主角」，不该被任何东西压住。
+ *
+ * ⚠ 区底色**不用内联 style 的 fillOpacity**，改成 lv0~lv3 四个 class：SVG 里读不到
+ *   当前主题，只有交给 CSS 才能给日间/夜间两套色阶（夜间 opcity 拉不开差别）。
  */
 
 // 美食按菜系着色：用固定调色盘而不是哈希色相，避免页面花成一片
@@ -34,6 +37,18 @@ function spread(i, n, r) {
   return [Math.cos(angle) * rad, Math.sin(angle) * rad];
 }
 
+/**
+ * 人数 → 色阶档位（0 人 / 少 / 中 / 多）。
+ * 分档而不是连续透明度：夜间底色本身就暗，连续渐变的差值肉眼分不出来。
+ */
+function heatLevel(count, max) {
+  if (!count) return 0;
+  const ratio = count / Math.max(1, max);
+  if (ratio >= 0.99) return 3;
+  if (ratio >= 0.5) return 2;
+  return 1;
+}
+
 export default function MemberMap({
   geo,
   districts,
@@ -41,6 +56,7 @@ export default function MemberMap({
   showHeat = true,
   showFoods = true,
   active = null,
+  hovered = null,
   onHover,
   onPick,
 }) {
@@ -67,21 +83,23 @@ export default function MemberMap({
         </radialGradient>
       </defs>
 
-      {/* ---- 1. 行政区底色：人数越多越深。0 人的区几乎不着色，这样「有人/没人」一眼分得开 ---- */}
+      {/* ---- 1. 行政区底色：lv0~lv3 由 CSS 给日间/夜间两套色阶 ---- */}
       {geo.districts.map((g) => {
         const d = byName.get(g.name);
         const count = d ? d.playerCount : 0;
-        const intensity = count / maxPlayers;
-        const isActive = active === g.name;
+        const cls =
+          'mmap-district lv' +
+          heatLevel(count, maxPlayers) +
+          (active === g.name ? ' is-active' : '') +
+          (hovered === g.name ? ' is-hover' : '');
         return (
           <path
             key={g.name}
             d={g.path}
-            className={'mmap-district' + (isActive ? ' is-active' : '')}
-            style={{ fill: 'var(--brand)', fillOpacity: count ? 0.14 + 0.42 * intensity : 0.04 }}
+            className={cls}
             onMouseEnter={() => onHover && onHover(g.name)}
             onMouseLeave={() => onHover && onHover(null)}
-            onClick={() => onPick && onPick(isActive ? null : g.name)}
+            onClick={() => onPick && onPick(g.name)}
           >
             <title>
               {g.name}：群友 {count} 人

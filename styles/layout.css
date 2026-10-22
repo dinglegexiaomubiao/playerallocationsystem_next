@@ -2321,15 +2321,93 @@ a.mh-row:hover { background: var(--bg-subtle); }
 /* ==================== 群友分布地图（/map） ====================
    地图是纯 SVG（components/MemberMap.js），几何来自
    public/data/shenzhen.geo.json 里已经投影好的 path，这里只管配色与排版。
-   所有颜色走令牌，深色/浅色主题自动跟随。 */
+
+   ⚠ 区底色是 lv0~lv3 四个 class，不是内联透明度：SVG 在浏览器里读不到当前主题，
+     要把「日间/夜间两套色阶」写进 CSS 变量才行（2026-10-22 之前夜间几乎看不出
+     人数差异，就是因为深底上 0.22 与 0.40 的透明度肉眼分不开）。
+*/
+
+/* 热力色阶：无人 → 最热，四个明度台阶。
+   夜间走「明度阶梯 + 暖色」（l0 中性灰 → l3 亮砖红），日间走「浅色 → 饱和红」。 */
+:root {
+  /* 夜间四档亮度（相对体感亮度）：39 → 60 → 93 → 128，相邻差都 ≥20，
+     实测截图里能一眼分出「没人 / 1 人 / 2 人 / 4 人」四档 */
+  --map-l0: #23272d;
+  --map-l1: #5b342d;
+  --map-l2: #94503c;
+  --map-l3: #d96a4f;
+}
+[data-theme='light'] {
+  /* 日间：底白，1~2 人保持很淡，只有「人多」才上饱和红，避免大片区看着过火 */
+  --map-l0: #eff1f4;
+  --map-l1: #f8d9cf;
+  --map-l2: #f2c4b6;
+  --map-l3: #d8503f;
+}
 
 .map-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) 330px;
   gap: var(--gutter);
   align-items: start;
 }
 
+/* 左栏：两个折叠面板 + 地图，竖着排 */
+.map-main { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* ---- 折叠面板（原生 details，零 JS） ---- */
+.map-fold {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.map-fold > summary {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-size: .9rem; font-weight: 600; color: var(--text);
+}
+.map-fold > summary::-webkit-details-marker { display: none; }
+.map-fold > summary::before {
+  content: '';
+  width: 0; height: 0;
+  border-left: 5px solid var(--text-3);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform .15s ease;
+  flex: 0 0 auto;
+}
+.map-fold[open] > summary::before { transform: rotate(90deg); }
+.map-fold > summary:hover { color: var(--brand); }
+.map-fold > summary:hover::before { border-left-color: var(--brand); }
+.map-fold-meta { margin-left: auto; font-size: .76rem; font-weight: 400; color: var(--text-3); }
+.map-fold-body { padding: 0 14px 12px; }
+
+/* ---- 各区人数：横向 chip，一行能铺开 6~7 个，比竖排列表省一半高度 ---- */
+.map-rank-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.map-rank-chip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: .82rem; color: var(--text);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: border-color .14s ease, background .14s ease;
+}
+.map-rank-chip.is-hover { border-color: var(--brand); }
+.map-rank-chip.is-active {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-on-soft);
+}
+.map-rank-chip-num { font-size: .74rem; color: var(--text-3); }
+.map-rank-chip.is-active .map-rank-chip-num { color: inherit; opacity: .8; }
+
+/* ---- 地图卡 ---- */
 .map-canvas-card {
   min-width: 0;
   background: var(--bg-card);
@@ -2347,6 +2425,7 @@ a.mh-row:hover { background: var(--bg-subtle); }
   font-size: .8rem; color: var(--text-2); cursor: pointer; white-space: nowrap;
 }
 .map-switch input { accent-color: var(--brand); cursor: pointer; }
+.map-toolbar-hint { margin-left: auto; font-size: .75rem; color: var(--text-3); }
 
 /* 手机上整幅地图被压到 300px 宽时，区名和圆点会小到看不清（缩放比只有 0.3），
    所以窄屏改成「保底宽度 + 横向滑动」：缩放到 0.6 左右，字和点都能认。
@@ -2355,22 +2434,28 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .mmap-svg { display: block; width: 100%; height: auto; }
 .map-pan-hint { display: none; }
 
-/* 行政区：底色透明度即「人数热度」，悬停/选中时描边变品牌色 */
+/* ---- 行政区：四档底色 + 悬停/选中描边 ---- */
 .mmap-district {
-  stroke: var(--bg-card);
-  stroke-width: 1.6;
+  /* 用 border 而不是 bg-card 做描边：夜间 0 人的区底色和卡片几乎一样，
+     描边同色会让它们直接「消失」，看不出这是陆地而不是空白 */
+  stroke: var(--border);
+  stroke-width: 1.2;
   cursor: pointer;
-  transition: fill-opacity .16s ease, stroke .16s ease;
+  transition: stroke .16s ease, stroke-width .16s ease;
 }
-.mmap-district:hover { stroke: var(--brand); stroke-width: 2.4; }
-.mmap-district.is-active { stroke: var(--brand); stroke-width: 2.8; }
+.mmap-district.lv0 { fill: var(--map-l0); }
+.mmap-district.lv1 { fill: var(--map-l1); }
+.mmap-district.lv2 { fill: var(--map-l2); }
+.mmap-district.lv3 { fill: var(--map-l3); }
+.mmap-district.is-hover { stroke: var(--brand); stroke-width: 2.6; }
+.mmap-district.is-active { stroke: var(--brand); stroke-width: 3.4; }
 
 .mmap-food { stroke: rgba(0, 0, 0, .35); stroke-width: .8; cursor: help; }
 .mmap-member-ring { fill: var(--bg-card); stroke: var(--brand); stroke-width: 2.4; }
 .mmap-member-initial { font-size: 14px; font-weight: 700; fill: var(--text); }
 
 /* 区名底板：有点阵压着的时候靠它兜底，否则「4 人 · 52 家」直接被圆点吃掉 */
-.mmap-label-plate { fill: var(--bg-card); fill-opacity: .88; }
+.mmap-label-plate { fill: var(--bg-card); fill-opacity: .9; }
 
 /* 区名压在色块上，用描边做底，任何底色都读得清 */
 .mmap-label-name {
@@ -2388,13 +2473,13 @@ a.mh-row:hover { background: var(--bg-subtle); }
 }
 .map-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .map-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
-.map-dot-heat { background: var(--brand); }
+.map-dot-heat { background: var(--map-l3); }
 .map-dot-food { background: #5aa9e2; }
 .map-dot-member { background: transparent; border: 2px solid var(--brand); }
 .map-source { margin-left: auto; }
 
-/* ---- 右侧栏 ---- */
-.map-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* ---- 右侧：当前点的区 ---- */
+.map-side { min-width: 0; }
 .map-panel {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -2403,7 +2488,7 @@ a.mh-row:hover { background: var(--bg-subtle); }
 }
 .map-panel h2 {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  margin: 0 0 8px; font-size: .95rem;
+  margin: 0 0 8px; font-size: 1rem;
 }
 .map-panel-close {
   padding: 0 2px; background: none; border: 0; cursor: pointer;
@@ -2414,6 +2499,16 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .map-panel-hint { margin: 0 0 8px; font-size: .76rem; color: var(--text-3); line-height: 1.6; }
 .map-panel-hint a { color: var(--brand); text-decoration: none; }
 
+/* 没选中的时候右栏给三行总览，别留一块空白卡片 */
+.map-side-stats { list-style: none; margin: 10px 0 0; padding: 0; font-size: .82rem; }
+.map-side-stats li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-top: 1px dashed var(--border);
+  color: var(--text-2);
+}
+.map-side-stats li:first-child { border-top: 0; }
+.map-side-stats strong { color: var(--text); font-weight: 600; }
+
 .map-search {
   width: 100%; padding: 8px 10px; font-family: inherit; font-size: .86rem;
   color: var(--text); background: var(--bg-subtle);
@@ -2421,7 +2516,11 @@ a.mh-row:hover { background: var(--bg-subtle); }
 }
 .map-search:focus { outline: none; border-color: var(--brand); }
 
-.map-hits { list-style: none; margin: 8px 0 0; padding: 0; max-height: 210px; overflow: auto; }
+.map-hits {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  max-height: 190px; overflow: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px;
+}
 .map-hit {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   width: 100%; padding: 6px 8px; text-align: left; cursor: pointer;
@@ -2430,6 +2529,7 @@ a.mh-row:hover { background: var(--bg-subtle); }
 }
 .map-hit:hover { background: var(--bg-subtle); }
 .map-hit.is-on { border-color: var(--brand); background: var(--brand-soft); }
+.map-hit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-hit-district { flex: 0 0 auto; font-size: .75rem; color: var(--text-3); }
 
 .map-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -2439,21 +2539,9 @@ a.mh-row:hover { background: var(--bg-subtle); }
   border: 0; border-radius: 999px;
 }
 .map-chip:hover { filter: brightness(1.12); }
-
-.map-rank { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
-.map-rank-row {
-  display: grid; grid-template-columns: 62px minmax(0, 1fr) auto;
-  gap: 8px; align-items: center; width: 100%;
-  padding: 5px 6px; text-align: left; cursor: pointer;
-  color: var(--text); font-size: .8rem;
-  background: none; border: 0; border-radius: var(--radius-sm);
+.map-chip-clear {
+  background: var(--bg-subtle); color: var(--text-3);
 }
-.map-rank-row:hover { background: var(--bg-subtle); }
-.map-rank-row.is-active { background: var(--brand-soft); }
-.map-rank-name { color: var(--text-2); white-space: nowrap; }
-.map-rank-bar { height: 6px; background: var(--bg-subtle); border-radius: 999px; overflow: hidden; }
-.map-rank-bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
-.map-rank-num { font-size: .74rem; color: var(--text-3); white-space: nowrap; }
 
 .map-list { display: flex; flex-direction: column; gap: 4px; list-style: none; margin: 0; padding: 0; font-size: .82rem; }
 .map-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -2505,11 +2593,16 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .map-missing summary { cursor: pointer; font-size: .86rem; color: var(--text-2); }
 .map-missing-names { margin-top: 8px; font-size: .8rem; line-height: 1.8; color: var(--text-3); }
 
+@media (max-width: 1120px) {
+  .map-layout { grid-template-columns: minmax(0, 1fr) 300px; }
+}
+
 @media (max-width: 920px) {
   .map-layout { grid-template-columns: minmax(0, 1fr); }
   .map-cta { grid-template-columns: minmax(0, 1fr); }
   .map-cta-actions .btn { width: 100%; }
   .map-source { margin-left: 0; flex-basis: 100%; }
+  .map-toolbar-hint { display: none; }
 
   /* 地图保底 620px 宽，超出就横向滑动（svg 不能只放大字号，字号是用户单位） */
   .map-canvas-card { padding: 14px; }
@@ -2523,4 +2616,5 @@ a.mh-row:hover { background: var(--bg-subtle); }
     display: block; margin: 2px 0 0;
     font-size: .74rem; color: var(--text-3);
   }
+  .map-hits { grid-template-columns: minmax(0, 1fr); }
 }

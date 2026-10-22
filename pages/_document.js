@@ -190,8 +190,10 @@ const BOOT_PROBE_SCRIPT = `
 `;
 
 export default function Document() {
+  // 默认日间：属性直接由服务端打在 <html> 上，JS 没跑起来也是亮色；
+  // 首屏脚本只在用户选过夜间时才把它摘掉（见 lib/theme.js）
   return (
-    <Html lang="zh-CN">
+    <Html lang="zh-CN" data-theme="light">
       <Head>
         {/* 地址栏 / 状态栏颜色，ThemeToggle 会同步更新 */}
         <meta name="theme-color" content={THEME_COLOR[THEME_DEFAULT]} />
