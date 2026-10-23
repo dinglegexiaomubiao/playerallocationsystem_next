@@ -197,7 +197,19 @@ if [ "$WITH_DEPS" = "1" ]; then
 fi
 
 # 5.3 构建；失败就回滚，绝不留一个跑不起来的站点
-if ! NODE_OPTIONS=--max-old-space-size=1024 npm run build > /tmp/laroja-build.log 2>&1; then
+# ⚠ 必须降优先级跑（2026-10-23 踩过）：这台是低规格 ECS，云盘 BPS 有上限。
+#   全量构建的并发读写会把 SysDiskBPS 打满（阿里云会发 StoragePerformanceReachLimit
+#   报警），随后系统进入 I/O 等待 —— sshd 连 banner 都发不出来、nginx 直接 000，
+#   整机假死，只能去控制台重启，站点 502 二十分钟。
+#   nice + ionice 让构建礼让交互进程，至少能保住 ssh 和 nginx 的 I/O。
+BUILD_CMD="env NODE_OPTIONS=--max-old-space-size=1024 npm run build"
+if command -v ionice > /dev/null 2>&1; then
+  BUILD_CMD="nice -n 15 ionice -c 2 -n 7 $BUILD_CMD"
+else
+  BUILD_CMD="nice -n 15 $BUILD_CMD"
+fi
+echo "  → 构建命令：$BUILD_CMD"
+if ! sh -c "$BUILD_CMD" > /tmp/laroja-build.log 2>&1; then
   echo "  ✗ 服务器构建失败，日志尾部："
   tail -30 /tmp/laroja-build.log
   if [ -n "$SNAP" ] && [ -d "$SNAP/.next" ]; then
@@ -216,6 +228,28 @@ if ! NODE_OPTIONS=--max-old-space-size=1024 npm run build > /tmp/laroja-build.lo
 fi
 echo "  → 构建完成"
 
+# 5.3.1 产物完整性检查（2026-10-23 的教训）
+# 构建被中断（例如整机 I/O 假死后重启）会留下一个没有 BUILD_ID、server/pages 为空的
+# .next。pm2 照样能启动，但立刻崩溃循环，线上是 502，而脚本上一版还会打印「部署完成」。
+# 所以构建成功不等于产物可用，必须验一下再重启。
+if [ ! -s .next/BUILD_ID ] || [ -z "$(ls .next/server/pages 2>/dev/null)" ]; then
+  echo "  ✗ 构建产物不完整（BUILD_ID 或 server/pages 缺失）"
+  if [ -n "$SNAP" ] && [ -d "$SNAP/.next" ]; then
+    echo "  ↺ 自动回滚到 $SNAP ..."
+    pm2 stop "$PM2_APP" > /dev/null 2>&1 || true
+    rm -rf .next
+    cp -a "$SNAP/.next" .next
+    tar -xzf "$SNAP/source.tar.gz"
+    pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1 || pm2 start "$PM2_APP" > /dev/null 2>&1 || true
+    sleep 4
+    echo "  ✓ 已回滚，站点返回 $(health)"
+  else
+    echo "  ⚠ 没有可用快照，请手动处理：cd $REMOTE_DIR && pm2 restart $PM2_APP"
+  fi
+  exit 1
+fi
+echo "  → 产物完整（BUILD_ID $(cat .next/BUILD_ID)，$(ls .next/server/pages | wc -l) 个页面）"
+
 # 5.4 重启
 pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1
 sleep 3
@@ -231,8 +265,21 @@ done
 if [ "$CODE" = "200" ]; then
   echo "  ✓ 站点返回 200"
 else
-  echo "  ⚠ 站点返回 $CODE，回滚命令：./deploy/rollback.sh"
-  echo "    日志：pm2 logs $PM2_APP --lines 50"
+  # 健康检查失败也要回滚到底，别留一个 502 的站点在线上等人发现
+  echo "  ✗ 站点返回 $CODE"
+  if [ -n "$SNAP" ] && [ -d "$SNAP/.next" ]; then
+    echo "  ↺ 自动回滚到 $SNAP ..."
+    pm2 stop "$PM2_APP" > /dev/null 2>&1 || true
+    rm -rf .next
+    cp -a "$SNAP/.next" .next
+    tar -xzf "$SNAP/source.tar.gz"
+    pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1 || pm2 start "$PM2_APP" > /dev/null 2>&1 || true
+    sleep 4
+    echo "  ✓ 已回滚，站点返回 $(health)"
+  else
+    echo "  ⚠ 没有可用快照，日志：pm2 logs $PM2_APP --lines 50"
+  fi
+  exit 1
 fi
 REMOTE
 
