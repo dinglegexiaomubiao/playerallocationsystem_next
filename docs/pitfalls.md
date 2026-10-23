@@ -327,3 +327,30 @@ cache / standalone 等），服务器解压到 `.next-build` 再 `mv` 原子切�
   剩下的位子按时间填，最后整体仍按时间倒序输出。
 - 动态栏里「活动/开黑」的 meta 是**活动本身的时间**，右边那列是**多久前发布**。
   不加「约」前缀两个时间并排会被读成同一件事。
+
+## 12. 「本地 500、线上正常」八成是 props 里塞了脏数据
+
+`/members` 本地一直 500，报 `Error serializing .initialPlayers[0].xxx`：
+
+- 先是 `avatar_synced_at`（`timestamptz` → pg 给 Date），
+  再是 `records[0].start_date`（同一个原因），
+  再是 `game_id`（值为 `undefined`：`null?.toString()` 的结果）。
+- **这个检查只在 dev / 构建期跑**。`next/dist/server/render.js` 里
+  `isSerializableProps` 的调用条件是 `process.env.__NEXT_DEV_SERVER || isBuildTimeSSG`；
+  线上走 `JSON.stringify` —— Date 自动变字符串、`undefined` 的键被删掉，所以一切正常。
+- 于是症状是「本地打不开、线上好好的」，而且完全不像数据形状的问题。
+- 修法：SSR 前统一洗一遍（Date→ISO、丢 `undefined` 键、NaN/Infinity→null）。
+  `lib/player-list.js` 的 `toSerializable()` 就是干这个的，**别逐字段写**，
+  下次再加一个时间列又中招。
+- 顺手一条：`players.avatar_synced_at` 是 timestamptz，而 `created_at`/`updated_at`
+  是 varchar —— 同一张表里两种时间类型并存，写查询前先 `\d players`。
+
+## 13. dev 下页面和 API 各持一份内存缓存
+
+建完帮派，`/api/players` 立刻返回了 `guild`，但 `/members` 的 SSR 还是旧的，
+卡片上没有帮派色。原因是 `clearPlayerListCache()` 清的是**当前模块实例**那份，
+dev 的 Turbopack 下页面路由与 API 路由各有一份 `lib/list-cache`。
+
+- 判据：接口对、页面不对，且等 45 秒（缓存 TTL）后页面自己好了。
+- 线上单进程单实例，共享同一份，不存在这个问题。
+- 所以自检脚本不能「建完就断言」，要按 5～6 秒轮询到出现为止（`check-guild-card.cjs`）。
