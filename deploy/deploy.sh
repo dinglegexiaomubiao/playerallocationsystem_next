@@ -44,14 +44,27 @@ SSH_OPTS="-i $KEY -o StrictHostKeyChecking=no -o BatchMode=yes"
 WITH_DEPS=0
 SKIP_BUILD=0
 NO_BACKUP=0
+SERVER_BUILD=0
 for arg in "$@"; do
   case "$arg" in
     --deps) WITH_DEPS=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
     --no-backup) NO_BACKUP=1 ;;
+    --server-build) SERVER_BUILD=1 ;;
     *) echo "未知参数: $arg"; exit 1 ;;
   esac
 done
+
+# 产物从哪来：
+#   local（默认）—— 本地构建好，产物传上去直接用。服务器只解压 + 原子切换，构建窗口≈0。
+#     为什么默认这个：线上是 2 核 / 1.7G，服务器端构建要 5.4 分钟（本地只要 13 秒），
+#     那 5.4 分钟里 next-server 抢不到 CPU，2026-10-23 实测一次部署产生 28 个 504 + 137 个
+#     499（用户等不及主动断开）。本地产物传上去体积只有 2.8M，上传期间线上一个字都不动。
+#   --server-build —— 回退到「在服务器上构建」。改动了原生依赖、或产物跨平台跑不起来时用。
+BUILD_MODE=local
+[ "$SERVER_BUILD" -eq 1 ] && BUILD_MODE=server
+NEXT_TAR_NAME="laroja-next.tar.gz"
+NEXT_TAR="/tmp/$NEXT_TAR_NAME"
 
 # 切到项目根目录（脚本可能在 deploy/ 下被调用）
 cd "$(dirname "$0")/.."
@@ -64,13 +77,23 @@ echo " 版本 commit: $COMMIT"
 echo " 时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
 
-# ---------- 1. 本地构建校验 ----------
+# ---------- 1. 本地构建 ----------
+# 这一步不只是「校验」：BUILD_MODE=local 时，它产出的 .next 就是最终上线的产物，
+# 服务器不会再构建一次。所以本地构建失败必须中止（半成品不能上线）。
 if [ "$SKIP_BUILD" -eq 0 ]; then
   echo ""
-  echo "[1/5] 本地构建校验（发现语法/类型错误，避免传坏代码上去）"
-  if ! npm run build > /tmp/laroja-local-build.log 2>&1; then
+  if [ "$BUILD_MODE" = "local" ]; then
+    echo "[1/5] 本地构建（产物将直接上传，服务器不再构建）"
+  else
+    echo "[1/5] 本地构建校验（服务器会重新构建）"
+  fi
+  if ! NODE_OPTIONS= npm run build > /tmp/laroja-local-build.log 2>&1; then
     echo "  ✗ 本地构建失败，已中止。日志尾部："
     tail -20 /tmp/laroja-local-build.log
+    exit 1
+  fi
+  if [ "$BUILD_MODE" = "local" ] && [ ! -f .next/BUILD_ID ]; then
+    echo "  ✗ 构建没有产出 BUILD_ID，产物不完整，已中止"
     exit 1
   fi
   echo "  ✓ 构建通过"
@@ -91,11 +114,26 @@ tar -czf "$TAR" \
   . 2>/dev/null
 echo "  ✓ $(du -h "$TAR" | cut -f1) → $TAR"
 
+# 产物也一起打包（只取运行必需的 server/static；cache 是 build 缓存，38M 且 next start 不用）
+if [ "$BUILD_MODE" = "local" ]; then
+  rm -f "$NEXT_TAR"
+  tar -czf "$NEXT_TAR" --exclude=./cache --exclude=./dev -C .next . 2>/dev/null
+  if [ ! -s "$NEXT_TAR" ]; then
+    echo "  ✗ 产物打包失败，已中止"
+    exit 1
+  fi
+  echo "  ✓ 构建产物 $(du -h "$NEXT_TAR" | cut -f1) → $NEXT_TAR"
+fi
+
 # ---------- 3. 上传 ----------
 echo ""
 echo "[3/5] 上传"
 scp -i "$KEY" -o StrictHostKeyChecking=no -q "$TAR" "$HOST:/tmp/$TAR_NAME"
 echo "  ✓ 已上传到 $HOST:/tmp/$TAR_NAME"
+if [ "$BUILD_MODE" = "local" ]; then
+  scp -i "$KEY" -o StrictHostKeyChecking=no -q "$NEXT_TAR" "$HOST:/tmp/$NEXT_TAR_NAME"
+  echo "  ✓ 已上传产物到 $HOST:/tmp/$NEXT_TAR_NAME"
+fi
 
 # ---------- 4. 服务器：快照当前版本 ----------
 # 注意：必须在解压新代码「之前」做，否则备份下来的就是新代码。
@@ -149,14 +187,18 @@ echo "  ✓ 当前保留 $(ls -1d "$SNAP_ROOT"/*/ 2>/dev/null | wc -l) 个历史
 SNAPSHOT
 fi
 
-# ---------- 5. 服务器：解压 → 构建 → 重启（失败自动回滚） ----------
+# ---------- 5. 服务器：解压 → 落地产物 → 原子切换 → 重启（失败不动线上） ----------
 echo ""
-echo "[5/5] 服务器构建并重启"
+if [ "$BUILD_MODE" = "local" ]; then
+  echo "[5/5] 服务器落地产物并重启"
+else
+  echo "[5/5] 服务器构建并重启"
+fi
 
 ssh $SSH_OPTS "$HOST" \
-  "bash -s -- '$REMOTE_DIR' '$SNAP_ROOT' '$PM2_APP' '$TAR_NAME' '$WITH_DEPS'" <<'REMOTE'
+  "bash -s -- '$REMOTE_DIR' '$SNAP_ROOT' '$PM2_APP' '$TAR_NAME' '$WITH_DEPS' '$BUILD_MODE' '$NEXT_TAR_NAME'" <<'REMOTE'
 set -e
-REMOTE_DIR="$1"; SNAP_ROOT="$2"; PM2_APP="$3"; TAR_NAME="$4"; WITH_DEPS="$5"
+REMOTE_DIR="$1"; SNAP_ROOT="$2"; PM2_APP="$3"; TAR_NAME="$4"; WITH_DEPS="$5"; BUILD_MODE="$6"; NEXT_TAR_NAME="$7"
 cd "$REMOTE_DIR"
 
 SNAP=""
@@ -208,43 +250,93 @@ if [ -d .next/static ]; then
   echo "  → 已备份上一版静态产物（$(du -sh /tmp/laroja-static-prev | cut -f1)）"
 fi
 
-# 5.3 构建到独立目录（.next-build）
-# ⚠ 不能原地 build：旧进程正在读 .next，`next build` 会边写边删，读到半成品的请求直接 500。
+# 5.3 准备新产物（NEW_DIR）
+# ⚠ 绝不能原地 build：旧进程正在读 .next，`next build` 会边写边删，读到半成品的请求直接 500。
 #   2026-10-23 10:48 那次部署就产生 11 个 `GET / 500` + 4 个 502 —— 用户看到的就是「报错 500」。
-#   构建到 .next-build 期间线上一个字都不动，构建完再原子切换。
-BUILD_OK=1
-# 先清干净：万一上次部署中途被打断留下了半个 .next-build，next build 复用会产出残缺产物
-rm -rf .next-build
-NODE_OPTIONS=--max-old-space-size=1024 NEXT_DIST_DIR=.next-build npm run build > /tmp/laroja-build.log 2>&1 || BUILD_OK=0
-# BUILD_ID 是「构建真的产出了完整产物」的铁证，光看退出码不够（postscript 失败也会非 0）
-[ -f .next-build/BUILD_ID ] || BUILD_OK=0
+#   所以不管是下载产物还是服务器构建，一律先落到独立目录，最后再用 mv 原子切换。
+NEW_DIR=".next-build"
+rm -rf "$NEW_DIR"
 
-if [ "$BUILD_OK" != "1" ]; then
-  echo "  ✗ 服务器构建失败，日志尾部："
-  tail -30 /tmp/laroja-build.log
-  # 关键：这次 .next 完全没被碰过，站点还在正常跑，不需要回滚也不需要重启
-  rm -rf .next-build
-  echo "  ✓ 线上产物未被触碰，站点仍返回 $(health)（源码已更新，下次成功后生效）"
-  exit 1
+if [ "$BUILD_MODE" = "local" ]; then
+  # 5.3a 用本地构建好的产物
+  # 好处不只是快：服务器 2 核，自己 build 要 5.4 分钟，那段时间 next-server 抢不到 CPU，
+  # 实测一次部署产生 28 个 504 + 137 个 499。改用上传产物后构建窗口直接归零。
+  if [ ! -s "/tmp/$NEXT_TAR_NAME" ]; then
+    echo "  ✗ 没找到上传的产物包 /tmp/$NEXT_TAR_NAME，线上未动"
+    exit 1
+  fi
+  mkdir -p "$NEW_DIR"
+  tar -xzf "/tmp/$NEXT_TAR_NAME" -C "$NEW_DIR"
+  rm -f "/tmp/$NEXT_TAR_NAME"
+  if [ ! -f "$NEW_DIR/BUILD_ID" ]; then
+    echo "  ✗ 上传的产物不完整（缺 BUILD_ID），线上未动"
+    rm -rf "$NEW_DIR"
+    exit 1
+  fi
+  echo "  → 产物已解压（BUILD_ID $(cat "$NEW_DIR/BUILD_ID")）"
+
+  # ⚠ Turbopack 把 pg / xlsx / nodemailer 这类外部包写成 <包名>-<哈希> 的虚拟名，
+  #   并在产物里放一个 node_modules 符号链接指向「构建机的绝对路径」。
+  #   在 Windows 上构建时那个链接长这样：pg-587764f78a6c7a9c -> /e/lzf/.../node_modules/pg
+  #   传到 Linux 就是死链，API 全部 500（Cannot find module 'pg-587764f78a6c7a9c'）。
+  #   这里改写成相对链接，指回服务器自己装好的 node_modules。
+  if [ -d "$NEW_DIR/node_modules" ]; then
+    FIXED=0
+    for d in "$NEW_DIR"/node_modules/*; do
+      [ -L "$d" ] || continue
+      tgt=$(readlink "$d" | tr '\\' '/')
+      pkg=$(basename "$tgt")
+      rm -f "$d"
+      ln -s "../../node_modules/$pkg" "$d"
+      FIXED=$((FIXED + 1))
+    done
+    # 链接改完必须真的能解析，否则上线就是一片 500
+    for d in "$NEW_DIR"/node_modules/*; do
+      [ -L "$d" ] || continue
+      if [ ! -f "$d/package.json" ]; then
+        echo "  ✗ 外部模块 $(basename "$d") 无法解析到 node_modules，线上未动"
+        echo "    可改用 --server-build 重新部署"
+        rm -rf "$NEW_DIR"
+        exit 1
+      fi
+    done
+    echo "  → $FIXED 个外部模块链接已指回 node_modules"
+  fi
+else
+  # 5.3b 回退方案：在服务器上构建（慢，但原生依赖/跨平台出问题时的保底）
+  echo "  → 服务器构建模式（约 5 分钟，这期间服务仍可用但会变慢）"
+  BUILD_OK=1
+  NODE_OPTIONS=--max-old-space-size=1024 NEXT_DIST_DIR="$NEW_DIR" npm run build > /tmp/laroja-build.log 2>&1 || BUILD_OK=0
+  # BUILD_ID 是「构建真的产出了完整产物」的铁证，光看退出码不够（postscript 失败也会非 0）
+  [ -f "$NEW_DIR/BUILD_ID" ] || BUILD_OK=0
+  if [ "$BUILD_OK" != "1" ]; then
+    echo "  ✗ 服务器构建失败，日志尾部："
+    tail -30 /tmp/laroja-build.log
+    # 关键：这次 .next 完全没被碰过，站点还在正常跑，不需要回滚也不需要重启
+    rm -rf "$NEW_DIR"
+    echo "  ✓ 线上产物未被触碰，站点仍返回 $(health)（源码已更新，下次成功后生效）"
+    exit 1
+  fi
+  echo "  → 构建完成"
 fi
-echo "  → 构建完成"
 
 # 5.3.1 把上一版独有的 chunk 合并进新产物（-n 不覆盖新版同名文件）
 # 这样还开着旧页面的用户也能把 JS 加载完、水合成功，不必等自己手动刷新。
 if [ -d /tmp/laroja-static-prev ]; then
-  cp -an /tmp/laroja-static-prev/. .next-build/static/ 2>/dev/null || true
+  mkdir -p "$NEW_DIR/static"
+  cp -an /tmp/laroja-static-prev/. "$NEW_DIR/static/" 2>/dev/null || true
   rm -rf /tmp/laroja-static-prev
 fi
 # 只留两周内的：更老的 chunk 不可能还有活跃页面在引用，没必要一直占空间
-find .next-build/static -type f -mtime +14 -delete 2>/dev/null || true
-echo "  → 静态产物 $(du -sh .next-build/static | cut -f1)（含上一版 chunk，旧页面不会 404）"
+find "$NEW_DIR/static" -type f -mtime +14 -delete 2>/dev/null || true
+echo "  → 静态产物 $(du -sh "$NEW_DIR/static" | cut -f1)（含上一版 chunk，旧页面不会 404）"
 
 # 5.3.2 原子切换：rename 是瞬间的，旧进程手里的 inode 不受影响，
 # 真正会 5xx 的窗口只剩「切换 → pm2 restart 完成」这一两秒（原来有二十秒）
 rm -rf .next-prev
 # set -e 下别写 `[ -d .next ] && mv ...`：条件为假时整句返回 1 会直接退出脚本
 if [ -d .next ]; then mv .next .next-prev; fi
-mv .next-build .next
+mv "$NEW_DIR" .next
 rm -rf .next-prev
 echo "  → 产物已切换"
 
