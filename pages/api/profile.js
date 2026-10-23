@@ -9,6 +9,7 @@ import {
   IdentityError,
 } from '../../lib/player-identity';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
+import { guildOfPlayer, countPendingInvites } from '../../lib/guild.mjs';
 import { checkText, LIMITS } from '../../lib/moderation.mjs';
 import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 import listCache from '../../lib/list-cache';
@@ -61,6 +62,12 @@ export default async function handler(req, res) {
       // 一个群友可以有多个 SteamID / 多个群昵称，全部带出去给编辑页用
       await ensureIdentityTables(client);
       const identities = await listIdentities(client, playerId);
+      // 帮派信息（我在哪个帮、有没有待处理的邀请）。2026-10-23 新增，
+      // 取不到时不影响主资料 —— 个人信息页的帮派区块自己会降级。
+      const [guild, pendingInvites] = await Promise.all([
+        guildOfPlayer(playerId).catch(() => null),
+        countPendingInvites(playerId).catch(() => 0),
+      ]);
       return res.status(200).json({
         success: true,
         bound: true,
@@ -68,6 +75,8 @@ export default async function handler(req, res) {
           ...shapePlayer(ply.rows[0]),
           steamIds: identities.steam,
           groupNicknames: identities.nicknames,
+          guild,
+          pendingInvites,
         },
         tournaments,
         regions,

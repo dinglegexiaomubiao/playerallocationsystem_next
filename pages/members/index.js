@@ -6,24 +6,24 @@ import useSession from '../../hooks/useSession';
 import Avatar from '../../components/Avatar';
 import AvatarSync from '../../components/AvatarSync';
 import HeroAvatar from '../../components/HeroAvatar';
-import MultiSelectFilter from '../../components/MultiSelectFilter';
+import MemberFilterPanel from '../../components/member/MemberFilterPanel';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
-import { TIERS, tierOf } from '../../lib/tier.mjs';
+import { tierOf } from '../../lib/tier.mjs';
 import { regionFull, regionShort } from '../../lib/regions';
-/* 位置选项走唯一来源，别再各页抄一份 */
-import { POSITIONS } from '../../lib/options.mjs';
+/* 筛选逻辑统一在 lib/member-filter.mjs（2026-10-23 从本页抽出）。
+   帮派的「邀请成员」选择器复用同一份 —— 不要再在这里内联一份筛选条件。 */
+import {
+  emptyMemberFilters,
+  buildRegionHeroFacets,
+  buildTierFacets,
+  buildScoreFacets,
+  buildSearchIndex,
+  filterMembers,
+  countActiveFilters,
+} from '../../lib/member-filter.mjs';
 
-// 天梯分区间。min/max 为 null 表示该侧不设限；none 表示「未填写分数」
-const SCORE_RANGES = [
-  { value: 'all', label: '不限', min: null, max: null },
-  { value: '6000+', label: '6000 分以上', min: 6000, max: null },
-  { value: '5000-6000', label: '5000 - 6000', min: 5000, max: 6000 },
-  { value: '4000-5000', label: '4000 - 5000', min: 4000, max: 5000 },
-  { value: '3000-4000', label: '3000 - 4000', min: 3000, max: 4000 },
-  { value: '2000-3000', label: '2000 - 3000', min: 2000, max: 3000 },
-  { value: '0-2000', label: '2000 分以下', min: null, max: 2000 },
-  { value: 'none', label: '未填写分数', min: null, max: null, none: true },
-];
+// 天梯分区间、空筛选、搜索哈栈都搬到了 lib/member-filter.mjs —— 帮派邀请选择器要用同一份。
+// 本页只负责「持有 filters state」和渲染卡片。
 
 // 复制到剪贴板。navigator.clipboard 只在安全上下文（https / localhost）可用，
 // 局域网 IP 访问时会 undefined，所以保留 execCommand 兜底。
@@ -52,57 +52,14 @@ async function copyText(text) {
   }
 }
 
-const EMPTY_FILTERS = {
-  keyword: '',
-  tier: 'all',
-  score: 'all',
-  // 位置与英雄支持多选：一个人会多个位置、多个绝活，
-  // 单选时只能一个个看完，多选才能问「谁会打 1 或 5」。
-  // 同组内是 OR —— 命中任意一个就算。
-  position: [],
-  region: '全部',
-  hero: [],
-  sort: 'score',
-};
-
-// 把一名选手所有可检索信息拼成小写文本，供搜索使用（全字段）
-/**
- * 搜索哈栈：一个人可能有好几个 SteamID 和群昵称，全部都要能被搜到。
- * 只拼 p.game_id 会导致「合并进来的副号搜不到人」——玩家搜自己小号
- * 却查不出档案，看起来就像是合并把号弄丢了。
- */
-function buildHaystack(p) {
-  const steamIds = (p.steamIds || [])
-    .map((s) => (s && typeof s === 'object' ? s.accountId : s))
-    .filter(Boolean);
-  const groupNicknames = (p.groupNicknames || [])
-    .map((n) => (n && typeof n === 'object' ? n.nickname : n))
-    .filter(Boolean);
-  const parts = [
-    p.nickname,
-    p.group_nickname,
-    p.game_id,
-    ...steamIds,
-    ...groupNicknames,
-    p.region,
-    p.self_intro,
-    tierOf(Number(p.score) || 0).label,
-    ...(p.positions || []),
-    ...(p.heroes || []),
-  ];
-  return parts
-    .filter((x) => x !== null && x !== undefined && String(x).trim() !== '')
-    .join(' ')
-    .toLowerCase();
-}
-
 export default function MembersPage({ initialPlayers = [], initialError = null }) {
   // 首屏数据由 getServerSideProps 直出：弱网 / 手机端 JS 没跑起来时，
   // 群友列表照样能看（以前全靠客户端 fetch，一旦那次请求卡住就是空白 + 永远「加载中」）。
   const [players, setPlayers] = useState(initialPlayers);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(initialError);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // 懒初始化：emptyMemberFilters() 每次返回新对象，避免多页共用同一个被 mutate 的字面量
+  const [filters, setFilters] = useState(emptyMemberFilters);
   // 刚复制成功的选手 id，用来把按钮临时切成「已复制」
   const [copiedId, setCopiedId] = useState(null);
   // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
@@ -154,128 +111,22 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
     return m;
   }, [players]);
 
-  // 地区 / 擅长英雄 选项从真实数据生成，按出现次数降序（英雄池可达上百种，写死会漏）
-  const facets = useMemo(() => {
-    const build = (picker) => {
-      const m = new Map();
-      players.forEach((p) => {
-        picker(p).forEach((v) => {
-          const key = String(v === null || v === undefined ? '' : v).trim();
-          if (key) m.set(key, (m.get(key) || 0) + 1);
-        });
-      });
-      return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'zh'));
-    };
-    return {
-      // 地区按「市 · 区」归组：同城的归到一项，否则下拉里会出现一堆
-      // 「中国 广东省 深圳市 南山区」「中国 广东省 深圳市 龙岗区」这样的长选项
-      region: build((p) => [regionShort(p.region)]),
-      hero: build((p) => p.heroes || []),
-    };
-  }, [players]);
+  // 地区 / 擅长英雄 / 段位 / 分数区间的可选项，以及搜索索引。
+  // 计算都搬到了 lib/member-filter.mjs —— 帮派的邀请选择器要用同一份口径，
+  // 各写一份迟早漂移（/api/players 当年就是这么变成两套的）。
+  const facets = useMemo(() => buildRegionHeroFacets(players), [players]);
+  const tierFacets = useMemo(() => buildTierFacets(players), [players]);
+  const scoreFacets = useMemo(() => buildScoreFacets(players), [players]);
+  const searchIndex = useMemo(() => buildSearchIndex(players), [players]);
 
-  // 各段位 / 分数区间命中数
-  const tierFacets = useMemo(
-    () =>
-      TIERS.map((t) => ({
-        ...t,
-        count: players.filter((p) => {
-          const s = Number(p.score) || 0;
-          if (t.min !== null && s < t.min) return false;
-          if (t.max !== null && s >= t.max) return false;
-          return true;
-        }).length,
-      })),
-    [players]
+  // 筛选 + 排序：同组 OR、跨组 AND。实现在 lib/member-filter.mjs，
+  // 与帮派「邀请成员」选择器共用 —— 那边同样要问「谁会打 1 或 5」这类问题。
+  const filtered = useMemo(
+    () => filterMembers(players, filters, searchIndex),
+    [players, filters, searchIndex]
   );
 
-  const scoreFacets = useMemo(
-    () =>
-      SCORE_RANGES.map((r) => ({
-        ...r,
-        count: players.filter((p) => {
-          const raw = p.score;
-          const has = raw !== null && raw !== undefined && Number(raw) > 0;
-          if (r.none) return !has;
-          if (!has) return false;
-          const v = Number(raw);
-          if (r.min !== null && v < r.min) return false;
-          if (r.max !== null && v >= r.max) return false;
-          return true;
-        }).length,
-      })),
-    [players]
-  );
-
-  // 搜索索引：id -> 全字段小写文本，避免每次筛选重复拼接
-  const searchIndex = useMemo(() => {
-    const m = new Map();
-    players.forEach((p) => m.set(p.id, buildHaystack(p)));
-    return m;
-  }, [players]);
-
-  const filtered = useMemo(() => {
-    const tier = TIERS.find((t) => t.key === filters.tier);
-    const score = SCORE_RANGES.find((r) => r.value === filters.score);
-    // 空格分词，每个词都要命中（如「南山 中单」）
-    const kws = String(filters.keyword || '')
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean);
-
-    const list = players.filter((p) => {
-      if (kws.length > 0) {
-        const hay = searchIndex.get(p.id) || '';
-        if (!kws.every((k) => hay.includes(k))) return false;
-      }
-      // 段位
-      if (tier) {
-        const s = Number(p.score) || 0;
-        if (tier.min !== null && s < tier.min) return false;
-        if (tier.max !== null && s >= tier.max) return false;
-      }
-      // 分数区间
-      if (score && score.value !== 'all') {
-        const raw = p.score;
-        const has = raw !== null && raw !== undefined && Number(raw) > 0;
-        if (score.none) {
-          if (has) return false;
-        } else {
-          if (!has) return false;
-          const v = Number(raw);
-          if (score.min !== null && v < score.min) return false;
-          if (score.max !== null && v >= score.max) return false;
-        }
-      }
-      // 擅长位置（多选，OR）
-      if (filters.position.length > 0) {
-        const mine = p.positions || [];
-        if (!filters.position.some((x) => mine.includes(x))) return false;
-      }
-      // 地区（按「市 · 区」归组，与 facets 口径一致）
-      if (filters.region !== '全部' && regionShort(p.region) !== filters.region) return false;
-      // 擅长英雄（多选，OR）
-      if (filters.hero.length > 0) {
-        const mine = p.heroes || [];
-        if (!filters.hero.some((x) => mine.includes(x))) return false;
-      }
-      return true;
-    });
-
-    if (filters.sort === 'score') list.sort((a, b) => (b.score || 0) - (a.score || 0));
-    else if (filters.sort === 'champion') list.sort((a, b) => (b.championships || 0) - (a.championships || 0));
-    else if (filters.sort === 'name') list.sort((a, b) => (a.nickname || '').localeCompare(b.nickname || ''));
-    return list;
-  }, [players, filters, searchIndex]);
-
-  const activeCount =
-    (String(filters.keyword || '').trim() ? 1 : 0) +
-    (filters.tier !== 'all' ? 1 : 0) +
-    (filters.score !== 'all' ? 1 : 0) +
-    (filters.position.length > 0 ? 1 : 0) +
-    (filters.region !== '全部' ? 1 : 0) +
-    (filters.hero.length > 0 ? 1 : 0);
+  const activeCount = countActiveFilters(filters);
 
   const handleImport = async (rows, onProgress) => {
     const list = rows
@@ -366,124 +217,17 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
-          <div className="filter-bar">
-            <div className="filter-field filter-field-search">
-              <label>搜索</label>
-              <div className="filter-search">
-                <input
-                  className={String(filters.keyword || '').trim() ? 'is-active' : ''}
-                  value={filters.keyword}
-                  onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-                  placeholder="昵称 / steamID / 群昵称 / 地区 / 英雄 / 评价…"
-                  aria-label="搜索群友"
-                />
-                {filters.keyword && (
-                  <button
-                    type="button"
-                    className="filter-search-clear"
-                    aria-label="清空搜索"
-                    onClick={() => setFilters({ ...filters, keyword: '' })}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="filter-field">
-              <label>段位</label>
-              <select
-                className={filters.tier !== 'all' ? 'is-active' : ''}
-                value={filters.tier}
-                onChange={(e) => setFilters({ ...filters, tier: e.target.value })}
-              >
-                <option value="all">全部段位（{players.length}）</option>
-                {tierFacets.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}（{t.count}）
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-field">
-              <label>天梯分</label>
-              <select
-                className={filters.score !== 'all' ? 'is-active' : ''}
-                value={filters.score}
-                onChange={(e) => setFilters({ ...filters, score: e.target.value })}
-              >
-                {scoreFacets.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.value === 'all' ? `不限（${r.count} 人有分数）` : `${r.label}（${r.count}）`}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-field">
-              <label>位置</label>
-              <MultiSelectFilter
-                label="擅长位置"
-                allLabel="全部位置"
-                unit="位群友"
-                options={POSITIONS.map((p) => ({
-                  value: p,
-                  count: players.filter((x) => (x.positions || []).includes(p)).length,
-                }))}
-                value={filters.position}
-                onChange={(next) => setFilters({ ...filters, position: next })}
-              />
-            </div>
-
-            <div className="filter-field">
-              <label>地区</label>
-              <select
-                className={filters.region !== '全部' ? 'is-active' : ''}
-                value={filters.region}
-                onChange={(e) => setFilters({ ...filters, region: e.target.value })}
-              >
-                <option value="全部">全部地区（{players.length}）</option>
-                {facets.region.map(([k, n]) => (
-                  <option key={k} value={k}>
-                    {k}（{n}）
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-field">
-              <label>擅长英雄</label>
-              <MultiSelectFilter
-                label="擅长英雄"
-                allLabel="全部英雄"
-                unit="位群友"
-                options={facets.hero.map(([k, n]) => ({ value: k, count: n }))}
-                value={filters.hero}
-                onChange={(next) => setFilters({ ...filters, hero: next })}
-              />
-            </div>
-
-            <div className="filter-field">
-              <label>排序</label>
-              <select value={filters.sort} onChange={(e) => setFilters({ ...filters, sort: e.target.value })}>
-                <option value="score">按天梯分</option>
-                <option value="champion">按冠军数</option>
-                <option value="name">按昵称</option>
-              </select>
-            </div>
-
-            <div className="filter-summary">
-              <span>
-                筛出 <b>{filtered.length}</b> / {players.length} 位
-              </span>
-              {activeCount > 0 && (
-                <button className="btn btn-ghost btn-sm" onClick={() => setFilters(EMPTY_FILTERS)}>
-                  重置
-                </button>
-              )}
-            </div>
-          </div>
+          <MemberFilterPanel
+            filters={filters}
+            onChange={setFilters}
+            players={players}
+            facets={facets}
+            tierFacets={tierFacets}
+            scoreFacets={scoreFacets}
+            resultCount={filtered.length}
+            activeCount={activeCount}
+            onReset={() => setFilters(emptyMemberFilters())}
+          />
 
           {loading && <div className="empty">加载中…</div>}
           {error && (
@@ -503,7 +247,7 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
                 <button
                   className="btn btn-ghost btn-sm"
                   style={{ marginLeft: 10 }}
-                  onClick={() => setFilters(EMPTY_FILTERS)}
+                  onClick={() => setFilters(emptyMemberFilters())}
                 >
                   清除筛选
                 </button>
