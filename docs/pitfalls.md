@@ -154,6 +154,21 @@ cache / standalone 等），服务器解压到 `.next-build` 再 `mv` 原子切�
   - 切换**之后**失败（健康检查非 200）→ 自动回滚快照并 `exit 1`
 - **`NEXT_DIST_DIR`**：`next.config.js` 读这个环境变量决定产物输出到哪。
   服务器构建模式靠它输出到 `.next-build`，本地开发不设它，仍然是 `.next`。
+- **增量的 `.next` 会留下空的 `node_modules`，传上去 API 全 500**（2026-10-23 真出事）：
+  Turbopack 把 `pg`/`xlsx`/`nodemailer` 外部化成 `<包名>-<16位哈希>`，在
+  `.next/node_modules` 放符号链接指向真实包。**保留 cache 的增量构建只建一个空目录、
+  不补链接**（实例：本地空目录，产物里 50 个文件引用 `pg-587764f78a6c7a9c`）。
+  传上去报 `Failed to load external module pg-...: Cannot find module`，
+  所有读写库的接口 500。→ 只要动过 `.next`，就 `rm -rf .next && npm run build` 全量重建；
+  `deploy.sh` 已在 `[2/5]` 加防呆（引用数 > 0 而链接数 = 0 就 exit 1）。
+- **健康检查只打 `/`（静态页），检测不到 API 挂**：静态页不碰数据库，200 是必然的。
+  那次部署「✓ 站点返回 200」后所有接口都是 500，前端只表现为「页面能开但没数据」。
+  → 部署后必须手动 curl 几个依赖库的接口（`/api/map/geo`、`/api/players`、`/api/party`）。
+- **`set -euo pipefail` 下做计数要兜底**：`ls` 对不存在的目录返回 2、`grep` 无匹配返回 1，
+  `pipefail` 会让 `X=$(cmd | wc -l)` 整个赋值失败 —— 脚本在打印原因之前就退出，
+  看到的是「什么都没输出就 exit 2」。写 `X=$( { cmd || true; } | wc -l | tr -d ' ')`。
+- **`set -e` 下别写 `[ cond ] && echo ...`**：条件为假时整句返回 1，脚本直接退出。
+  对方 `deploy.sh` 的注释里提醒过一次，我还是踩了。一律写成 `if ...; then ...; fi`。
 
 ---
 

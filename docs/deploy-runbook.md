@@ -133,6 +133,21 @@ sleep 5 && pm2 list | grep laroja      # uptime 应持续增长，mem 应上百 
 
 注意：恢复的是**旧代码的产物**，站点会回到部署前的版本 —— 先救活，再谈上线。
 
+⚠ 还有一种**更隐蔽**的表现：**页面全部 200，但所有依赖数据库的接口 500**。
+健康检查只打静态首页，发现不了这种。看到这个组合先看日志：
+
+```bash
+pm2 logs laroja-site --lines 50
+```
+
+- 报 `Cannot find module 'pg-xxxxx'`（带哈希的虚拟包名）→ 本地产物里
+  `.next/node_modules` 是空的：增量构建没补符号链接。`rm -rf .next && npm run build`
+  全量重建后重新部署（`deploy.sh` 现在会在 `[2/5]` 直接拦住这种产物）
+- 报别的运行时错 → 先 `./deploy/rollback.sh` 退回上一版
+
+**部署后别只看「站点返回 200」**，至少 curl 一个依赖库的接口确认：
+`curl -s -o /dev/null -w '%{http_code}\n' https://<域名>/api/map/geo?adcode=440300`
+
 ⚠ 还有一种情况要会区分：**整个 `.next` 不存在或没有 `BUILD_ID`**（服务器断电打断了
 `mv` 切换）→ 说明不是运行时错误而是产物缺失，直接用上面这段手工恢复。
 
