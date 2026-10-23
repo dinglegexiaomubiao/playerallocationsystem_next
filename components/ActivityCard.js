@@ -153,14 +153,6 @@ export default function ActivityCard({ post, me, onChanged }) {
             </span>
           </span>
         </div>
-        {post.cost ? (
-          <div className="pg-row">
-            <span className="pg-k">费用</span>
-            <span className="pg-v">
-              <span className="p-tag">{post.cost}</span>
-            </span>
-          </div>
-        ) : null}
         {post.note ? (
           <div className="pg-row">
             <span className="pg-k">备注</span>

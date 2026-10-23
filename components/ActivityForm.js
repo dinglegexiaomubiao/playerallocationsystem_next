@@ -2,7 +2,6 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   ACTIVITY_TYPES,
-  ACTIVITY_COSTS,
   activityTypeLabel,
 } from '../lib/options.mjs';
 import { apiPost } from '../lib/api-client.mjs';
@@ -54,7 +53,6 @@ export default function ActivityForm({ me, onCreated, onClose }) {
     meet_at: defaultMeetAt(),
     duration_min: 120,
     need_people: 4,
-    cost: '',
     note: '',
   }));
   const [busy, setBusy] = useState(false);
@@ -93,7 +91,6 @@ export default function ActivityForm({ me, onCreated, onClose }) {
       tz_offset: new Date().getTimezoneOffset(),
       duration_min: Number(f.duration_min),
       need_people: Number(f.need_people),
-      cost: f.cost || null,
       note: f.note.trim() || null,
     };
     try {
@@ -235,19 +232,6 @@ export default function ActivityForm({ me, onCreated, onClose }) {
           />
           <span>人 · 可直接输入 1~50</span>
         </div>
-      </div>
-
-      <div className="party-section-label">⑤ 费用方式</div>
-      <div className="form-field" style={{ marginBottom: 14 }}>
-        <label>费用</label>
-        <select value={f.cost} onChange={(e) => set('cost', e.target.value)}>
-          <option value="">未指定</option>
-          {ACTIVITY_COSTS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="form-field" style={{ marginBottom: 16 }}>

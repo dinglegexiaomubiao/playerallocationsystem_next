@@ -5,6 +5,7 @@ import useSession from '../../hooks/useSession';
 import ActivityCard from '../../components/ActivityCard';
 import ActivityForm from '../../components/ActivityForm';
 import { ACTIVITY_TYPES } from '../../lib/options.mjs';
+import { regionShort } from '../../lib/regions';
 
 export default function ActivitiesPage() {
   const { me: session, ready } = useSession();
@@ -14,6 +15,7 @@ export default function ActivitiesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('all');
   const [openOnly, setOpenOnly] = useState(false);
   const [showExpired, setShowExpired] = useState(false); // 过期活动折叠区默认收起
   const [q, setQ] = useState('');
@@ -48,6 +50,7 @@ export default function ActivitiesPage() {
     const kw = q.trim().toLowerCase();
     return posts.filter((p) => {
       if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+      if (regionFilter !== 'all' && p.region !== regionFilter) return false;
       // 「只看招募中」= 状态 open 且还没过期（时间过了的招不到人，不算招募中）
       if (openOnly && (p.status !== 'open' || p.expired)) return false;
       if (!kw) return true;
@@ -57,7 +60,6 @@ export default function ActivitiesPage() {
         p.typeLabel,
         p.region,
         p.location,
-        p.cost,
         p.note,
       ]
         .filter(Boolean)
@@ -65,7 +67,16 @@ export default function ActivitiesPage() {
         .toLowerCase();
       return hay.includes(kw);
     });
-  }, [posts, typeFilter, openOnly, q]);
+  }, [posts, typeFilter, regionFilter, openOnly, q]);
+
+  // 地区下拉选项：从现有活动的 region 聚合（RegionPicker 输出的标准化路径，直接做 value）
+  const regionOptions = useMemo(() => {
+    const seen = new Set();
+    posts.forEach((p) => {
+      if (p.region) seen.add(p.region);
+    });
+    return [...seen].sort((a, b) => a.localeCompare(b, 'zh'));
+  }, [posts]);
 
   // 招募中（没过期）排前面正常展示；过期的一律折叠到底部，默认收起
   const activePosts = filtered.filter((p) => !p.expired);
@@ -158,6 +169,21 @@ export default function ActivitiesPage() {
                 {ACTIVITY_TYPES.map((t) => (
                   <option key={t.key} value={t.key}>
                     {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="filter-field">
+              <label>地区</label>
+              <select
+                value={regionFilter}
+                onChange={(e) => setRegionFilter(e.target.value)}
+                className={regionFilter !== 'all' ? 'is-active' : ''}
+              >
+                <option value="all">全部地区</option>
+                {regionOptions.map((r) => (
+                  <option key={r} value={r}>
+                    {regionShort(r) || r}
                   </option>
                 ))}
               </select>
