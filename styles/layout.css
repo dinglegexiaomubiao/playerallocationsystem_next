@@ -2707,6 +2707,35 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .map-fold-body { padding: 0 14px 12px; }
 
 /* ---- 各区人数：横向 chip，一行能铺开 6~7 个，比竖排列表省一半高度 ---- */
+/* 层级导航：人数列表上方的「返回上一级 / 进入下一级」。放在这里而不是面包屑，
+   是因为群友看着人数列表时最想做的就是「进去看看」或「退回去」。 */
+.map-rank-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 0 0 10px; margin: 0 0 10px;
+  border-bottom: 1px solid var(--line-hairline);
+}
+.map-step-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px;
+  font-family: inherit; font-size: .8rem; font-weight: 600;
+  color: var(--text-2); background: var(--bg-subtle);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+/* 按钮里带的层级名：长名字（如「香港特别行政区」）要能截断，别把按钮撑破 */
+.map-step-btn em {
+  font-style: normal; font-weight: 600; color: var(--text);
+  max-width: 8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.map-step-btn:hover:not(:disabled) {
+  color: var(--brand-on-soft); background: var(--brand-soft); border-color: var(--brand);
+}
+.map-step-btn:hover:not(:disabled) em { color: var(--brand-on-soft); }
+.map-step-btn:disabled { opacity: .42; cursor: not-allowed; }
+.map-step-btn > span { font-size: .92em; opacity: .75; }
+.map-step-hint { margin-left: auto; font-size: .76rem; color: var(--text-3); }
+
 .map-rank-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .map-rank-chip {
   display: inline-flex; align-items: baseline; gap: 6px;

@@ -64,6 +64,8 @@ export default function MapPage({ initial, initialError }) {
 
   const activeData = active ? areas.find((a) => a.name === active) : null;
   const covered = areas.filter((a) => a.playerCount || a.foodCount).length;
+  // 「返回上一级」的目标：上级链的最后一个（全国时为空 → 按钮禁用）
+  const parent = ancestors.length ? ancestors[ancestors.length - 1] : null;
 
   /**
    * 右栏只列 14 家，排序按「有群友评价的优先 → 星级高 → 新的」。
@@ -332,6 +334,47 @@ export default function MapPage({ initial, initialError }) {
                       <span className="map-fold-meta">点一下看这里的群友和美食</span>
                     </summary>
                     <div className="map-fold-body">
+                      {/* 层级导航：把「返回 / 下钻」放在人数列表里，
+                          不用再回到地图面包屑或先点区块才能上下走 */}
+                      <div className="map-rank-actions">
+                        <button
+                          type="button"
+                          className="map-step-btn"
+                          disabled={!parent}
+                          onClick={() => parent && goTo(parent.adcode)}
+                          title={parent ? `返回${parent.name}` : '已经在最上一级（全国）'}
+                        >
+                          <span aria-hidden="true">↑</span> 返回上一级
+                          {parent ? <em>{parent.name}</em> : null}
+                        </button>
+                        <button
+                          type="button"
+                          className="map-step-btn"
+                          disabled={!activeData || !activeData.canDrill}
+                          onClick={() => activeData && activeData.canDrill && goTo(activeData.adcode)}
+                          title={
+                            !activeData
+                              ? '先在下面选一个有下级的区块'
+                              : !activeData.canDrill
+                                ? `${activeData.name} 不设下级行政区`
+                                : `进入${activeData.name}`
+                          }
+                        >
+                          进入下一级
+                          {activeData && activeData.canDrill ? <em>{activeData.name}</em> : null}
+                          <span aria-hidden="true">↓</span>
+                        </button>
+                        <span className="map-step-hint">
+                          {activeData
+                            ? activeData.canDrill
+                              ? `可进入 ${activeData.name}`
+                              : `${activeData.name} 没有下级`
+                            : areas.some((a) => a.canDrill)
+                              ? `选一个${depth === 0 ? '省' : depth === 1 ? '市' : '区'}即可进入`
+                              : '已是最下一级'}
+                        </span>
+                      </div>
+
                       <div className="map-rank-chips">
                         {ranking.map((a) => (
                           <button

@@ -185,6 +185,10 @@ sleep 5 && pm2 list | grep laroja      # uptime 应持续增长，mem 应上百 
 npm run heroes:check                                    # 英雄名表与官方数据一致
 BASE=https://dota.playerallocationsystem.online node scripts/check-map-levels.cjs   # 地图层级/几何 22 项
 BASE=https://dota.playerallocationsystem.online node scripts/check-map-panel.cjs    # 地图右栏面板 12 项
+BASE=https://dota.playerallocationsystem.online node scripts/check-map-step.cjs     # 人数卡片的上下级按钮 15 项
 node scripts/check-match-ext.cjs                        # 赛事页外链
 node scripts/a11y-contrast.cjs / /map /members           # 对比度
 ```
+
+⚠ Git Bash 里跑带路径参数的脚本要加 `MSYS_NO_PATHCONV=1`，否则 `/map` 会被当成
+Windows 路径转换（实测会变成 `…/PortableGit/map`，脚本直接报 invalid URL）。
