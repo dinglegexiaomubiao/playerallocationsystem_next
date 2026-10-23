@@ -313,3 +313,17 @@ cache / standalone 等），服务器解压到 `.next-build` 再 `mv` 原子切�
   and table_name like '%关键词%'`。
 - 建表必须归应用账号所有（`OWNER TO laroja` + sequence + GRANT），否则接口 500 报
   `permission denied`（详见 `data-model.md`）。
+
+## 11. 首页动态栏（/api/feed）的两个数据坑
+
+- **`players` 的时间列是 varchar，不是 timestamp**：`created_at`/`updated_at` 都是
+  `character varying`，而且格式混用（`2026-10-23` 和 `2026-10-23T12:40:16.973Z` 都有）。
+  写 `AT TIME ZONE` 会报 `pg_catalog.timezone(text, character varying) does not exist`。
+  → 排序按文本（同一天里带 `T` 的自然排在纯日期前），解析交给 JS 的 `new Date()`
+  —— 两种格式它都认。别的表（matches / party_posts / activity_posts）是 timestamp，
+  那些才需要 `AT TIME ZONE current_setting('TimeZone')`。
+- **聚合多类数据时不能纯按时间取前 N 条**：某一类最近特别活跃（比如今天连着进几个群友），
+  别的类会被整类挤出列表 —— 实测「美食」一条都进不了前 10。做法：每类先保底最新一条，
+  剩下的位子按时间填，最后整体仍按时间倒序输出。
+- 动态栏里「活动/开黑」的 meta 是**活动本身的时间**，右边那列是**多久前发布**。
+  不加「约」前缀两个时间并排会被读成同一件事。
