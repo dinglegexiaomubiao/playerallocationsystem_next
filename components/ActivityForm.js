@@ -5,6 +5,7 @@ import {
   activityTypeLabel,
 } from '../lib/options.mjs';
 import { apiPost } from '../lib/api-client.mjs';
+import { checkInput, LIMITS, moderationMessage } from '../lib/moderation.mjs';
 import RegionPicker from './RegionPicker';
 
 // datetime-local 需要一个不带时区的本地时间字符串；默认给「明天同一钟点」
@@ -79,6 +80,12 @@ export default function ActivityForm({ me, onCreated, onClose }) {
     }
     if (!f.location.trim()) {
       setErr('请填写具体集合地点');
+      return;
+    }
+    // 文本合规初筛：命中违禁词直接提醒，不放行
+    const chk = checkInput(f, { title: LIMITS.title, location: LIMITS.location, note: LIMITS.note });
+    if (!chk.ok) {
+      setErr(moderationMessage(chk));
       return;
     }
     setBusy(true);
@@ -179,7 +186,7 @@ export default function ActivityForm({ me, onCreated, onClose }) {
         <input
           value={f.location}
           onChange={(e) => set('location', e.target.value)}
-          maxLength={160}
+          maxLength={80}
           placeholder="如：海岸城星巴克门口 / 塘朗山荔云登山口"
         />
         <div className="party-hint">地区和具体地点结合，方便大家找到集合点。</div>
@@ -238,6 +245,7 @@ export default function ActivityForm({ me, onCreated, onClose }) {
         <label>备注</label>
         <textarea
           rows={3}
+          maxLength={500}
           value={f.note}
           onChange={(e) => set('note', e.target.value)}
           placeholder="集合细节、需要带什么、交通建议……"

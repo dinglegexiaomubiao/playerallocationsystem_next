@@ -9,6 +9,7 @@ import {
   IdentityError,
 } from '../../lib/player-identity';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
+import { checkText, LIMITS } from '../../lib/moderation.mjs';
 import listCache from '../../lib/list-cache';
 
 // 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
@@ -139,6 +140,34 @@ export default async function handler(req, res) {
         }
         body[key] = n; // 统一成 number，避免字符串形式的数字进 SQL
       }
+
+      // ---------- UGC 合规初筛（群昵称 / 自我评价 / 位置 / 英雄） ----------
+      // 长度超限直接截断（updatePlayer 会写回），违禁词报错提醒。
+      const textChecks = [
+        { get: () => body.group_nickname, max: LIMITS.nickname, label: '群昵称' },
+        { get: () => body.self_intro, max: LIMITS.selfIntro, label: '自我评价' },
+        { get: () => body.region, max: LIMITS.region, label: '所处地区' },
+      ];
+      for (const { get, max, label } of textChecks) {
+        const v = get();
+        if (typeof v !== 'string' || !v) continue;
+        const hit = checkText(v);
+        if (!hit.ok) {
+          return res.status(400).json({ success: false, error: `「${label}」里检测到不合适的内容（${hit.category}），请修改后再提交` });
+        }
+      }
+      for (const key of ['positions', 'heroes']) {
+        if (!Array.isArray(body[key])) continue;
+        body[key] = body[key].map((x) => String(x || '').trim().slice(0, LIMITS.heroItem)).filter(Boolean);
+        for (const item of body[key]) {
+          const hit = checkText(item);
+          if (!hit.ok) {
+            return res.status(400).json({ success: false, error: `「${key === 'heroes' ? '擅长英雄' : '擅长位置'}」里检测到不合适的内容（${hit.category}），请修改后再提交` });
+          }
+        }
+      }
+      if (typeof body.self_intro === 'string') body.self_intro = [...body.self_intro].slice(0, LIMITS.selfIntro).join('');
+      if (typeof body.group_nickname === 'string') body.group_nickname = [...body.group_nickname].slice(0, LIMITS.nickname).join('');
 
       const updated = await updatePlayer(playerId, {
         nickname: cur.nickname,

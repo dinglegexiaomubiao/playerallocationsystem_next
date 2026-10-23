@@ -3,6 +3,7 @@ import { pool, ensurePartyTables } from '../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 import { tierOf } from '../../lib/tier.mjs';
 import { PARTY_MODES, modeLabel, PARTY_STATUS } from '../../lib/options.mjs';
+import { checkInput, LIMITS, moderationMessage } from '../../lib/moderation.mjs';
 
 const toList = (v) =>
   Array.isArray(v)
@@ -230,6 +231,10 @@ export default async function handler(req, res) {
       }
 
       const b = req.body || {};
+      // UGC 合规初筛 + 截断（标题/段位/语音/备注）
+      const chk = checkInput(b, { title: LIMITS.title, my_rank: LIMITS.myRank, want_rank: LIMITS.wantRank, voice_app: LIMITS.voiceApp, note: LIMITS.note });
+      if (!chk.ok) return res.status(400).json({ success: false, error: moderationMessage(chk) });
+      Object.assign(b, chk.cleaned);
       const mode = String(b.mode || '');
       if (!MODE_KEYS.includes(mode)) {
         return res.status(400).json({ success: false, error: '请选择开黑模式' });

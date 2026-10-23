@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { notifySessionChanged } from '../../hooks/useSession';
+import { checkText } from '../../lib/moderation.mjs';
 
 export default function Register() {
   const router = useRouter();
@@ -20,6 +21,10 @@ export default function Register() {
     if (!gameId.trim()) return setError('请填写 Steam 账号');
     if (!/^\d{1,20}$/.test(gameId.trim())) return setError('Steam 账号应为纯数字 ID，例如 114678450');
     if (!groupNickname.trim()) return setError('请填写群昵称');
+    {
+      const hit = checkText(groupNickname);
+      if (!hit.ok) return setError(`群昵称里检测到不合适的内容（${hit.category}），请换一个`);
+    }
     setLoading(true);
 
     try {

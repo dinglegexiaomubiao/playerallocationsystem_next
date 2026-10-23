@@ -15,6 +15,7 @@ import HeroPicker from '../components/HeroPicker';
 import RegionPicker from '../components/RegionPicker';
 import { mergeMyTournaments } from '../lib/tournament-format.mjs';
 import { regionFull } from '../lib/regions';
+import { checkText, LIMITS } from '../lib/moderation.mjs';
 
 export default function Profile() {
   const router = useRouter();
@@ -133,6 +134,25 @@ export default function Profile() {
         setMsg(`${label}请填整数（例如 ${key === 'win_rate' ? 55 : 4950}），不能带小数点`);
         return;
       }
+    }
+
+    // 文本合规初筛：群昵称（含多个备用）、自我评价；命中违禁词直接提醒
+    const textChecks = [
+      { label: '群昵称', value: form.group_nickname },
+      ...(form.group_nicknames_all || []).map((n, i) => ({ label: `群昵称${i > 0 ? '（备用' + (i) + '）' : ''}`, value: n && n.value })),
+      { label: '自我评价', value: form.self_intro },
+    ];
+    for (const { label, value } of textChecks) {
+      if (!value) continue;
+      const hit = checkText(value);
+      if (!hit.ok) {
+        setMsg(`「${label}」里检测到不合适的内容（${hit.category}），请修改后再提交`);
+        return;
+      }
+    }
+    if (form.self_intro && [...form.self_intro].length > LIMITS.selfIntro) {
+      setMsg(`自我评价最多 ${LIMITS.selfIntro} 字，请精简一下`);
+      return;
     }
 
     setSaving(true);
@@ -335,7 +355,7 @@ export default function Profile() {
               </div>
               <div className="form-field" style={{ marginBottom: 14 }}>
                 <label>自我评价</label>
-                <textarea value={form.self_intro || ''} onChange={(e) => setForm({ ...form, self_intro: e.target.value })} rows={2} />
+                <textarea value={form.self_intro || ''} onChange={(e) => setForm({ ...form, self_intro: e.target.value })} rows={2} maxLength={300} />
               </div>
               <PlayerPicker label="默契队友" value={synergy} onChange={setSynergy} placeholder="搜索昵称或 SteamID 添加" />
               <div style={{ height: 14 }} />

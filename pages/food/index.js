@@ -7,6 +7,7 @@ import RegionPicker from '../../components/RegionPicker';
 import useSession from '../../hooks/useSession';
 import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
 import { parseRegion, regionShort } from '../../lib/regions';
+import { checkText } from '../../lib/moderation.mjs';
 
 // 美团人均价格区间（元）。min/max 为 null 表示该侧不设限
 const PRICE_RANGES = [
@@ -280,6 +281,16 @@ export default function FoodPage() {
       alert('请填写店名');
       return;
     }
+    // UGC 合规初筛：店名/特色/地址/推荐人等文本字段
+    for (const key of ['name', 'cuisine', 'address', 'feature', 'recommender', 'nearby']) {
+      const v = form[key];
+      if (!v) continue;
+      const hit = checkText(v);
+      if (!hit.ok) {
+        alert(`美食信息里检测到不合适的内容（${hit.category}），请修改后再提交`);
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -325,6 +336,21 @@ export default function FoodPage() {
     if (!reviewForm.content.trim()) {
       alert('写点什么吧～');
       return;
+    }
+    // UGC 合规初筛：评价 / 署名
+    {
+      const hit = checkText(reviewForm.content);
+      if (!hit.ok) {
+        alert(`评价里检测到不合适的内容（${hit.category}），请修改后再提交`);
+        return;
+      }
+      if (reviewForm.reviewer) {
+        const hitR = checkText(reviewForm.reviewer);
+        if (!hitR.ok) {
+          alert(`署名里检测到不合适的内容（${hitR.category}），请修改后再提交`);
+          return;
+        }
+      }
     }
     const r = await fetch('/api/food-reviews', {
       method: 'POST',
@@ -780,11 +806,13 @@ export default function FoodPage() {
                       <div className="f-review-form">
                         <input
                           placeholder="你的昵称"
+                          maxLength={50}
                           value={reviewForm.reviewer}
                           onChange={(e) => setReviewForm({ ...reviewForm, reviewer: e.target.value })}
                         />
                         <textarea
                           placeholder="饭后评价一下…"
+                          maxLength={300}
                           value={reviewForm.content}
                           onChange={(e) => setReviewForm({ ...reviewForm, content: e.target.value })}
                         />

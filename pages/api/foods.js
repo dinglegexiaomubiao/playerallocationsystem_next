@@ -1,6 +1,18 @@
 import { pool } from '../../lib/db';
 import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
 import { parseRegion } from '../../lib/regions';
+import { checkText } from '../../lib/moderation.mjs';
+
+// 美食 UGC 合规初筛：店名/菜系/地址/特色/推荐人/附近地标，命中违禁即拒绝
+const checkFoodBody = (body) => {
+  for (const key of ['name', 'cuisine', 'address', 'feature', 'recommender', 'nearby']) {
+    const v = body[key];
+    if (typeof v !== 'string' || !v.trim()) continue;
+    const hit = checkText(v);
+    if (!hit.ok) return { key, ...hit };
+  }
+  return null;
+};
 
 let tableReady = false;
 
@@ -114,6 +126,8 @@ export default async function handler(req, res) {
         if (!body.name || !String(body.name).trim()) {
           return res.status(400).json({ success: false, error: '店名不能为空' });
         }
+        const bad = checkFoodBody(body);
+        if (bad) return res.status(400).json({ success: false, error: `美食信息里检测到不合适的内容（${bad.category}），请修改后再提交` });
         const row = await client.query(
           `INSERT INTO public.foods (name, cuisine, area, region, address, feature, recommender, nearby, avg_price, rating, lat, lng)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
@@ -144,6 +158,8 @@ export default async function handler(req, res) {
         if (!body.name || !String(body.name).trim()) {
           return res.status(400).json({ success: false, error: '店名不能为空' });
         }
+        const bad = checkFoodBody(body);
+        if (bad) return res.status(400).json({ success: false, error: `美食信息里检测到不合适的内容（${bad.category}），请修改后再提交` });
         const row = await client.query(
           `UPDATE public.foods
            SET name=$1, cuisine=$2, area=$3, region=$4, address=$5, feature=$6, recommender=$7,

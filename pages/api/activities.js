@@ -8,6 +8,7 @@ import {
   ACTIVITY_STATUS,
   ACTIVITY_COSTS,
 } from '../../lib/options.mjs';
+import { checkInput, LIMITS, moderationMessage } from '../../lib/moderation.mjs';
 
 const clip = (v, n) =>
   v === null || v === undefined ? null : String(v).trim().slice(0, n) || null;
@@ -199,6 +200,10 @@ export default async function handler(req, res) {
 
       const me = await getMe(client, session.name);
       const b = req.body || {};
+      // UGC 合规初筛 + 截断（标题/地点/备注）
+      const chk = checkInput(b, { title: LIMITS.title, location: LIMITS.location, note: LIMITS.note });
+      if (!chk.ok) return res.status(400).json({ success: false, error: moderationMessage(chk) });
+      Object.assign(b, chk.cleaned);
 
       const type = String(b.type || '');
       if (!TYPE_KEYS.includes(type)) {
