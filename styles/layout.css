@@ -2418,7 +2418,14 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
    模式 tab → 版本下拉 → 汇总 → 近20场英雄格 → 对局列表。
    胜=绿(--ok)、负=红(--color-danger)，和站内其他处保持一致。 */
 .mh { min-width: 0; }
-.mh-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+/* 头部即折叠开关（button）：外观与原 div 一致，可点击展开/收起 */
+.mh-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  width: 100%; background: none; border: 0; padding: 0; margin: 0; text-align: left;
+  font-family: inherit; cursor: pointer;
+}
+.mh-head:hover h4 { color: var(--brand); }
+.mh-head.open .ai-caret { transform: rotate(180deg); }
 .mh-src { font-size: .74rem; color: var(--text-3); display: inline-flex; align-items: center; gap: 8px; }
 .mh-refresh { background: none; border: 0; color: var(--text-3); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; padding: 0; }
 .mh-refresh:hover { color: var(--brand); }

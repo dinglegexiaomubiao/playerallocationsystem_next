@@ -38,6 +38,15 @@ export default function MatchHistory({ accountId, accounts }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // 折叠状态记在 localStorage（与 AI 分析面板同款体验），默认展开
+  const [open, setOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem('match_history_open') !== '0';
+    } catch {
+      return true;
+    }
+  });
   const [acc, setAcc] = useState(primaryAccount);
   const [mode, setMode] = useState('all');
   const [patch, setPatch] = useState('all');
@@ -66,6 +75,18 @@ export default function MatchHistory({ accountId, accounts }) {
     },
     [acc]
   );
+
+  const toggleOpen = () => {
+    setOpen((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem('match_history_open', next ? '1' : '0');
+      } catch {
+        /* 隐私模式下写不了，忽略 */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     load(false);
@@ -109,15 +130,20 @@ export default function MatchHistory({ accountId, accounts }) {
 
   return (
     <div className="side-card mh">
-      <div className="mh-head">
+      {/* 头部即折叠开关：收起状态存 localStorage，展开后内容与原来一致 */}
+      <button
+        type="button"
+        className={'mh-head' + (open ? ' open' : '')}
+        onClick={toggleOpen}
+        aria-expanded={open}
+      >
         <h4>最近比赛</h4>
-        <span className="mh-src">
-          来自 OpenDota
-          <button type="button" className="mh-refresh" onClick={() => load(true)} title="重新拉取">
-            刷新
-          </button>
-        </span>
-      </div>
+        <span className="mh-src">来自 OpenDota</span>
+        <span className="ai-caret" aria-hidden="true">▾</span>
+      </button>
+
+      {open && (
+      <>
 
       {/* 多个 Steam 号时给切换器：对局按账号分开，主号没数据也能看小号 */}
       {accountList.length > 1 && (
@@ -195,6 +221,9 @@ export default function MatchHistory({ accountId, accounts }) {
                 </option>
               ))}
             </select>
+            <button type="button" className="mh-refresh" onClick={() => load(true)} title="重新拉取">
+              刷新
+            </button>
             {data.lifetime && (
               <span className="mh-lifetime">
                 生涯 {data.lifetime.win} 胜 / {data.lifetime.lose} 负 · {data.lifetime.winRate}%
@@ -321,6 +350,8 @@ export default function MatchHistory({ accountId, accounts }) {
             </button>
           )}
         </>
+      )}
+      </>
       )}
     </div>
   );
