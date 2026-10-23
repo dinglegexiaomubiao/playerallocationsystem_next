@@ -20,7 +20,8 @@
     "css:dup": "node scripts/css-dup-check.cjs",
     "a11y": "node scripts/a11y-contrast.cjs",
     "shoot:theme": "node scripts/shoot-theme.cjs",
-    "theme:check": "node scripts/theme-check.cjs"
+    "theme:check": "node scripts/theme-check.cjs",
+    "docs:pitfalls": "node scripts/sync-pitfalls-doc.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

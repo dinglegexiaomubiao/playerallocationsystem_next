@@ -1,7 +1,7 @@
 # 部署与应急手册
 
 > 给所有会碰这台服务器的人。踩坑的完整技术细节在
-> `.workbuddy/memory/notes/pitfalls.md`，这份只讲「怎么做」。
+> [`docs/pitfalls.md`](./pitfalls.md)，这份只讲「怎么做」。
 >
 > 背景：2026-10-23 一天内出了两次事故 —— 上午被并行开发线覆盖了功能，傍晚部署把
 > 整台机器搞到假死 20 分钟。两次都是可预防的，所以有了这份手册。
@@ -130,7 +130,7 @@ sleep 5 && pm2 list | grep laroja      # uptime 应持续增长，mem 应上百 
 | 环境变量 | `/www/wwwroot/laroja/.env.local`（不在仓库里） |
 | PM2 日志 | `/www/wwwroot/laroja/logs/`、`pm2 logs laroja-site` |
 | 构建日志 | `/tmp/laroja-build.log` |
-| 完整踩坑表 | `.workbuddy/memory/notes/pitfalls.md` |
+| 完整踩坑表 | `docs/pitfalls.md` |
 
 ## 六、改完代码的自检
 
