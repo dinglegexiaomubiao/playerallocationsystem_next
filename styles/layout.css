@@ -1728,6 +1728,13 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .pg-expired { margin-left: 6px; }
 .pg-need { color: var(--text-3); font-weight: 500; }
 
+/* 数据来源声明条（赛事信息 / 群友美食页顶部） */
+.src-note {
+  margin-bottom: 16px; padding: 10px 14px;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--bg-subtle); color: var(--text-2); font-size: .84rem; line-height: 1.6;
+}
+
 /* 过期招募折叠区（开黑 / 活动招募共用）：默认收起，点标题展开 */
 .pg-expired-fold { margin-top: 20px; }
 .pg-expired-toggle {
@@ -2482,22 +2489,25 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .mh-best-i { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
 .mh-best-i b { color: var(--gold); font-weight: 700; margin-left: 4px; }
 
-.mh-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; margin: 10px 0 18px; }
+/* 近 20 场英雄格：20 列让每格只有原来 10 列的一半大 */
+.mh-grid { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); gap: 4px; margin: 10px 0 18px; }
 .mh-tile {
-  position: relative; display: block; border-radius: 7px; overflow: hidden;
+  position: relative; display: block; border-radius: 5px; overflow: hidden;
   aspect-ratio: 1 / 1; background: var(--bg-card); border: 1px solid var(--border);
   transition: border-color .15s, transform .15s;
 }
 .mh-tile .mh-hero { width: 100%; height: 100%; border-radius: 0; flex: none; }
-.mh-tile.win { border-color: rgba(111, 191, 115, .45); box-shadow: inset 0 -3px 0 var(--ok); }
-.mh-tile.lose { border-color: rgba(208, 80, 68, .42); box-shadow: inset 0 -3px 0 var(--color-danger); }
+.mh-tile.win { border-color: rgba(111, 191, 115, .45); box-shadow: inset 0 -2px 0 var(--ok); }
+.mh-tile.lose { border-color: rgba(208, 80, 68, .42); box-shadow: inset 0 -2px 0 var(--color-danger); }
 .mh-tile:hover { border-color: var(--brand); transform: translateY(-1px); }
+/* 右下角胜负角标：胜=绿底、负=红底，字用黑色（白底看不清） */
 .mh-tile i {
-  position: absolute; right: 2px; bottom: 2px; font-style: normal;
-  font-size: .57rem; font-weight: 700; line-height: 1.4;
-  color: var(--bg-page); background: rgba(240, 234, 226, .84);
-  border-radius: 3px; padding: 0 3px;
+  position: absolute; right: 1px; bottom: 1px; font-style: normal;
+  font-size: .52rem; font-weight: 700; line-height: 1.4;
+  color: #111; background: var(--ok);
+  border-radius: 3px; padding: 0 2px;
 }
+.mh-tile.lose i { background: var(--color-danger); }
 
 .mh-hero { width: 26px; height: 26px; border-radius: 6px; overflow: hidden; flex: 0 0 26px; display: block; background: var(--bg-card); }
 .mh-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -2534,7 +2544,7 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .mh-more:hover { color: var(--brand); border-color: var(--brand); }
 
 @media (max-width: 720px) {
-  .mh-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .mh-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); }
   .mh-row { grid-template-columns: 76px minmax(0, 1.4fr) 80px minmax(0, 1fr); }
   .mh-row > :nth-child(5), .mh-row > :nth-child(6) { display: none; }
   .mh-sum-cells { margin-left: 0; }

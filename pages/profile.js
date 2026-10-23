@@ -6,6 +6,8 @@ import useSession from '../hooks/useSession';
 import PlayerPicker from '../components/PlayerPicker';
 import PlayerBind from '../components/PlayerBind';
 import MyTournamentTable from '../components/MyTournamentTable';
+import MatchHistory from '../components/member/MatchHistory';
+import AiPanel from '../components/member/AiPanel';
 import OrderedChips from '../components/OrderedChips';
 import PositionPicker from '../components/PositionPicker';
 import IdentityEditor from '../components/IdentityEditor';
@@ -386,6 +388,22 @@ export default function Profile() {
               </div>
             </div>
           )}
+
+          {/* 最近比赛 + AI 战力分析：与群友详情页（/members/[id]）同一套组件 */}
+          <div className="detail-grid" style={{ marginTop: 18 }}>
+            <div className="detail-main">
+              <MatchHistory accountId={profile.game_id} accounts={profile.steamIds} />
+            </div>
+            <div className="detail-aside">
+              <AiPanel
+                player={profile}
+                nameMap={nameMap}
+                me={me}
+                sessionReady={ready}
+                loginHref="/login?from=/profile"
+              />
+            </div>
+          </div>
 
           <h2 className="sec-title">我的赛事（{tournaments.length}）</h2>
           <MyTournamentTable items={tournaments} />

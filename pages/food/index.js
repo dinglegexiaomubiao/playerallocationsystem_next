@@ -496,6 +496,10 @@ export default function FoodPage() {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          {/* 数据来源声明 */}
+          <div className="src-note">
+            <span>群友美食由群友提供，感谢每一位提供信息的群友。</span>
+          </div>
           {showForm && (
             <form className="food-form" onSubmit={submit}>
               <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 14 }}>
