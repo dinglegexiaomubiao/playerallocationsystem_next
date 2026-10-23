@@ -310,46 +310,77 @@
   }
 }
 
-/* ==================== 首页 · 最近动态 ====================
-   比赛 / 开黑 / 活动 / 群友 / 美食 / 功能更新混排成一条时间线。
-   刻意做成「信息行 + 分隔线」而不是卡片堆：首页第一屏已经有 Hero 和四宫格，
-   再摆一堆卡片会把层次压平。 */
-.home-feed {
-  margin-top: 34px;
+/* ==================== 首页 · Hero 右栏的最近动态 ====================
+   和「今晚谁来守高地」同一张卡：第一屏只说一件事 —— 社区里现在在发生什么。
+   右栏只有 0.6fr 宽，所以每条压成一行（标签 + 标题 + 多久前），标题超长省略。
+   一条动态都没有时才退回氛围图（.home-shot），不至于留一块空白。 */
+.home-hero-feed {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-left: 1px solid var(--line-hairline);
+  padding-left: 22px;
 }
-.home-feed-hint {
-  font-size: .74rem;
+.home-hero-feed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.home-hero-feed-head h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--text);
+}
+.home-hero-feed-more {
+  font-size: 0.7rem;
   color: var(--text-3);
-  letter-spacing: .02em;
 }
-.home-feed-list {
+.home-hero-feed-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--line-hairline);
+  flex: 1 1 auto;
 }
-.home-feed-row {
+.home-hero-feed-row {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 9px 2px;
-  border-bottom: 1px solid var(--line-hairline);
+  gap: 8px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line-hairline);
   text-decoration: none;
   color: var(--text);
-  transition: background .14s ease;
 }
-.home-feed-row:hover { background: var(--bg-subtle); }
-.home-feed-row:hover .home-feed-title { color: var(--brand); }
+.home-hero-feed-list li:first-child .home-hero-feed-row { border-top: 0; }
+.home-hero-feed-row:hover .home-hero-feed-title { color: var(--brand); }
+.home-hero-feed-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+.home-hero-feed-at {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
 
-/* 类型标签：六类各一档低饱和色，靠色相区分而不是靠六个不同的花哨底 */
+/* 类型标签：六类各一档低饱和色，靠色相区分。Hero 里窄，字号比原来小半档 */
 .home-feed-tag {
   flex: 0 0 auto;
-  min-width: 2.9em;
+  min-width: 2.4em;
   text-align: center;
   padding: 2px 0;
-  font-size: .7rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   border-radius: 3px;
   background: var(--bg-subtle);
   color: var(--text-2);
@@ -361,35 +392,12 @@
 .home-feed-tag.is-food { background: var(--color-warning-bg); color: var(--color-warning); }
 .home-feed-tag.is-feature { background: var(--bg-subtle); color: var(--text-2); }
 
-.home-feed-title {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: .88rem;
-}
-.home-feed-sub {
-  flex: 0 0 auto;
-  max-width: 12em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: .76rem;
-  color: var(--text-3);
-}
-.home-feed-at {
-  flex: 0 0 auto;
-  min-width: 4.2em;
-  text-align: right;
-  font-size: .74rem;
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
-}
-
-/* 手机上把次要信息让掉，先保住标题和时间的可读性 */
-@media (max-width: 640px) {
-  .home-feed-sub,
-  .home-feed-hint { display: none; }
-  .home-feed-title { font-size: .84rem; }
+/* 窄屏 Hero 变单列，动态从「右侧栏」变成「文案下面一块」，分割线跟着转成横的 */
+@media (max-width: 900px) {
+  .home-hero-feed {
+    border-left: 0;
+    border-top: 1px solid var(--line-hairline);
+    padding-left: 0;
+    padding-top: 14px;
+  }
 }

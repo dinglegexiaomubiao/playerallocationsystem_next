@@ -62,6 +62,9 @@ const relTime = (iso) => {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
+/** Hero 右栏最多摆几条动态 —— 再多会把首屏撑高，剩下的看列表本身的信息密度 */
+const FEED_ON_HERO = 6;
+
 export default function Home() {
   const [tours, setTours] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -183,38 +186,38 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 氛围图放右栏做配图，不再全宽铺满 —— 首页第一屏要留给信息 */}
-            <div className="home-shot">
-              <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
-            </div>
-          </section>
-
-          {/* ==================== 最近动态 ====================
-              比赛 / 活动 / 开黑 / 群友 / 美食 / 功能更新混排，按时间倒序。
-              数据来自 /api/feed 一次聚合；某一类没有内容就不出现在列表里，
-              不摆「暂无」占位 —— 动态栏空着比摆一排「暂无」好看。 */}
-          {feed.length > 0 && (
-            <section className="home-feed">
-              <div className="home-sec-head">
-                <h2>最近动态</h2>
-                <span className="home-feed-hint">比赛 · 开黑 · 活动 · 群友 · 美食 · 功能更新</span>
+            {/* 右栏：有动态就摆动态（信息优先），一条都没有才退回氛围图兜底。
+                动态和「今晚谁来守高地」同一张卡，是为了让第一屏只说一件事：
+                「现在社区里在发生什么」。 */}
+            {feed.length > 0 ? (
+              <div className="home-hero-feed">
+                <div className="home-hero-feed-head">
+                  <h2>最近动态</h2>
+                  <span className="home-hero-feed-more">
+                    {/* 别写「共 N 条」—— 这里只摆 6 条，写了会让人以为还有地方能看全 */}
+                    {feed.length > FEED_ON_HERO ? `最近 ${FEED_ON_HERO} 条` : ''}
+                  </span>
+                </div>
+                <ul className="home-hero-feed-list">
+                  {feed.slice(0, FEED_ON_HERO).map((it, i) => (
+                    <li key={`${it.kind}-${i}`}>
+                      <Link href={it.href || '/'} className="home-hero-feed-row">
+                        <span className={`home-feed-tag is-${it.kind}`}>{it.label}</span>
+                        <span className="home-hero-feed-title">{it.title}</span>
+                        <time className="home-hero-feed-at" dateTime={it.at}>
+                          {relTime(it.at)}
+                        </time>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="home-feed-list">
-                {feed.map((it, i) => (
-                  <li key={`${it.kind}-${i}`}>
-                    <Link href={it.href || '/'} className="home-feed-row">
-                      <span className={`home-feed-tag is-${it.kind}`}>{it.label}</span>
-                      <span className="home-feed-title">{it.title}</span>
-                      {it.meta ? <span className="home-feed-sub">{it.meta}</span> : null}
-                      <time className="home-feed-at" dateTime={it.at}>
-                        {relTime(it.at)}
-                      </time>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
+            ) : (
+              <div className="home-shot">
+                <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
+              </div>
+            )}
+          </section>
 
           {/* ==================== 2×2 入口 ==================== */}
           <div className="home-grid">
