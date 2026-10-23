@@ -1357,6 +1357,19 @@ a { text-decoration: none; color: inherit; }
 .pg-mode-normal { background: var(--brand-soft); color: var(--brand-on-soft); }
 .pg-mode-single_draft { background: var(--gold-soft); color: var(--gold); }
 .pg-mode-turbo { background: var(--green-soft); color: var(--ok); }
+
+/* 活动类型徽标（约饭/爬山/打球/钓鱼/其他）—— 复用既有主题色，明暗主题都安全 */
+.act-type {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+}
+.act-type-meal { background: var(--gold-soft); color: var(--gold); }
+.act-type-hike { background: var(--green-soft); color: var(--ok); }
+.act-type-sport { background: var(--brand-soft); color: var(--brand-on-soft); }
+.act-type-fishing { background: var(--accent-soft); color: var(--brand-on-soft); }
+.act-type-other { background: var(--bg-subtle); color: var(--text-2); }
+/* 活动地点（具体地址） */
+.act-loc { font-weight: 600; color: var(--text); }
 .pg-time {
   margin-left: auto; font-size: .82rem; color: var(--text-2); font-weight: 600;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
@@ -1477,6 +1490,8 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 }
 .party-section-label:first-of-type { margin-top: 0; }
 .party-modes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+/* 活动类型有 5 项，改用自适应列数，避免 5th 项被挤到下一行还错位 */
+.act-types { grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); }
 .party-mode-opt {
   display: flex; flex-direction: column; gap: 3px; align-items: flex-start;
   padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; text-align: left;

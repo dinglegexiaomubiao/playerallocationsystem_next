@@ -28,6 +28,8 @@ const ACCOUNT_NAME_TABLES = [
   ['page_views', '浏览记录'],
   ['party_posts', '开黑组队帖'],
   ['party_signups', '开黑报名'],
+  ['activity_posts', '活动招募帖'],
+  ['activity_signups', '活动报名'],
   ['support_reports', '问题反馈'],
 ];
 

@@ -11,6 +11,7 @@ import { footerAccountItems } from '../lib/nav-items.mjs';
 const PRIMARY_NAV = [
   { href: '/', label: '首页' },
   { href: '/party', label: '开黑组队' },
+  { href: '/activities', label: '活动招募' },
   { href: '/tournaments', label: '赛事信息' },
   { href: '/members', label: '群友信息' },
   { href: '/map', label: '群友分布' },
