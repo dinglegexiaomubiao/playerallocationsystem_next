@@ -18,8 +18,12 @@ curl -s https://dota.playerallocationsystem.online/api/version
 
 # 2) 最近几次部署的 commit（每次部署都会写 meta.txt）
 ssh root@47.115.130.170 'cat /www/wwwroot/laroja-backups/*/meta.txt | grep commit'
+```
 
-# 3) 磁盘现在能不能扛住构建
+第 3 项「磁盘测速」**脚本已经自动做了**（见第二节 `[0/5]`），你不用手动跑；想提前确认
+可以自己量一次：
+
+```bash
 ssh root@47.115.130.170 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=direct 2>&1 | tail -1; rm -f /tmp/iotest'
 ```
 
@@ -28,7 +32,7 @@ ssh root@47.115.130.170 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=di
 | 检查 | 通过 | 不通过怎么办 |
 |---|---|---|
 | 第 2 步最新 commit | 在**你的**本地 `git cat-file -t <sha>` 里存在 | **有别的线在推，先停手**，弄清对方改了什么再部署 |
-| 第 3 步写速 | **> 100 MB/s**（正常 222 MB/s） | 云盘被限流，等半小时到几小时，别硬上 |
+| 磁盘写速（脚本自动测） | **≥ 100 MB/s**（正常 220~240） | 脚本会直接拒绝部署。等 30 分钟到几小时额度恢复；应急用 `--force`，但接受整机假死风险 |
 
 ---
 
@@ -37,10 +41,12 @@ ssh root@47.115.130.170 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=di
 ```bash
 ./deploy/deploy.sh                # 本地构建校验 + 上传 + 服务器构建
 ./deploy/deploy.sh --skip-build   # 本地已经 build 过，省掉校验
+./deploy/deploy.sh --force        # 跳过磁盘测速（限流时强行部署，风险自负）
 ```
 
-脚本会自动：快照 → 打包上传 → 服务器构建（`nice`+`ionice` 降优先级）→ 校验产物完整性
-→ 重启 → 健康检查。**任何一步失败都会自动回滚到本次部署前的快照**，不会留 502 在线上。
+脚本会自动：**磁盘测速** → 快照 → 打包上传 → 服务器构建（`nice`+`ionice` 降优先级）
+→ 校验产物完整性 → 重启 → 健康检查。**任何一步失败都会自动回滚到本次部署前的快照**，
+不会留 502 在线上。快照阶段（压缩源码 + 复制产物）同样降优先级。
 
 部署完成后必看两行输出：
 

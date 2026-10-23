@@ -7,17 +7,19 @@
 #   ./deploy/deploy.sh --deps       # 依赖有变化时（改了 package.json）
 #   ./deploy/deploy.sh --skip-build # 跳过本地构建校验，赶时间用
 #   ./deploy/deploy.sh --no-backup  # 不备份（省磁盘，不建议）
+#   ./deploy/deploy.sh --force      # 跳过服务器磁盘测速（有整机假死风险，慎用）
 #
 # 它做的事：
+#   0. 量一下服务器磁盘写速，被限流就直接拒绝部署（见下）
 #   1. 本地打包源码（排除 node_modules / .next / .env.local 等）
 #   2. scp 上传到服务器
 #   3. 【服务器】把当前正在跑的版本快照到 /www/wwwroot/laroja-backups/<时间戳>/
 #        - source.tar.gz  当前源码
-#        - .next/         当前构建产物（135M 左右，直接复制，回滚时不用重新 build）
+#        - .next/         当前构建产物（18M 左右，直接复制，回滚时不用重新 build）
 #        - meta.txt       时间 / 部署 commit / pm2 重启次数
 #      只保留最近 5 个快照，更早的自动删掉
-#   4. 解压新代码 → 构建 → 重启 PM2 → 健康检查
-#   5. 如果构建失败，自动用刚才的快照回滚，站点不会挂着白屏
+#   4. 解压新代码 → 构建 → 校验产物完整性 → 重启 PM2 → 健康检查
+#   5. 构建失败 / 产物不完整 / 健康检查不过，都会自动用快照回滚
 #
 # 回滚：./deploy/rollback.sh            # 回到上一次部署前的版本
 #       ./deploy/rollback.sh --list     # 看有哪些备份可回
@@ -44,14 +46,19 @@ SSH_OPTS="-i $KEY -o StrictHostKeyChecking=no -o BatchMode=yes"
 WITH_DEPS=0
 SKIP_BUILD=0
 NO_BACKUP=0
+SKIP_DISK_CHECK=0
 for arg in "$@"; do
   case "$arg" in
     --deps) WITH_DEPS=1 ;;
     --skip-build) SKIP_BUILD=1 ;;
     --no-backup) NO_BACKUP=1 ;;
+    --force) SKIP_DISK_CHECK=1 ;;
     *) echo "未知参数: $arg"; exit 1 ;;
   esac
 done
+
+# 磁盘写速阈值（MB/s）。正常 222，被限流通常掉到几十。可用环境变量覆盖。
+MIN_WRITE_MB="${DEPLOY_MIN_WRITE_MB:-100}"
 
 # 切到项目根目录（脚本可能在 deploy/ 下被调用）
 cd "$(dirname "$0")/.."
@@ -63,6 +70,41 @@ echo " 部署到 $HOST"
 echo " 版本 commit: $COMMIT"
 echo " 时间: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
+
+# ---------- 0. 服务器磁盘测速（部署前置闸门）----------
+# 2026-10-23 的教训：全量构建打满云盘 BPS，内核进入无限 I/O 等待（启动参数
+# nvme_core.io_timeout=4294967295 意味着请求永不超时），整机假死 20 分钟 ——
+# ssh 发不出 banner、nginx 返回 000，只能去阿里云控制台重启，站点 502。
+# 所以部署前先量写速：被限流就直接拒绝，别等构建跑到一半才发现。
+# 应急用 --force 跳过（等于接受整机假死的风险）。
+if [ "$SKIP_DISK_CHECK" -eq 0 ]; then
+  echo ""
+  echo "[0/5] 服务器磁盘测速（阈值 ${MIN_WRITE_MB}MB/s）"
+  SPEED_RAW=$(ssh $SSH_OPTS "$HOST" '
+    OUT=$(dd if=/dev/zero of=/tmp/laroja-iotest bs=1M count=100 oflag=direct 2>&1 | tail -1)
+    rm -f /tmp/laroja-iotest
+    echo "$OUT" | sed -E "s/.* ([0-9.]+) ([kMG]B)\/s.*/\1 \2/"
+  ' 2>/dev/null || echo '')
+  SPEED_VAL=$(echo "$SPEED_RAW" | awk '{print $1}')
+  SPEED_UNIT=$(echo "$SPEED_RAW" | awk '{print $2}')
+  case "$SPEED_UNIT" in
+    GB) SPEED_MB=$(awk "BEGIN{printf \"%.0f\", ${SPEED_VAL:-0}*1024}") ;;
+    MB) SPEED_MB=$(awk "BEGIN{printf \"%.0f\", ${SPEED_VAL:-0}}") ;;
+    kB) SPEED_MB=$(awk "BEGIN{printf \"%.0f\", ${SPEED_VAL:-0}/1024}") ;;
+    *)  SPEED_MB=0 ;;
+  esac
+
+  if [ "$SPEED_MB" -lt "$MIN_WRITE_MB" ]; then
+    echo "  ✗ 磁盘写速 ${SPEED_MB}MB/s（原始输出：${SPEED_RAW:-取不到}）"
+    echo ""
+    echo "    低于阈值 ${MIN_WRITE_MB}MB/s，云盘很可能正被限流（阿里云 SysDiskBPS 报警）。"
+    echo "    此时构建会打满 I/O，内核把所有进程挂起，sshd/nginx 一起死，只能重启机器。"
+    echo "    等 30 分钟到几小时、额度恢复后再试。"
+    echo "    确认要现在上：./deploy/deploy.sh --force（风险自负）"
+    exit 1
+  fi
+  echo "  ✓ 写速 ${SPEED_MB}MB/s（≥ ${MIN_WRITE_MB}MB/s）"
+fi
 
 # ---------- 1. 本地构建校验 ----------
 if [ "$SKIP_BUILD" -eq 0 ]; then
@@ -113,15 +155,32 @@ TS=$(date +%Y%m%d-%H%M%S)
 SNAP="$SNAP_ROOT/$TS"
 mkdir -p "$SNAP"
 
-# 1) 源码快照（排除依赖/产物/密钥，体积约 10~20M）
-tar -czf "$SNAP/source.tar.gz" \
+# 快照要压 38M 源码 + 复制约 14M 产物（已排除 40M 的 Turbopack 缓存），
+# 是这次部署里第二个 I/O 高峰（第一个是构建）。同样降优先级，保证 ssh/nginx
+# 始终抢得到带宽。
+NICE="nice -n 15"
+if command -v ionice > /dev/null 2>&1; then
+  NICE="nice -n 15 ionice -c 2 -n 7"
+fi
+
+# 1) 源码快照（排除依赖/产物/密钥）
+$NICE tar -czf "$SNAP/source.tar.gz" \
   --exclude=./node_modules --exclude=./.next --exclude=./.git \
   --exclude=./.cache --exclude=./.env.local --exclude=./logs --exclude='*.log' \
   . 2>/dev/null
 
-# 2) 构建产物快照：直接复制 135M，回滚时不用重新 build，快得多
+# 2) 构建产物快照：回滚时不用重新 build，直接换上就能跑
+#    ⚠ 必须排除 .next/cache（40M）：那是 Turbopack 的构建加速缓存，next start 不读、
+#    回滚也用不上。不排除的话每次部署白复制 40M，5 个快照白占 200M 磁盘。
+#    ⚠ 不能改用硬链接 cp -al：构建会原地覆盖 BUILD_ID / build-manifest.json 这些
+#    同名文件，硬链接会让快照跟着一起被改，回滚时拿到半新半旧的东西。
 if [ -d .next ]; then
-  cp -a .next "$SNAP/.next"
+  if command -v rsync > /dev/null 2>&1; then
+    $NICE rsync -a --exclude=/cache .next/ "$SNAP/.next/"
+  else
+    $NICE cp -a .next "$SNAP/.next"
+    rm -rf "$SNAP/.next/cache"
+  fi
 fi
 
 # 3) 元信息
