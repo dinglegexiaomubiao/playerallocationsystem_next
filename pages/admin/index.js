@@ -758,6 +758,7 @@ export default function Admin({ denied, todo, pending, feedback }) {
               <Link className="adm-tab" href="/admin/members">群友管理</Link>
               <Link className="adm-tab" href="/admin/food">美食管理</Link>
               <Link className="adm-tab" href="/admin/party">开黑管理</Link>
+              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
               <Link className="adm-tab" href="/main">阵容分配</Link>
               <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
               <Link className="adm-tab" href="/admin/support">群友反馈</Link>

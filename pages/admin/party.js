@@ -188,6 +188,7 @@ export default function AdminPartyPage({ denied }) {
             <Link className="adm-tab" href="/admin">赛事管理</Link>
             <Link className="adm-tab" href="/admin/members">群友管理</Link>
             <Link className="adm-tab" href="/admin/food">美食管理</Link>
+            <Link className="adm-tab" href="/admin/activities">活动管理</Link>
             <span className="adm-tab active">开黑管理</span>
             <Link className="adm-tab" href="/main">阵容分配</Link>
             <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
