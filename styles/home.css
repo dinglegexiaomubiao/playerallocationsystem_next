@@ -313,13 +313,19 @@
 /* ==================== 首页 · Hero 右栏的最近动态 ====================
    和「今晚谁来守高地」同一张卡：第一屏只说一件事 —— 社区里现在在发生什么。
    右栏只有 0.6fr 宽，所以每条压成一行（标签 + 标题 + 多久前），标题超长省略。
-   一条动态都没有时才退回氛围图（.home-shot），不至于留一块空白。 */
+   一条动态都没有时才退回氛围图（.home-shot），不至于留一块空白。
+
+   ⚠ 高度是「预留」的，不随内容走：切分类 Tab 只换列表内容，卡片高度必须一动不动。
+   原先按内容撑高，6 条 → 2 条时整张 Hero 卡矮了一百多像素，视口里的东西全往上跳。 */
 .home-hero-feed {
   display: flex;
   flex-direction: column;
   min-width: 0;
   border-left: 1px solid var(--line-hairline);
   padding-left: 22px;
+  /* 行数与行高做成变量，只为了下面那条「预留固定高度」。
+     --feed-rows 由 pages/index.js 的 FEED_ON_HERO 内联进来，别在这里再写死一个 6。 */
+  --feed-row-h: 34px;
 }
 .home-hero-feed-head {
   display: flex;
@@ -348,12 +354,17 @@
   margin: 0;
   padding: 0;
   flex: 1 1 auto;
+  /* 切 Tab 时列表条数会变（6 条 → 2 条 → 0 条），Hero 是 grid + align-items:stretch，
+     右栏一变矮整张卡跟着缩，看着像页面在抖。所以按「全部」的最大条数把高度钉住。 */
+  min-height: calc(var(--feed-rows, 6) * var(--feed-row-h));
 }
 .home-hero-feed-row {
   display: flex;
-  align-items: baseline;
+  /* 行高固定：标签 / 版本号 / 时间的字号各不相同，靠内容撑会出现半像素级的高度差 */
+  align-items: center;
   gap: 8px;
-  padding: 7px 0;
+  min-height: var(--feed-row-h);
+  padding: 0;
   border-top: 1px solid var(--line-hairline);
   text-decoration: none;
   color: var(--text);
@@ -457,7 +468,13 @@
 }
 
 .home-feed-empty {
-  margin: 14px 0 4px;
+  margin: 0;
+  /* 空分类也要占住和 6 条一样的位置，否则切到空 Tab 整张卡立刻塌下去 */
+  min-height: calc(var(--feed-rows, 6) * var(--feed-row-h));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--line-hairline);
   font-size: 0.78rem;
   color: var(--text-3);
 }

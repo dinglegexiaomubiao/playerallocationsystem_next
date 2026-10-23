@@ -3344,6 +3344,15 @@ a.mh-row:hover { background: var(--bg-subtle); }
   background: var(--text-3);
   transform: translateY(-3px);
 }
+/* 时分（仅管理员）：固定宽度让所有时间对齐成一列，扫一眼就能看出哪几条是同一分钟上线的 */
+.changelog-clock {
+  flex: 0 0 auto;
+  min-width: 3.4em;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.72rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
 .changelog-admin {
   flex: 0 0 auto;
   font-size: 0.66rem;

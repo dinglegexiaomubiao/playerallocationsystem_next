@@ -11,8 +11,11 @@ import { changelogByVersion, LATEST_VERSION } from '../lib/changelog';
  *
  * 管理员条目在 getServerSideProps 就过滤掉了 —— 前端隐藏不算隐藏，
  * 数据已经在 HTML 里了，看一眼源码就有。
+ *
+ * 时间同理：`clock`（HH:MM）只有管理员那份数据里才有，页面只负责把它摆出来，
+ * 不做任何时区换算 —— 换算会把服务端和浏览器的时间算岔。
  */
-export default function Changelog({ groups, latestVersion }) {
+export default function Changelog({ groups, latestVersion, isAdmin }) {
   return (
     <>
       <Head>
@@ -28,6 +31,7 @@ export default function Changelog({ groups, latestVersion }) {
             </h1>
             <p>
               社区站每个版本改了什么，按时间倒序。当前版本 {latestVersion}
+              {isAdmin && ' · 每条改动的时间精确到分（只有管理员看得到）'}
             </p>
           </div>
         </div>
@@ -51,6 +55,12 @@ export default function Changelog({ groups, latestVersion }) {
                   {g.items.map((it, i) => (
                     <li className="changelog-item" key={i}>
                       <span className="changelog-dot" aria-hidden="true" />
+                      {/* 时分摆成左侧一列：管理员扫一眼就知道哪几条是同一个提交上线的 */}
+                      {it.clock && (
+                        <time className="changelog-clock" dateTime={it.at}>
+                          {it.clock}
+                        </time>
+                      )}
                       {it.href ? (
                         <Link href={it.href}>{it.title}</Link>
                       ) : (
@@ -66,8 +76,9 @@ export default function Changelog({ groups, latestVersion }) {
           </div>
 
           <p className="changelog-foot">
-            更早的改动没有存档。想看最近的动态，回<Link href="/">首页</Link>右栏，或者去
-            <Link href="/members">群友信息</Link>看看。
+            记录从 1.0.0（2026-10-20 站点上线）开始，按 git 提交时间补录；
+            再往前的「阵容分配工具」时期没有存档。想看最近的动态，回<Link href="/">首页</Link>
+            右栏，或者去<Link href="/members">群友信息</Link>看看。
           </p>
         </div>
       </section>
@@ -82,6 +93,7 @@ export async function getServerSideProps(ctx) {
     props: {
       groups: changelogByVersion({ isAdmin }),
       latestVersion: LATEST_VERSION,
+      isAdmin,
     },
   };
 }

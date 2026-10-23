@@ -59,6 +59,15 @@ const USER_MARKS = ['群友分布从「深圳 9 区」扩成全国三级', '英�
   ok(feats.length > 0, 'feature 类有条目', feats.length + ' 条');
   ok(feats.every((i) => i.version), '每条 feature 都带版本号', feats[0] && feats[0].version);
 
+  // 时间必须是「写死的本地时刻」，不能落到兜底的 12:00
+  // （兜底说明那条忘写 at 了；写成 Z 的话管理员看到的「几点」会差 8 小时）
+  const atOk = feats.every((i) => /T\d{2}:\d{2}\+08:00$/.test(String(i.at)));
+  ok(atOk, 'feature 的时间都带 +08:00 的时分', feats.slice(0, 2).map((i) => i.at).join(' / '));
+  ok(
+    feats.filter((i) => /T12:00\+08:00$/.test(String(i.at))).length === 0,
+    '没有条目落回兜底时间 12:00'
+  );
+
   // ---- 2. 管理员 ----
   //
   // ⚠ 打线上时本地签的 cookie 不被认（线上 AUTH_SECRET 是另一份），所以远端跑要传
@@ -84,10 +93,15 @@ const USER_MARKS = ['群友分布从「深圳 9 区」扩成全国三级', '英�
   ok(ADMIN_MARKS.every((m) => !anonHtml.includes(m)), '未登录的 HTML 里没有管理员条目',
     ADMIN_MARKS.filter((m) => anonHtml.includes(m)).join(' / ') || '干净');
   ok(anonHtml.includes('1.4.0'), 'HTML 里有版本号');
+  // 时分只给管理员：普通群友的 HTML 里连这个 class 都不该有
+  ok(!anonHtml.includes('changelog-clock'), '未登录的 HTML 里没有时分');
 
   if (!(REMOTE && !admin.isAdmin)) {
     const adminHtml = await (await fetch(BASE + '/changelog', { headers: { cookie: adminCookie } })).text();
     ok(ADMIN_MARKS.every((m) => adminHtml.includes(m)), '管理员的 HTML 里有管理员条目');
+    const clocks = [...adminHtml.matchAll(/class="changelog-clock"[^>]*>(\d{2}:\d{2})</g)].map((m) => m[1]);
+    ok(clocks.length > 0, '管理员的 HTML 里有精确到分的时间', clocks.length + ' 条');
+    ok(clocks.every((c) => /^\d{2}:\d{2}$/.test(c)), '时分格式 HH:MM', clocks.slice(0, 4).join(' / '));
   }
 
   // ---- 4. 缓存头：带管理员差异的响应不能被共享缓存 ----

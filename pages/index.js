@@ -68,6 +68,18 @@ const monthDay = (iso) => {
   return Number.isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
+/**
+ * 「10/23 22:52」。只给管理员看功能更新的时间。
+ *
+ * ⚠ 直接从字符串上切，不走 new Date().getHours()：SSR 与浏览器的时区未必一样，
+ *   走时区换算就会出现「服务端渲染 14:52、客户端变 22:52」的水合不一致。
+ *   lib/changelog.js 里的 at 一律写成 +08:00 的本地时刻，切出来就是对的。
+ */
+const dayMinute = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(String(iso || ''));
+  return m ? `${+m[2]}/${+m[3]} ${m[4]}:${m[5]}` : '';
+};
+
 /** Hero 右栏最多摆几条动态 —— 再多会把首屏撑高，剩下的看列表本身的信息密度 */
 const FEED_ON_HERO = 6;
 
@@ -94,6 +106,8 @@ export default function Home() {
   const [feed, setFeed] = useState([]);
   // 右栏 Tab。默认「全部」：一进来应该先看到今天最热闹的事，而不是某一类
   const [feedTab, setFeedTab] = useState('all');
+  // 功能更新的时间精确到分只给管理员看，身份由 /api/feed 判定（那边已经按它过滤了条目）
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -118,6 +132,7 @@ export default function Home() {
       setFoods(fd.foods || []);
       setRooms((rd.posts || []).filter((p) => !p.expired).length);
       setFeed(Array.isArray(ff.items) ? ff.items : []);
+      setIsAdmin(!!ff.isAdmin);
       setLoaded(true);
     });
     return () => {
@@ -154,6 +169,12 @@ export default function Home() {
     m[it.kind] = (m[it.kind] || 0) + 1;
     return m;
   }, {});
+
+  /** 一行右侧那个时间：功能更新看日期（管理员看到分），其它类看「多久前」 */
+  const feedTime = (it) => {
+    if (it.kind !== 'feature') return relTime(it.at);
+    return isAdmin ? dayMinute(it.at) : monthDay(it.at);
+  };
 
   /* 入口卡：只放真实存在的板块，指标也取真实条数 */
   const ENTRIES = [
@@ -240,7 +261,7 @@ export default function Home() {
                 动态和「今晚谁来守高地」同一张卡，是为了让第一屏只说一件事：
                 「现在社区里在发生什么」。 */}
             {feed.length > 0 ? (
-              <div className="home-hero-feed">
+              <div className="home-hero-feed" style={{ '--feed-rows': FEED_ON_HERO }}>
                 <div className="home-hero-feed-head">
                   <h2>最近动态</h2>
                   {/* 右栏只摆 6 条，想看全部更新去日志页 —— 别写「共 N 条」，
@@ -294,9 +315,10 @@ export default function Home() {
                           )}
                           <span className="home-hero-feed-title">{it.title}</span>
                           {/* 功能更新显示日期而不是「10 小时前」：那一条的时间是「版本日期」，
-                              相对时间会让所有条目都变成同一个「N 小时前」，看着像同时发的 */}
+                              相对时间会让所有条目都变成同一个「N 小时前」，看着像同时发的。
+                              管理员多看一段时分 —— 想知道「这条到底是今晚几点上线的」。 */}
                           <time className="home-hero-feed-at" dateTime={it.at}>
-                            {it.kind === 'feature' ? monthDay(it.at) : relTime(it.at)}
+                            {feedTime(it)}
                           </time>
                         </Link>
                       </li>

@@ -1,6 +1,7 @@
 /**
  * 首页分类 Tab 的自检：5 个 Tab、默认选中、切 Tab 过滤、分类内不重复类型标签、
- * 「更新」Tab 带版本号、空分类走空态、手机端不溢出，以及 /changelog 页的分组与日期。
+ * 「更新」Tab 带版本号、空分类走空态、切 Tab 时卡片高度不抖、手机端不溢出，
+ * 以及 /changelog 页的分组与日期。
  *
  * 为什么需要：Tab 是纯前端过滤，没有接口能验证「切过去到底对不对」。
  * 而且「全部」Tab 有个隐蔽规则 —— 每类保底一条，否则一类活跃就把整屏占满。
@@ -50,6 +51,27 @@ const ok = (c, label, detail = '') => {
   ok(rowsAll > 0 && rowsAll <= 6, '「全部」最多 6 行', rowsAll + ' 行');
   const tagsInAll = await p.locator('.home-feed-tag').count();
   ok(tagsInAll > 0, '「全部」里每行有类型标签', tagsInAll + ' 个');
+
+  // ---- 切 Tab 时 Hero 卡片高度必须一动不动 ----
+  //
+  // 用户报的「切 Tab 卡片大小抖动」：Hero 是 grid + align-items:stretch，右栏一矮整张卡跟着缩，
+  // 视口里的东西全往上跳。现在右栏按 6 行预留高度，任何 Tab（包括空分类）都不该改变卡片高度。
+  // 只量高度不够，所以每个 Tab 都量一遍取极差 —— 单点比较会漏掉「只有空 Tab 才塌」这种情况。
+  const heroH = () =>
+    p.locator('.home-hero').evaluate((el) => Math.round(el.getBoundingClientRect().height * 10) / 10);
+  const heights = {};
+  for (const label of ['开黑', '活动', '群友', '更新', '全部']) {
+    await p.locator('.home-feed-tab').filter({ hasText: label }).first().click();
+    await p.waitForTimeout(260);
+    heights[label] = await heroH();
+  }
+  const hs = Object.values(heights);
+  const spread = Math.max(...hs) - Math.min(...hs);
+  ok(
+    spread <= 1,
+    '切 Tab 时 Hero 卡片高度不变',
+    Object.entries(heights).map(([k, v]) => k + ' ' + v).join(' / ') + ' → 极差 ' + spread.toFixed(1) + 'px'
+  );
 
   // ---- 切到「开黑」 ----
   await p.locator('.home-feed-tab').filter({ hasText: '开黑' }).click();

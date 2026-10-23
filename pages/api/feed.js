@@ -187,6 +187,10 @@ export default async function handler(req, res) {
   //
   // 管理员条目在这里过滤，**不在前端隐藏**：前端隐藏只是不渲染，数据照样发出去了，
   // 打开网络面板就能看到「后台改了账号名」这类不该给普通群友看的东西。
+  //
+  // 不做截断：更新日志本身就是「一次给全」的设计（切 Tab 不再请求），
+  // 而且 check-feed-admin 要靠完整列表证明管理员的条目一条没漏。
+  // 纯文本条目，五十来条加起来也就几 KB，gzip 完可以忽略。
   const session = getSession(req);
   const isAdmin = !!session && isAdminName(session.name);
   const changelog = flattenChangelog({ isAdmin });
