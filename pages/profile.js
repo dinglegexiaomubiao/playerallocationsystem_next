@@ -13,6 +13,7 @@ import PositionPicker from '../components/PositionPicker';
 import IdentityEditor from '../components/IdentityEditor';
 import HeroPicker from '../components/HeroPicker';
 import RegionPicker from '../components/RegionPicker';
+import GuildPanel from '../components/GuildPanel';
 import { mergeMyTournaments } from '../lib/tournament-format.mjs';
 import { regionFull } from '../lib/regions';
 import { checkText, LIMITS } from '../lib/moderation.mjs';
@@ -387,6 +388,9 @@ export default function Profile() {
                 {profile.self_intro && (
                   <div className="kv" style={{ alignItems: 'flex-start' }}><span className="k">自我评价</span><span className="v">{profile.self_intro}</span></div>
                 )}
+                {/* 帮派：创建入口 / 我的帮派 / 帮派管理。自己拉 GET /api/guild
+                    （比 profile 接口多一份配色占用表，弹窗里要把已占用的置灰） */}
+                <GuildPanel />
               </div>
               <div className="side-card">
                 <h4>擅长英雄</h4>

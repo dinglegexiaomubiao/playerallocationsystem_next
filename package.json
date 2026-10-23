@@ -23,7 +23,10 @@
     "theme:check": "node scripts/theme-check.cjs",
     "docs:pitfalls": "node scripts/sync-pitfalls-doc.cjs",
     "guild:contrast": "node scripts/check-guild-contrast.mjs",
-    "members:check": "node scripts/check-members-filter.cjs"
+    "members:check": "node scripts/check-members-filter.cjs",
+    "guild:api": "node scripts/check-guild-api.cjs",
+    "guild:ui": "node scripts/check-guild-ui.cjs",
+    "guild:a11y": "node scripts/check-guild-a11y.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

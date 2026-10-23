@@ -3145,3 +3145,136 @@ a.mh-row:hover { background: var(--bg-subtle); }
   /* 手机上右栏掉到地图下面，群友列表铺两列，省一半竖向高度 */
   .map-member-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ==================== 帮派 ====================
+   配色只出现在三个地方：色块选择器、卡片左侧竖条、极淡的渐变底。
+   渐变透明度 0.12/0.04 是算出来的（见 lib/guild-colors.mjs + npm run guild:contrast），
+   12 套 × 日夜两种主题下最弱文字都 ≥ 4.5:1。不要凭好看调大。
+
+   ⚠ 状态类一律带 guild- 前缀：裸 .is-on / .is-taken 会和全站工具类撞
+   （踩过 .empty 的坑：布局样式覆盖了组件样式）。 */
+
+/* ---- 个人信息里的区块 ---- */
+.guild-block {
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.guild-block-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 8px;
+}
+.guild-block-label { font-size: .78rem; color: var(--text-3); letter-spacing: .02em; }
+.guild-block-hint { font-size: .76rem; line-height: 1.55; color: var(--text-3); margin-top: 6px; }
+.guild-block-hint.is-pending { color: var(--gold); }
+.guild-create-btn { width: 100%; justify-content: center; }
+
+.guild-mini {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background-color: var(--bg-card);
+}
+.guild-mini-dot { width: 8px; height: 8px; border-radius: 2px; flex: 0 0 auto; }
+.guild-mini-name { font-weight: 700; font-size: .9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guild-mini-slogan { margin-top: 6px; font-size: .8rem; color: var(--text-2); font-style: italic; }
+.guild-role {
+  flex: 0 0 auto; margin-left: auto;
+  font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+  padding: 1px 6px; border-radius: 3px;
+  color: var(--brand-on-soft); background: var(--brand-soft);
+}
+.guild-role.is-member { color: var(--text-2); background: var(--bg-subtle); font-weight: 600; }
+
+/* ---- 配色选择器 ---- */
+.guild-colors {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px; margin-top: 4px;
+}
+.guild-color {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); cursor: pointer;
+  font-size: .78rem; color: var(--text-2); text-align: left;
+  transition: border-color .14s ease, background .14s ease;
+  min-width: 0;
+}
+.guild-color:hover:not(:disabled) { border-color: var(--brand); }
+.guild-color-dot {
+  width: 14px; height: 14px; border-radius: 4px; border: 1px solid;
+  flex: 0 0 auto;
+}
+.guild-color-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guild-color.is-on {
+  border-color: var(--brand); background: var(--brand-soft); color: var(--text);
+  font-weight: 700;
+}
+.guild-color.is-taken { opacity: .38; cursor: not-allowed; }
+.guild-color:disabled { cursor: not-allowed; }
+
+/* ---- 弹窗 ---- */
+.guild-modal { width: min(560px, 100%); }
+.guild-modal-count { margin-left: 10px; font-size: .78rem; font-weight: 500; color: var(--text-3); }
+.guild-modal-count b { color: var(--text); }
+.guild-modal-body { padding: 16px 22px; overflow: auto; }
+.guild-modal-body .form-field { margin-bottom: 16px; }
+.guild-modal-body .form-field:last-of-type { margin-bottom: 6px; }
+.guild-modal-body .form-field > label {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+}
+.guild-len { font-size: .72rem; color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: 500; }
+.guild-len.is-over { color: var(--color-danger); }
+.guild-hint { margin-top: 6px; font-size: .74rem; line-height: 1.5; color: var(--text-3); }
+
+/* ---- 成员列表 ---- */
+.guild-members { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.guild-members-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.guild-members-head h4 { font-size: .92rem; font-weight: 700; }
+.guild-members-count { font-size: .76rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.guild-member-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.guild-member-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 2px; border-bottom: 1px solid var(--line-hairline, var(--border));
+  min-width: 0;
+}
+/* 头像：Avatar 组件会追加 avatar-img（有图）或 avatar-letter（回退首字），
+   而 .avatar-letter 没有通用样式（每个具体类自己定义），所以这里要写全，
+   否则成员行左边会是一块空白/未居中的字母。 */
+.guild-member-avatar {
+  width: 26px; height: 26px; flex: 0 0 26px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-subtle); color: var(--text-2);
+  font-size: .78rem; font-weight: 700; overflow: hidden;
+}
+.guild-member-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.guild-member-name { font-size: .86rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guild-member-grow { flex: 1 1 auto; }
+.guild-empty { padding: 14px 2px; font-size: .82rem; color: var(--text-3); }
+
+/* ---- 提示与危险操作 ---- */
+.guild-msg { margin-top: 12px; padding: 9px 12px; border-radius: 8px; font-size: .8rem; line-height: 1.5; }
+.guild-msg.is-error { color: var(--brand-on-soft); background: var(--brand-soft); border: 1px solid var(--color-primary-border); }
+.guild-msg.is-ok { color: var(--ok); background: var(--green-soft, rgba(111,191,115,.14)); border: 1px solid var(--border); }
+.guild-danger { color: var(--brand); }
+.guild-danger:hover:not(:disabled) { background: var(--brand-soft); }
+.guild-danger-solid { background: var(--brand-solid); border-color: var(--brand-solid); color: #fff; }
+.guild-danger-solid:disabled { opacity: .45; }
+.guild-modal-actions { align-items: center; }
+.guild-actions-grow { flex: 1 1 auto; }
+.guild-dissolve-btn { margin-right: auto; }
+
+/* ---- 二次确认（叠在弹窗底部，不另开一层遮罩） ---- */
+.guild-confirm {
+  border-top: 1px solid var(--border);
+  background: var(--bg-subtle);
+}
+.guild-confirm-body { padding: 14px 22px 4px; font-size: .82rem; line-height: 1.6; color: var(--text-2); }
+.guild-confirm-body b { color: var(--text); }
+.guild-confirm-body input { margin-top: 8px; width: 100%; }
+.guild-confirm-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 4px 22px 14px; }
+
+@media (max-width: 640px) {
+  /* 手机上 4 列色块太窄，名字会挤成竖排 */
+  .guild-colors { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .guild-member-row { flex-wrap: wrap; }
+  .guild-member-grow { display: none; }
+  .guild-modal { width: 100%; }
+}
