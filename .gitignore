@@ -6,6 +6,10 @@
 
 # Next.js 相关
 .next/
+# 部署时构建到独立目录再原子切换（deploy/deploy.sh），别让产物进仓库
+.next-build/
+.next-prev/
+.next-local/
 out/
 !.next/static/
 .next/static/chunks/

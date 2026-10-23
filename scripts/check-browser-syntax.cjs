@@ -18,7 +18,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const NEXT_DIR = process.argv[2] || path.join(ROOT, '.next');
+// 部署时 next build 会写到 NEXT_DIST_DIR（.next-build），检查必须跟着走，
+// 否则会去扫上一版还没换掉的 .next —— 检查通过但新产物根本没被检查。
+const NEXT_DIR = process.argv[2] || path.join(ROOT, process.env.NEXT_DIST_DIR || '.next');
 
 // 每一项都是「语法级」不兼容：命中就是解析失败，不是运行时才报错。
 // 括号里写明最早支持的版本，方便判断影响范围。
