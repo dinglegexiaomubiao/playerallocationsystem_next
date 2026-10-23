@@ -1718,7 +1718,48 @@ button.back-link:hover {
 }
 .pwd-meta { font-size: 11.5px; color: var(--text-3); }
 .pwd-none { font-size: 12px; color: var(--text-3); }
+/* 第一个按钮顶到右边；第二个跟在它后面（两个都 auto 会把中间拉出一条大缝） */
 .pwd-box-head .btn { margin-left: auto; }
+.pwd-box-head .btn + .btn { margin-left: 0; }
+
+/* ---- 改用户名：展开行 + 提示 + 结果 ---- */
+.pwd-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pwd-rename label { font-size: 12px; color: var(--text-3); }
+.pwd-rename-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-subtle, rgba(255, 255, 255, .04));
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm, 4px);
+}
+.pwd-rename-input:focus { outline: none; border-color: var(--brand); }
+.pwd-rename-tip {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-3);
+}
+.pwd-rename-done {
+  margin-top: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+  /* --ok-soft 不存在，绿色淡底的真实令牌是 --green-soft */
+  border-left: 3px solid var(--ok);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--green-soft);
+}
 
 .pwd-result {
   margin-top: 10px;
