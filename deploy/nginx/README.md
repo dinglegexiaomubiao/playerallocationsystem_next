@@ -3,10 +3,10 @@
 这些文件**不随** `deploy/deploy.sh` 上线，改动后手动同步：
 
 ```bash
-scp deploy/nginx/laroja root@47.115.130.170:/etc/nginx/sites-available/laroja
+scp deploy/nginx/laroja root@YOUR_SERVER_IP:/etc/nginx/sites-available/laroja
 scp deploy/nginx/laroja-proxy.conf deploy/nginx/laroja-sec-headers.conf \
-    root@47.115.130.170:/etc/nginx/snippets/
-ssh root@47.115.130.170 'nginx -t && systemctl reload nginx'
+    root@YOUR_SERVER_IP:/etc/nginx/snippets/
+ssh root@YOUR_SERVER_IP 'nginx -t && systemctl reload nginx'
 ```
 
 （`/etc/nginx/sites-enabled/laroja` 是指向 `sites-available/laroja` 的软链接，改 available 即可。）

@@ -190,7 +190,7 @@ tournament_placements ──▶ tournaments   (名次)
 
 > 部署窗口已压缩到 **约 25 秒**、**0 个 5xx**（2026-10-23 重构前是服务器原地构建 8 分钟，产生 28×504 + 137×499）。完整链路见 `docs/项目链路.md` 第 5 节。
 
-服务器：`root@47.115.130.170` → `/www/wwwroot/laroja`，PM2 应用名 `laroja-site`（**单实例 fork**，限流/缓存都是进程内内存），
+服务器：`root@YOUR_SERVER_IP` → `/www/wwwroot/laroja`，PM2 应用名 `laroja-site`（**单实例 fork**，限流/缓存都是进程内内存），
 Nginx 反代 `127.0.0.1:3000`，数据库是**服务器本机 PostgreSQL**（`DATABASE_SSL=off`）。
 细节见 `deploy/MIGRATION.md`。
 

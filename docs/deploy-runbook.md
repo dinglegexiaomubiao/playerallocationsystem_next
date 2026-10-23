@@ -3,10 +3,13 @@
 > 给所有会碰这台服务器的人。踩坑的完整技术细节在
 > [`docs/pitfalls.md`](./pitfalls.md)，这份只讲「怎么做」。
 >
+> **文档里的 `YOUR_SERVER_IP` 是占位符**，执行前换成实际地址 —— 服务器公网地址
+> 不写进仓库。同理 `root@YOUR_SERVER_IP` 指登录用的账号与主机。
+>
 > 背景：2026-10-23 一天内出了两次事故 —— 上午被并行开发线覆盖了功能，傍晚部署把
 > 整台机器搞到假死 20 分钟。两次都是可预防的，所以有了这份手册。
 
-服务器：`root@47.115.130.170` · 站点目录 `/www/wwwroot/laroja` · PM2 应用 `laroja-site`
+服务器：`root@YOUR_SERVER_IP` · 站点目录 `/www/wwwroot/laroja` · PM2 应用 `laroja-site`
 
 ---
 
@@ -17,14 +20,14 @@
 curl -s https://dota.playerallocationsystem.online/api/version
 
 # 2) 最近几次部署的 commit（每次部署都会写 meta.txt）
-ssh root@47.115.130.170 'cat /www/wwwroot/laroja-backups/*/meta.txt | grep commit'
+ssh root@YOUR_SERVER_IP 'cat /www/wwwroot/laroja-backups/*/meta.txt | grep commit'
 ```
 
 第 3 项「磁盘测速」**脚本已经自动做了**（见第二节 `[0/5]`），你不用手动跑；想提前确认
 可以自己量一次：
 
 ```bash
-ssh root@47.115.130.170 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=direct 2>&1 | tail -1; rm -f /tmp/iotest'
+ssh root@YOUR_SERVER_IP 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=direct 2>&1 | tail -1; rm -f /tmp/iotest'
 ```
 
 判断标准：
@@ -86,8 +89,8 @@ ssh root@47.115.130.170 'dd if=/dev/zero of=/tmp/iotest bs=1M count=200 oflag=di
 `ping 通 4ms` + 端口 22/80 TCP 可连 + 应用层完全无响应。
 
 ```bash
-ping 47.115.130.170                    # 通
-nc -zv 47.115.130.170 22               # 端口可连
+ping YOUR_SERVER_IP                    # 通
+nc -zv YOUR_SERVER_IP 22               # 端口可连
 curl -m 20 https://dota...online/      # 000 超时
 ```
 

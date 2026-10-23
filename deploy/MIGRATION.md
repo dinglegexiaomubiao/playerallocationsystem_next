@@ -71,14 +71,14 @@ ls /www/server/pgsql/bin/pg_dump
 
 ## Step 2 · 传代码并导入数据
 
-本地执行（把 IP 换成 `47.115.130.170`）：
+本地执行（把下面命令里的 `YOUR_SERVER_IP` 换成实际地址）：
 
 ```bash
 # 代码
-scp -r . root@47.115.130.170:/www/wwwroot/laroja
+scp -r . root@YOUR_SERVER_IP:/www/wwwroot/laroja
 
 # 迁移用的两个 SQL（含真实数据，别进 git）
-scp -r .cache/migration root@47.115.130.170:/tmp/laroja-migration
+scp -r .cache/migration root@YOUR_SERVER_IP:/tmp/laroja-migration
 ```
 
 服务器上：

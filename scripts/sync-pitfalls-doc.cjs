@@ -65,7 +65,11 @@ out = out.replace(
 // 去掉替换后留下的多余空行（原文件在标题与第一条之间有一空行 + 分隔线）
 out = out.replace('隧道（见第 4 节）。\n\n\n---', '隧道（见第 4 节）。\n\n---');
 
-// ---- 3. 自检：确认敏感内容没漏出去 ----
+// ---- 3. 服务器公网 IP 不进仓库 ----
+// 内部版里会原样写 IP（要拿它登录），共享版统一换成占位符。
+out = out.replace(/47\.115\.130\.170/g, 'YOUR_SERVER_IP');
+
+// ---- 4. 自检：确认敏感内容没漏出去 ----
 // ⚠ 必须在落盘之前。写完了再检查等于没检查 —— 文件已经被污染，而且脚本退出后
 // 那份带密钥的文档就躺在仓库里等着被提交。
 const LEAK_PATTERNS = [
@@ -73,6 +77,7 @@ const LEAK_PATTERNS = [
   "base64url({n:'dom'",
   'key=sha256(secret)',
   'dd_session=',
+  '47.115.130.170',
 ];
 const leaks = LEAK_PATTERNS.filter((k) => out.includes(k));
 if (leaks.length) {
@@ -81,7 +86,7 @@ if (leaks.length) {
   process.exit(1);
 }
 
-// ---- 4. 落盘 ----
+// ---- 5. 落盘 ----
 fs.writeFileSync(OUT, out, 'utf8');
 
 console.log('✓ docs/pitfalls.md 已生成');
