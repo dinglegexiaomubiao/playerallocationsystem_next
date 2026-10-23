@@ -21,7 +21,8 @@
     "a11y": "node scripts/a11y-contrast.cjs",
     "shoot:theme": "node scripts/shoot-theme.cjs",
     "theme:check": "node scripts/theme-check.cjs",
-    "docs:pitfalls": "node scripts/sync-pitfalls-doc.cjs"
+    "docs:pitfalls": "node scripts/sync-pitfalls-doc.cjs",
+    "guild:contrast": "node scripts/check-guild-contrast.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
