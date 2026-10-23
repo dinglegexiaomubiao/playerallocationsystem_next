@@ -15,6 +15,7 @@ export default function PartyPage() {
   const [error, setError] = useState('');
   const [modeFilter, setModeFilter] = useState('all');
   const [openOnly, setOpenOnly] = useState(false);
+  const [showExpired, setShowExpired] = useState(false); // 过期卡片折叠区默认收起
   const [q, setQ] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState('');
@@ -47,7 +48,8 @@ export default function PartyPage() {
     const kw = q.trim().toLowerCase();
     return posts.filter((p) => {
       if (modeFilter !== 'all' && p.mode !== modeFilter) return false;
-      if (openOnly && p.status !== 'open') return false;
+      // 「只看招募中」= 状态 open 且还没过期（时间过了的招不到人，不算招募中）
+      if (openOnly && (p.status !== 'open' || p.expired)) return false;
       if (!kw) return true;
       const hay = [
         p.title,
@@ -68,7 +70,10 @@ export default function PartyPage() {
     });
   }, [posts, modeFilter, openOnly, q]);
 
-  const openCount = posts.filter((p) => p.status === 'open').length;
+  // 招募中（没过期）排前面正常展示；过期的一律折叠到底部，默认收起
+  const activePosts = filtered.filter((p) => !p.expired);
+  const expiredPosts = filtered.filter((p) => p.expired);
+  const openCount = posts.filter((p) => p.status === 'open' && !p.expired).length;
 
   return (
     <>
@@ -173,7 +178,10 @@ export default function PartyPage() {
               </div>
             </div>
             <div className="filter-summary">
-              共 <b>{filtered.length}</b> 张卡片
+              共 <b>{activePosts.length}</b> 张卡片
+              {expiredPosts.length > 0 && (
+                <span className="filter-summary-sub">（另有 {expiredPosts.length} 条已过期，在下方折叠区）</span>
+              )}
             </div>
           </div>
 
@@ -197,7 +205,7 @@ export default function PartyPage() {
           )}
 
           <div className="party-grid">
-            {filtered.map((p) => (
+            {activePosts.map((p) => (
               <PartyCard
                 key={p.id}
                 post={p}
@@ -209,6 +217,32 @@ export default function PartyPage() {
               />
             ))}
           </div>
+
+          {/* 过期卡片折叠区：默认收起，点一下展开 */}
+          {!loading && !error && expiredPosts.length > 0 && (
+            <div className="pg-expired-fold">
+              <button type="button" className="pg-expired-toggle" onClick={() => setShowExpired((v) => !v)}>
+                <span className="pg-expired-arrow">{showExpired ? '▾' : '▸'}</span>
+                已过期招募（{expiredPosts.length}）
+                <span className="pg-expired-hint">{showExpired ? '收起' : '展开'}</span>
+              </button>
+              {showExpired && (
+                <div className="party-grid" style={{ marginTop: 12 }}>
+                  {expiredPosts.map((p) => (
+                    <PartyCard
+                      key={p.id}
+                      post={p}
+                      me={me}
+                      onChanged={() => {
+                        setMsg('');
+                        load();
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </>

@@ -1728,6 +1728,19 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .pg-expired { margin-left: 6px; }
 .pg-need { color: var(--text-3); font-weight: 500; }
 
+/* 过期招募折叠区（开黑 / 活动招募共用）：默认收起，点标题展开 */
+.pg-expired-fold { margin-top: 20px; }
+.pg-expired-toggle {
+  display: inline-flex; align-items: center; gap: 8px; width: 100%;
+  border: 1px dashed var(--border-strong); background: var(--bg-subtle); border-radius: var(--radius-sm);
+  padding: 9px 14px; cursor: pointer; font-family: inherit; font-size: .86rem; font-weight: 600;
+  color: var(--text-2); transition: color .14s ease, border-color .14s ease;
+}
+.pg-expired-toggle:hover { color: var(--text); border-color: var(--text-3); }
+.pg-expired-arrow { flex: 0 0 auto; font-size: .8rem; }
+.pg-expired-hint { margin-left: auto; font-size: .74rem; font-weight: 500; color: var(--text-3); }
+.filter-summary-sub { color: var(--text-3); font-size: .78rem; margin-left: 6px; }
+
 /* 建卡表单：人数直填行 */
 .party-need-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .party-need-row input { width: 88px; }
