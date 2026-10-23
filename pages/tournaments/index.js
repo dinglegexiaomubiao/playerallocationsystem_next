@@ -252,6 +252,10 @@ export default function TournamentsPage() {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          {/* 数据来源声明 */}
+          <div className="src-note">
+            <span>Laroja超级联赛部分信息由孙哥提供，感谢孙哥提供的比赛资料。</span>
+          </div>
           {/* ---------- 两个 Tab ---------- */}
           <div className="lr-tabs" role="tablist" aria-label="赛事视图">
             <button

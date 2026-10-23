@@ -8,6 +8,8 @@ import {
 import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { hashPasswordWithSalt } from '../../lib/password';
 import { getClientIp } from '../../lib/rate-limit';
+import { checkText } from '../../lib/moderation.mjs';
+import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 import { notifySignup } from '../../lib/notify';
 
 let dbInitialized = false;
@@ -70,6 +72,16 @@ export default async function handler(req, res) {
   if (!gameId) return res.status(400).json({ error: '请填写 Steam 账号' });
   // 群昵称是选手的公开名片（登录账号不对外展示），所以必填
   if (!groupNickname) return res.status(400).json({ error: '请填写群昵称' });
+  // 公开昵称合规初筛（登录账号自己用，群昵称是公开名片）
+  const nickHit = checkText(groupNickname);
+  if (!nickHit.ok) {
+    return res.status(400).json({ error: `群昵称里检测到不合适的内容（${nickHit.category}），请修改后再注册` });
+  }
+  // AI 复审（DeepSeek）：超时/出错自动放行
+  const nickAi = await aiModerate({ 群昵称: groupNickname });
+  if (!nickAi.ok) {
+    return res.status(400).json({ error: aiModerationMessage(nickAi) });
+  }
   if (username.length > MAX_NAME_LEN) {
     return res.status(400).json({ error: `登录账号不能超过 ${MAX_NAME_LEN} 个字符` });
   }

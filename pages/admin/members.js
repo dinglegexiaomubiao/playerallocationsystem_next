@@ -74,6 +74,8 @@ export default function AdminMembersPage({ denied }) {
   const [busy, setBusy] = useState(false);
   /* 重置密码：busy 管按钮，result 装一次性临时密码（关弹窗即丢弃） */
   const [resetState, setResetState] = useState({ busy: false, result: null });
+  /* 改用户名（登录账号）：open 展开输入行，done 装结果提示 */
+  const [renameState, setRenameState] = useState({ open: false, value: '', busy: false, done: null });
   const [msg, setMsg] = useState(null);
 
   const load = useCallback(async () => {
@@ -209,8 +211,50 @@ export default function AdminMembersPage({ denied }) {
     }
   };
 
-  const remove = async (p) => {
+  /**
+   * 修改登录账号（用户名）。
+   *
+   * 为什么要单独做：账号名是自己注册时填的，拼音手误很常见（lanzihong / landizhong）。
+   * 没有这个功能时只能让他重新注册，但他已经绑定 Steam、报名过赛事，换号等于丢掉历史。
+   *
+   * ⚠ 改的是 play_score.name（主键），改完旧登录态就废了 —— 必须提醒管理员转告本人重新登录。
+   */
+  const renameAccount = async (p) => {
+    const oldName = p.account_name;
+    const newName = String(renameState.value || '').trim();
+    if (!oldName || renameState.busy) return;
+    if (!newName) {
+      setMsg({ type: 'err', text: '新用户名不能为空' });
+      return;
+    }
+    if (newName === oldName) {
+      setRenameState((s) => ({ ...s, open: false, done: null }));
+      return;
+    }
     const ok = window.confirm(
+      `确认把登录账号从「${oldName}」改成「${newName}」？\n\n` +
+        `· 改完他必须用「${newName}」登录，旧的「${oldName}」立刻失效；\n` +
+        '· 浏览器里已登录的会话也要重新登录；\n' +
+        '· 他以前的反馈、开黑报名、浏览记录会一起迁到新名字上。'
+    );
+    if (!ok) return;
+
+    setRenameState((s) => ({ ...s, busy: true, done: null }));
+    setMsg(null);
+    try {
+      const r = await apiPost('/api/admin/rename-account', { playerId: p.id, newName });
+      setRenameState({ open: false, value: '', busy: false, done: r });
+      // 弹窗里的「登录账号」与列表都要立刻反映新名字
+      setEditing((prev) => (prev ? { ...prev, account_name: r.newName } : prev));
+      setMsg({ type: 'ok', text: `用户名已改为「${r.newName}」，请转告本人用新名字重新登录` });
+      await load();
+    } catch (e) {
+      setRenameState((s) => ({ ...s, busy: false }));
+      setMsg({ type: 'err', text: '修改用户名失败：' + e.message });
+    }
+  };
+
+  const remove = async (p) => {    const ok = window.confirm(
       `确认删除选手「${p.nickname}」？\n\n这会同时移除他与所有赛事队伍的关系，不可恢复。\n如果只是想修正信息，请用「编辑」。`
     );
     if (!ok) return;
@@ -272,6 +316,7 @@ export default function AdminMembersPage({ denied }) {
             <span className="adm-tab active">群友管理</span>
             <Link className="adm-tab" href="/admin/food">美食管理</Link>
             <Link className="adm-tab" href="/admin/party">开黑管理</Link>
+              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
             <Link className="adm-tab" href="/main">阵容分配</Link>
             <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
             <Link className="adm-tab" href="/admin/support">群友反馈</Link>
@@ -404,8 +449,10 @@ export default function AdminMembersPage({ denied }) {
                         </td>
                         <td>
                           <button className="btn btn-ghost btn-sm" onClick={() => {
-                            // 临时密码是一次性的，重新打开弹窗必须清掉
+                            // 临时密码是一次性的，重新打开弹窗必须清掉；
+                            // 改名输入行同理，否则会把上一个群友的名字带进来
                             setResetState({ busy: false, result: null });
+                            setRenameState({ open: false, value: '', busy: false, done: null });
                             setEditing({
                             ...p,
                             // 位置与英雄在库里是逗号分隔字符串，弹窗里用数组编辑
@@ -511,6 +558,21 @@ export default function AdminMembersPage({ denied }) {
                     <>
                       <b className="pwd-acct">{editing.account_name}</b>
                       <span className="pwd-meta">已登录 {editing.login_count || 0} 次</span>
+                      {/* 和重置密码放一起：两件事都动「登录凭据」，管理员找人时不该跑两个地方 */}
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={renameState.busy}
+                        onClick={() =>
+                          setRenameState((s) =>
+                            s.open
+                              ? { open: false, value: '', busy: false, done: s.done }
+                              : { open: true, value: editing.account_name, busy: false, done: null }
+                          )
+                        }
+                      >
+                        {renameState.open ? '取消改名' : '改用户名'}
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
@@ -524,6 +586,52 @@ export default function AdminMembersPage({ denied }) {
                     <span className="pwd-none">还没有登录账号，等他注册后再来重置</span>
                   )}
                 </div>
+
+                {/* ---- 改用户名：默认填当前账号，直接改错字即可 ---- */}
+                {renameState.open && editing.account_name && (
+                  <>
+                    <div className="pwd-rename">
+                      <label htmlFor="pwd-rename-input">新用户名</label>
+                      <input
+                        id="pwd-rename-input"
+                        className="pwd-rename-input"
+                        value={renameState.value}
+                        maxLength={40}
+                        autoFocus
+                        placeholder="输入新的登录账号"
+                        onChange={(e) => setRenameState((s) => ({ ...s, value: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') renameAccount(editing);
+                          if (e.key === 'Escape') setRenameState((s) => ({ ...s, open: false, value: '' }));
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        disabled={renameState.busy}
+                        onClick={() => renameAccount(editing)}
+                      >
+                        {renameState.busy ? '保存中…' : '保存'}
+                      </button>
+                    </div>
+                    <p className="pwd-rename-tip">
+                      改完他必须用新用户名登录，旧的立刻失效（已登录的会话也要重登）。
+                      以前的反馈、开黑报名、浏览记录会一起迁到新名字上，不会丢。
+                    </p>
+                  </>
+                )}
+
+                {renameState.done && renameState.done.ok && renameState.done.oldName && (
+                  <div className="pwd-rename-done">
+                    已把「{renameState.done.oldName}」改成「{renameState.done.newName}」
+                    {renameState.done.moved && Object.keys(renameState.done.moved).length > 0
+                      ? `，同步迁移 ${Object.entries(renameState.done.moved)
+                          .map(([k, v]) => `${k} ${v} 条`)
+                          .join('、')}`
+                      : ''}
+                    。请转告本人用新名字重新登录。
+                  </div>
+                )}
 
                 {resetState.result && (
                   <div className="pwd-result">

@@ -1,8 +1,10 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Avatar from '../../components/Avatar';
 import MemberMap from '../../components/MemberMap';
+import { memberHref } from '../../lib/member-href';
 
 /**
  * 群友分布（/map）
@@ -62,6 +64,57 @@ export default function MapPage({ initial, initialError }) {
 
   const activeData = active ? areas.find((a) => a.name === active) : null;
   const covered = areas.filter((a) => a.playerCount || a.foodCount).length;
+
+  /**
+   * 右栏只列 14 家，排序按「有群友评价的优先 → 星级高 → 新的」。
+   * ⚠ 不要直接 slice(0,14) 拿原顺序：数据层是按 id 倒序出来的，
+   *   排在前面的都是最新录入、一条评价都还没有的新店，右栏会整片「暂无评价」，
+   *   看起来像评价功能没做。真正有内容的店全被挤在后面。
+   */
+  const sideFoods = useMemo(() => {
+    if (!activeData) return [];
+    return [...activeData.foods]
+      .sort(
+        (a, b) =>
+          (b.reviewCount || 0) - (a.reviewCount || 0) ||
+          (Number(b.rating) || 0) - (Number(a.rating) || 0) ||
+          String(b.id).localeCompare(String(a.id))
+      )
+      .slice(0, 14);
+  }, [activeData]);
+
+  // ---- 选区跟着地址栏走（?adcode=440300&dist=南山区）----
+  // 群友详情的「返回分布图」带 dist 回来，右栏能落回原来那个区；反过来点区块也把
+  // dist 写进地址栏，刷新和复制链接都能还原。
+  // ⚠ 读 router.query 必须放在 useEffect 里：首帧读会让 SSR 出来的 HTML 和客户端首次
+  //   渲染不一致（hydrate 报错），而且 getServerSideProps 并不知道 dist 这个参数。
+  const distParam = Array.isArray(router.query.dist) ? router.query.dist[0] : router.query.dist;
+  useEffect(() => {
+    if (typeof distParam === 'string' && distParam) setActive(distParam);
+    // 只在参数变化时还原，不要把 active 加进依赖（会和下面的写回打架）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [distParam]);
+
+  // 首帧必须跳过：上面那个 effect 的 setActive 是异步的，此刻 active 还是 null，
+  // 一跑就会把 /map?adcode=…&dist=南山区 改写成 /map?adcode=…，然后又被还原、再改写，
+  // 地址栏来回跳。
+  const urlSyncReady = useRef(false);
+  useEffect(() => {
+    if (!urlSyncReady.current) {
+      urlSyncReady.current = true;
+      return;
+    }
+    const cur = typeof distParam === 'string' ? distParam : '';
+    if (cur === (active || '')) return;
+    // 保留 adcode（当前层级），只增删 dist —— 否则写回会把层级一起抹掉
+    router.replace(
+      { pathname: '/map', query: { ...router.query, dist: active || undefined } },
+      undefined,
+      { shallow: true }
+    );
+    // 故意只跟 active：跟着 distParam 会和自己打架
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   const toggleMember = (id) => {
     const key = String(id);
@@ -363,49 +416,116 @@ export default function MapPage({ initial, initialError }) {
                   <div className="map-panel">
                     {activeData ? (
                       <>
-                        <h2>
-                          {activeData.name}
+                        <header className="map-panel-head">
+                          <div className="map-panel-head-main">
+                            <h2 className="map-panel-name">{activeData.name}</h2>
+                            <p className="map-panel-stat">
+                              <b>{activeData.playerCount}</b> 位群友 · <b>{activeData.foodCount}</b> 家美食
+                            </p>
+                          </div>
                           <button
                             type="button"
                             className="map-panel-close"
                             onClick={() => setActive(null)}
-                            aria-label="关闭"
+                            aria-label="取消选中"
+                            title="取消选中"
                           >
                             ×
                           </button>
-                        </h2>
-                        <h3 className="map-sub-h">群友 {activeData.playerCount} 人</h3>
-                        {activeData.players.length ? (
-                          <ul className="map-list">
-                            {activeData.players.map((p) => (
-                              <li key={p.id}>
-                                <Link href={`/members/${p.id}`}>{p.nickname}</Link>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="map-panel-hint">这里还没有群友填。</p>
-                        )}
+                        </header>
 
-                        <h3 className="map-sub-h">美食 {activeData.foodCount} 家</h3>
-                        {activeData.foods.length ? (
-                          <ul className="map-list">
-                            {activeData.foods.slice(0, 14).map((f) => (
-                              <li key={f.id}>
-                                <span className="map-food-name">{f.name}</span>
-                                {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
-                                {f.rating ? <span className="map-food-star">{f.rating} 星</span> : null}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="map-panel-hint">这里还没有美食记录。</p>
-                        )}
-                        {activeData.foods.length > 14 && (
-                          <p className="map-panel-hint">
-                            还有 {activeData.foods.length - 14} 家，去<Link href="/food">群友美食</Link>看全部。
-                          </p>
-                        )}
+                        {/* 群友：可折叠。标题条整条是一条色带，和下面的美食一眼分得开 */}
+                        <details className="map-group map-group-member" open>
+                          <summary>
+                            <span className="map-group-title">群友</span>
+                            <span className="map-group-count">{activeData.playerCount}</span>
+                            <span className="map-group-tip">点名字看资料</span>
+                          </summary>
+                          <div className="map-group-body">
+                            {activeData.players.length ? (
+                              <ul className="map-member-list">
+                                {activeData.players.map((p) => (
+                                  <li key={p.id}>
+                                    {/* 带上 dist，详情页的「返回分布图」才能把右栏还原 */}
+                                    <Link
+                                      href={memberHref(p.id, '/map', { dist: activeData.name })}
+                                      className="map-member"
+                                    >
+                                      <Avatar className="map-member-avatar" src={p.avatar} name={p.nickname} />
+                                      <span className="map-member-name">{p.nickname}</span>
+                                      <span className="map-member-go" aria-hidden="true">
+                                        ›
+                                      </span>
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="map-group-empty">这里还没有群友填地区。</p>
+                            )}
+                          </div>
+                        </details>
+
+                        {/* 美食：可折叠，每张卡带星级 + 评价条数 + 最新一条评价 */}
+                        <details className="map-group map-group-food" open>
+                          <summary>
+                            <span className="map-group-title">美食</span>
+                            <span className="map-group-count">{activeData.foodCount}</span>
+                            <span className="map-group-tip">点卡片去美食页</span>
+                          </summary>
+                          <div className="map-group-body">
+                            {activeData.foods.length ? (
+                              <div className="map-food-list">
+                                {sideFoods.map((f) => {
+                                  const score = Number(f.rating);
+                                  const quote = f.reviews && f.reviews[0];
+                                  return (
+                                    <Link
+                                      key={f.id}
+                                      href={'/food?focus=' + encodeURIComponent(String(f.id))}
+                                      className="map-food"
+                                    >
+                                      <span className="map-food-head">
+                                        <span className="map-food-name">{f.name}</span>
+                                        {score > 0 ? (
+                                          <span className="map-food-score">
+                                            <i aria-hidden="true">★</i>
+                                            {score.toFixed(1)}
+                                          </span>
+                                        ) : (
+                                          <span className="map-food-score is-none">未评分</span>
+                                        )}
+                                      </span>
+                                      <span className="map-food-sub">
+                                        {f.cuisine ? <span className="map-food-tag">{f.cuisine}</span> : null}
+                                        {f.reviewCount ? (
+                                          <span className="map-food-rc">{f.reviewCount} 条评价</span>
+                                        ) : (
+                                          <span className="map-food-rc is-none">暂无评价</span>
+                                        )}
+                                      </span>
+                                      {quote ? (
+                                        <span className="map-food-quote">
+                                          {quote.content}
+                                          <em>— {quote.reviewer || '群友'}</em>
+                                        </span>
+                                      ) : null}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="map-group-empty">这里还没有美食记录。</p>
+                            )}
+                            {activeData.foods.length > 14 && (
+                              <p className="map-group-empty">
+                                还有 {activeData.foods.length - 14} 家没列出，
+                                <Link href="/food">去群友美食看全部</Link>。
+                              </p>
+                            )}
+                          </div>
+                        </details>
+
                         {activeData.canDrill ? (
                           <button type="button" className="btn map-drill-btn" onClick={() => goTo(activeData.adcode)}>
                             进入{activeData.name}看下一级

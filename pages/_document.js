@@ -17,22 +17,54 @@ import { THEME_BOOT_SCRIPT, THEME_COLOR, THEME_DEFAULT } from '../lib/theme';
  * hydrate → 页面只剩预渲染的骨架，客户端 fetch 一次都没发出。
  *
  * 服务端已经给 HTML 加了 Cache-Control: no-cache（见 Nginx 的 laroja-proxy.conf），
- * 这里再加一道客户端兜底：捕获 script 加载失败就重新拉页面，拿到新 HTML 即恢复。
- * 60 秒内只自愈一次，避免极端情况下反复刷新。
+ * 这里再加一道客户端兜底：捕获 script / link 加载失败就重拉页面，拿到新 HTML 即恢复。
+ * 一个会话最多自愈两次（见 MAX），且**必须换带时间戳的 URL**：微信/QQ 内置浏览器
+ * 会把 HTML 缓存得很死，普通 reload 只会把旧页面原样拿回来，于是又 404 又刷新。
  */
 const ASSET_SELFHEAL_SCRIPT = `
 (function () {
-  var KEY = 'laroja-asset-selfheal';
-  function lastTry() {
-    try { return Number(sessionStorage.getItem(KEY) || 0); } catch (e) { return 0; }
+  var KEY = 'laroja-selfheal';     // 已用次数
+  var AT_KEY = 'laroja-selfheal-at'; // 上次自愈的时间戳
+  var MAX = 2;       // 一个会话最多自愈两次，绝不放成无限刷新
+  var GAP = 3000;    // 两次自愈至少间隔 3 秒
+  function num(k, d) { try { var v = Number(sessionStorage.getItem(k)); return isFinite(v) ? v : d; } catch (e) { return d; } }
+  function heal(reason) {
+    var now = Date.now();
+    // ⚠ 时间戳必须存 sessionStorage，不能只放内存变量：heal 会 location.replace 跳走，
+    //   新文档重新执行这个 IIFE，内存变量永远是 0，间隔判断形同虚设（实测 81 毫秒内连跳两次）。
+    // ⚠ 同一轮里的多个资源 404 只能算一次：一个页面通常并发加载七八个 chunk，
+    //   不隔开的话它们会在几十毫秒内把 2 次配额烧光，第一次 reload 还没开始就停手了。
+    if (now - num(AT_KEY, 0) < GAP) return false;
+    var n = num(KEY, MAX);
+    if (n >= MAX) return false;
+    try { sessionStorage.setItem(KEY, String(n + 1)); sessionStorage.setItem(AT_KEY, String(now)); } catch (e) {}
+    // ⚠ 必须换成带时间戳的新 URL，不能只 location.reload()：
+    //   微信 / QQ 内置浏览器对 HTML 缓存很激进（PC 微信尤甚），普通 reload 会把旧页面
+    //   原样再拿回来 —— 旧 HTML 引用旧 chunk，于是又失败又 reload。
+    //   2026-10-23 那次「按键失灵」就是卡在这个循环里（自愈生效了但拿回同一份缓存）。
+    // ⚠ 先把地址栏上已有的 _r 剥掉再拼，否则第二次自愈会变成 ?_r=a&_r=b 一路累加。
+    var q = '';
+    var parts = location.search.replace(/^\\?/, '').split('&');
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i] || parts[i].indexOf('_r=') === 0) continue;
+      q += (q ? '&' : '') + parts[i];
+    }
+    var u = location.pathname + (q ? '?' + q + '&' : '?') + '_r=' + now;
+    try { location.replace(u); }
+    catch (e2) { try { location.reload(); } catch (e3) {} }
+    return true;
   }
+  // 水合探针 6 秒后也要用它（那个脚本先于本脚本执行，靠这个全局变量接头）
+  window.__larojaSelfHeal = heal;
   window.addEventListener('error', function (e) {
     var t = e && e.target;
-    if (!t || t.tagName !== 'SCRIPT' || !t.src) return;
-    if (t.src.indexOf('/_next/static/') === -1) return;
-    if (Date.now() - lastTry() < 60000) return;
-    try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e2) {}
-    location.reload();
+    if (!t || !t.tagName) return;
+    var tag = String(t.tagName).toUpperCase();
+    // LINK 也要管：CSS 404 时页面虽然还能点，但样式全丢，看着像坏了
+    if (tag !== 'SCRIPT' && tag !== 'LINK') return;
+    var url = t.src || t.href || '';
+    if (url.indexOf('/_next/static/') === -1) return;
+    heal(tag);
   }, true);
 })();
 `;
@@ -180,10 +212,24 @@ const BOOT_PROBE_SCRIPT = `
     } catch (e) { ok = false; }
     if (!ok) {
       send('boot', '水合未完成：6 秒后 React 仍未接管页面', { name: 'HydrationTimeout' });
-    } else if (isOldEngine()) {
-      // 老引擎上「没报错」不等于「修好了」：只有明确收到这一条，才能证明
-      // static 块降级补丁真的让 iOS 16 / Chrome 86 把 React 跑起来了。
-      send('boot-ok', 'JS 启动正常（老引擎）', { name: 'BootOK' });
+      // 页面「看得见但按不动」比白屏更难受，自动重拉一次。
+      // 部署窗口里撞上旧 chunk 404 的用户，靠这一步自己恢复（最多两次，见 ASSET_SELFHEAL_SCRIPT）。
+      if (window.__larojaSelfHeal) window.__larojaSelfHeal('hydration');
+    } else {
+      // 自愈刷新带的 _r= 只是缓存清除器，页面正常后从地址栏抹掉，别让它跟着用户四处走
+      try {
+        if (location.search.indexOf('_r=') !== -1) {
+          var sp = new URLSearchParams(location.search);
+          sp.delete('_r');
+          var rest = sp.toString();
+          window.history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+        }
+      } catch (e4) {}
+      if (isOldEngine()) {
+        // 老引擎上「没报错」不等于「修好了」：只有明确收到这一条，才能证明
+        // static 块降级补丁真的让 iOS 16 / Chrome 86 把 React 跑起来了。
+        send('boot-ok', 'JS 启动正常（老引擎）', { name: 'BootOK' });
+      }
     }
   }, 6000);
 })();

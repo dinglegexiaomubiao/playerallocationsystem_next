@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import ExcelIO from '../../components/ExcelIO';
 import RegionPicker from '../../components/RegionPicker';
 import useSession from '../../hooks/useSession';
 import { FOOD_COLUMNS, pickAlias, parseReviews } from '../../lib/excel';
 import { parseRegion, regionShort } from '../../lib/regions';
+import { checkText } from '../../lib/moderation.mjs';
 
 // 美团人均价格区间（元）。min/max 为 null 表示该侧不设限
 const PRICE_RANGES = [
@@ -116,6 +119,9 @@ export default function FoodPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [openReviewId, setOpenReviewId] = useState(null);
   const [reviewForm, setReviewForm] = useState({ reviewer: '', content: '', rating: 5 });
+  // 从分布图点过来的那一家：?focus=<id>，滚过去并高亮
+  const [focusId, setFocusId] = useState(null);
+  const router = useRouter();
   // 当前登录身份，统一走 useSession（登出后所有订阅组件立刻同步）
   const { me, isAdmin, name: myName } = useSession();
 
@@ -146,6 +152,25 @@ export default function FoodPage() {
   useEffect(() => {
     load();
   }, []);
+
+  /**
+   * 从「群友分布」右栏点美食进来时会带 ?focus=<id>：滚到那一家并高亮。
+   * ⚠ 先清筛选再滚 —— 否则那一家正好被当前筛选条件挡掉，页面滚不到任何地方，
+   *    用户会以为链接点坏了（当前筛选是空的时候这一步等于没做，无副作用）。
+   */
+  useEffect(() => {
+    const raw = Array.isArray(router.query.focus) ? router.query.focus[0] : router.query.focus;
+    if (!raw || loading) return;
+    const id = String(raw);
+    setFocusId(id);
+    setFilters(EMPTY_FILTERS);
+    // 等筛选生效、卡片真正渲染出来再滚
+    const timer = setTimeout(() => {
+      const el = document.getElementById('food-' + id);
+      if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [router.query.focus, loading]);
 
   // 筛选项全部从真实数据里生成，并按出现次数降序排列（菜系多达 50+ 种，写死列表会漏）
   const facets = useMemo(() => {
@@ -256,6 +281,16 @@ export default function FoodPage() {
       alert('请填写店名');
       return;
     }
+    // UGC 合规初筛：店名/特色/地址/推荐人等文本字段
+    for (const key of ['name', 'cuisine', 'address', 'feature', 'recommender', 'nearby']) {
+      const v = form[key];
+      if (!v) continue;
+      const hit = checkText(v);
+      if (!hit.ok) {
+        alert(`美食信息里检测到不合适的内容（${hit.category}），请修改后再提交`);
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -301,6 +336,21 @@ export default function FoodPage() {
     if (!reviewForm.content.trim()) {
       alert('写点什么吧～');
       return;
+    }
+    // UGC 合规初筛：评价 / 署名
+    {
+      const hit = checkText(reviewForm.content);
+      if (!hit.ok) {
+        alert(`评价里检测到不合适的内容（${hit.category}），请修改后再提交`);
+        return;
+      }
+      if (reviewForm.reviewer) {
+        const hitR = checkText(reviewForm.reviewer);
+        if (!hitR.ok) {
+          alert(`署名里检测到不合适的内容（${hitR.category}），请修改后再提交`);
+          return;
+        }
+      }
     }
     const r = await fetch('/api/food-reviews', {
       method: 'POST',
@@ -472,6 +522,10 @@ export default function FoodPage() {
 
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="wrap">
+          {/* 数据来源声明 */}
+          <div className="src-note">
+            <span>群友美食由群友提供，感谢每一位提供信息的群友。</span>
+          </div>
           {showForm && (
             <form className="food-form" onSubmit={submit}>
               <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 14 }}>
@@ -680,9 +734,32 @@ export default function FoodPage() {
             )
           )}
 
+          {/* 从分布图点进来的那条：说明一下为什么停在页面中间，并给个回地图的口子 */}
+          {focusId !== null && (() => {
+            const target = foods.find((f) => String(f.id) === String(focusId));
+            if (!target) return null;
+            // 回地图时带上这家所属的区，右栏才会落在同一个区上
+            const backHref = target.area ? '/map?dist=' + encodeURIComponent(target.area) : '/map';
+            return (
+              <div className="f-focus-note">
+                <span>
+                  从分布图定位到：<b>{target.name}</b>
+                  {target.region ? ` · ${regionShort(target.region)}` : target.area ? ` · ${target.area}` : ''}
+                </span>
+                <Link href={backHref} className="f-focus-back">
+                  回分布图
+                </Link>
+              </div>
+            );
+          })()}
+
           <div className="food-grid">
             {filtered.map((f) => (
-              <div className="f-card" key={f.id}>
+              <div
+                className={'f-card' + (focusId !== null && String(focusId) === String(f.id) ? ' is-focus' : '')}
+                key={f.id}
+                id={'food-' + f.id}
+              >
                 <div className="f-body">
                   <div className="f-top">
                     <div className="f-name">{f.name}</div>
@@ -729,11 +806,13 @@ export default function FoodPage() {
                       <div className="f-review-form">
                         <input
                           placeholder="你的昵称"
+                          maxLength={50}
                           value={reviewForm.reviewer}
                           onChange={(e) => setReviewForm({ ...reviewForm, reviewer: e.target.value })}
                         />
                         <textarea
                           placeholder="饭后评价一下…"
+                          maxLength={300}
                           value={reviewForm.content}
                           onChange={(e) => setReviewForm({ ...reviewForm, content: e.target.value })}
                         />

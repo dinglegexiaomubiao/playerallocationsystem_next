@@ -1,6 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import { addPlayer, updatePlayer, deletePlayer, getPlayerById } from '../../lib/db';
 import { denyIfNotAdmin } from '../../lib/auth';
+import { checkText, LIMITS } from '../../lib/moderation.mjs';
 import { loadPlayerList, clearPlayerListCache } from '../../lib/player-list';
 
 // 列表装配（45s 缓存 + 全员参赛记录聚合 + 多值身份）统一在 lib/player-list.js：
@@ -34,6 +35,16 @@ export default async function handler(req, res) {
         // 此前这里只校验 x-excel-import 头，不带该头的 POST / PUT / DELETE 完全对外开放。
         if (denyIfNotAdmin(req, res, '仅管理员可新增选手')) return;
         const { tournament_id, ...playerData } = req.body;
+        // 文本字段合规初筛（昵称/群昵称/简介/地区）
+        for (const key of ['nickname', 'group_nickname', 'self_intro', 'region']) {
+          const v = playerData[key];
+          if (typeof v !== 'string' || !v.trim()) continue;
+          const hit = checkText(v);
+          if (!hit.ok) {
+            return res.status(400).json({ success: false, error: `「${key === 'nickname' ? '昵称' : key === 'group_nickname' ? '群昵称' : key === 'self_intro' ? '自我介绍' : '地区'}」里检测到不合适的内容（${hit.category}），请修改后再提交` });
+          }
+        }
+        if (typeof playerData.self_intro === 'string') playerData.self_intro = [...playerData.self_intro].slice(0, LIMITS.selfIntro).join('');
         const newPlayer = await addPlayer(playerData, tournament_id);
         clearListCache();
         res.status(201).json({ success: true, player: newPlayer });

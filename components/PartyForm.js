@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { TIERS, tierOf } from '../lib/tier.mjs';
 import { POSITIONS, PARTY_MODES, VOICE_APPS, DURATION_OPTIONS, NEED_PLAYER_OPTIONS } from '../lib/options.mjs';
 import { apiPost } from '../lib/api-client.mjs';
+import { checkInput, LIMITS, moderationMessage } from '../lib/moderation.mjs';
 
 const toggle = (list, v) =>
   list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
@@ -86,6 +87,12 @@ export default function PartyForm({ me, onCreated, onClose }) {
     }
     if (!(Number(f.need_players) >= 1 && Number(f.need_players) <= 20)) {
       setErr('请填写需要几个人（1~20）');
+      return;
+    }
+    // 文本合规初筛：命中违禁词直接提醒，不放行
+    const chk = checkInput(f, { title: LIMITS.title, my_rank: LIMITS.myRank, want_rank: LIMITS.wantRank, voice_app: LIMITS.voiceApp, note: LIMITS.note });
+    if (!chk.ok) {
+      setErr(moderationMessage(chk));
       return;
     }
     setBusy(true);
@@ -180,6 +187,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
         </label>
         <input
           value={f.title}
+          maxLength={80}
           onChange={(e) => set('title', e.target.value)}
           maxLength={80}
           placeholder={defaultTitle(me)}
@@ -382,6 +390,7 @@ export default function PartyForm({ me, onCreated, onClose }) {
       <div className="form-field" style={{ marginBottom: 16 }}>
         <label>备注</label>
         <textarea
+          maxLength={500}
           rows={3}
           value={f.note}
           onChange={(e) => set('note', e.target.value)}

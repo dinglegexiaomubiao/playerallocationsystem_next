@@ -1,6 +1,7 @@
 // Next.js API route for managing individual tournament
 import { pool, ensureTournamentSchema } from '../../../lib/db';
 import { denyIfNotAdmin } from '../../../lib/auth';
+import { checkText } from '../../../lib/moderation.mjs';
 
 export default async function handler(req, res) {
   const { method } = req;
@@ -131,6 +132,16 @@ export default async function handler(req, res) {
         if (denyIfNotAdmin(req, res, '仅管理员可修改赛事信息')) break;
         const updateData = req.body;
         console.log('PUT tournaments/[id] - updateData:', JSON.stringify(updateData), 'id:', id);
+
+        // 文本字段合规初筛（赛事名/赞助/奖品说明）
+        for (const key of ['name', 'sponsor_info', 'champion_prize', 'runner_up_prize']) {
+          const v = updateData ? updateData[key] : undefined;
+          if (typeof v !== 'string' || !v.trim()) continue;
+          const hit = checkText(v);
+          if (!hit.ok) {
+            return res.status(400).json({ success: false, message: `「${key === 'name' ? '赛事名称' : key === 'sponsor_info' ? '赞助信息' : '奖品说明'}」里检测到不合适的内容（${hit.category}），请修改后再提交` });
+          }
+        }
 
         if (!id) {
           return res.status(400).json({
