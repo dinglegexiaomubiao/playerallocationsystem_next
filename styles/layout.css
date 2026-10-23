@@ -1906,6 +1906,29 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
   .adm-bar-actions { width: 100%; }
 }
 
+/* ===== 可搜索选手选择器（后台赛事页：加报名 / 加队员） ===== */
+/* 替换原生的无搜索 <select>：输入即搜，下拉点选，外观与 .adm-input 一致 */
+.pss-wrap { position: relative; min-width: 260px; max-width: 340px; flex: 0 1 320px; }
+.pss-wrap .adm-input { width: 100%; }
+.pss-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 30;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg); max-height: 280px; overflow: auto; padding: 4px;
+}
+.pss-item, .pss-create {
+  display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left;
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  padding: 7px 9px; border-radius: var(--radius-sm); font-size: .85rem; color: var(--text);
+}
+.pss-item:hover, .pss-item.is-active, .pss-create:hover { background: var(--brand-soft); }
+.pss-label { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pss-sub { color: var(--text-3); font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pss-create { color: var(--brand); font-weight: 600; border-bottom: 1px solid var(--border); border-radius: 0; margin-bottom: 4px; }
+.pss-empty { padding: 10px 9px; font-size: .8rem; color: var(--text-3); }
+@media (max-width: 560px) {
+  .pss-wrap { min-width: 0; flex: 1 1 100%; max-width: none; }
+}
+
 /* 导入预览：校验不通过的行（与「重复」区分开——重复能导，错的是根本导不了） */
 .modal-table tr.is-err td { background: var(--accent-soft); }
 .badge-err {

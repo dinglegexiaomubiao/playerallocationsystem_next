@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -117,6 +117,68 @@ function normMatch(m) {
     is_grudge: !!m.is_grudge,
     _new: false,
   };
+}
+
+/* ---------- 可搜索的选手选择器 ----------
+ * 替换原先无搜索的原生 <select>：选手多时根本没法找。
+ * 输入框即搜索框，按 昵称/群昵称/SteamID 模糊过滤；onCreate 提供时，
+ * 搜不到还会显示「新建选手」入口（把搜索词带过去当昵称预填）。
+ */
+function PlayerSearchSelect({ value, onChange, options, placeholder, disabled, onCreate }) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+
+  const selected = options.find((o) => String(o.id) === String(value));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? options.filter((o) => `${o.label} ${o.sub || ''}`.toLowerCase().includes(q))
+    : options;
+
+  // 点外面收起下拉
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  return (
+    <div className="pss-wrap" ref={boxRef}>
+      <input
+        className="adm-input"
+        value={open ? query : selected ? selected.label : ''}
+        placeholder={selected ? selected.label : placeholder}
+        disabled={disabled}
+        onFocus={() => { setOpen(true); setQuery(''); }}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+      />
+      {open && !disabled && (
+        <div className="pss-menu">
+          {onCreate && q && (
+            <button type="button" className="pss-create" onClick={() => { setOpen(false); onCreate(query.trim()); }}>
+              ＋ 新建选手「{query.trim()}」
+            </button>
+          )}
+          {filtered.length === 0 && !onCreate && <div className="pss-empty">没有匹配的选手</div>}
+          {filtered.map((o) => (
+            <button
+              type="button"
+              key={o.id}
+              className={'pss-item' + (String(o.id) === String(value) ? ' is-active' : '')}
+              onClick={() => { onChange(o.id); setOpen(false); setQuery(''); }}
+            >
+              <span className="pss-label">{o.label}</span>
+              {o.sub && <span className="pss-sub">{o.sub}</span>}
+            </button>
+          ))}
+          {filtered.length === 0 && onCreate && !q && <div className="pss-empty">输入名字或 SteamID 搜索，或直接新建</div>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ---------- 草稿 diff：算出「要改什么」和「怎么改」 ---------- */
@@ -368,6 +430,11 @@ export default function AdminTournament({ denied }) {
   // 本地表单输入（尚未成为草稿的一部分）
   const [addPlayerId, setAddPlayerId] = useState('');
   const [memberPick, setMemberPick] = useState({}); // teamId -> playerId
+  // 新建选手弹窗（报名名单里搜不到人时，现场建档再入队）
+  const [showNewPlayer, setShowNewPlayer] = useState(false);
+  const [npForm, setNpForm] = useState({ nickname: '', game_id: '', group_nickname: '', score: '', positions: '', region: '', self_intro: '' });
+  const [npSaving, setNpSaving] = useState(false);
+  const [npError, setNpError] = useState('');
   const [newRoundName, setNewRoundName] = useState('');
   const [newMatch, setNewMatch] = useState({ round_id: '', team_a_id: '', team_b_id: '' });
 
@@ -520,6 +587,73 @@ export default function AdminTournament({ denied }) {
       };
     });
     setAddPlayerId('');
+  };
+
+  /* ---------- 新建选手（管理员现场建档） ---------- */
+  const openNewPlayer = (prefillName = '') => {
+    setNpForm({ nickname: prefillName || '', game_id: '', group_nickname: '', score: '', positions: '', region: '', self_intro: '' });
+    setNpError('');
+    setShowNewPlayer(true);
+  };
+
+  const submitNewPlayer = async () => {
+    const name = String(npForm.nickname || '').trim();
+    if (!name) {
+      setNpError('请填写选手昵称（必填）');
+      return;
+    }
+    const steamId = String(npForm.game_id || '').trim();
+    if (steamId && !/^\d{5,20}$/.test(steamId)) {
+      setNpError('SteamID 应为纯数字（如 113529567），请检查');
+      return;
+    }
+    setNpSaving(true);
+    setNpError('');
+    try {
+      // tournament_id 一起带上：addPlayer 会顺带写入 player_tournament_participations
+      const created = await apiPost('/api/players', {
+        tournament_id: Number(id),
+        nickname: name,
+        game_id: steamId || null,
+        group_nickname: String(npForm.group_nickname || '').trim() || name,
+        score: npForm.score === '' ? 0 : Number(npForm.score),
+        positions: String(npForm.positions || '').trim(),
+        region: String(npForm.region || '').trim(),
+        self_intro: String(npForm.self_intro || '').trim(),
+      });
+      if (!created?.success || !created?.player?.id) {
+        throw new Error(created?.error || '创建失败，请重试');
+      }
+      const p = created.player;
+      // 本地状态同步（不能 load()：会把用户其他未保存的草稿改动冲掉）
+      setCandidates((prev) => [
+        ...prev.filter((c) => String(c.id) !== String(p.id)),
+        { id: String(p.id), nickname: p.nickname, group_nickname: p.group_nickname, game_id: p.game_id, score: p.score, positions: p.positions },
+      ]);
+      // 直接进本赛事报名草稿，点「保存修改」时 diff 会落库
+      setDraft((d) => ({
+        ...d,
+        signups: [
+          ...d.signups,
+          {
+            player_id: String(p.id),
+            nickname: p.nickname || p.group_nickname || name,
+            game_id: p.game_id ? String(p.game_id) : '',
+            score: p.score == null ? '' : String(p.score),
+            positions: p.positions || '',
+            region: p.region || '',
+            is_captain: false,
+            _new: true,
+          },
+        ],
+      }));
+      setShowNewPlayer(false);
+      setMsg({ type: 'ok', text: `已建档「${p.nickname}」并加入报名草稿，点「保存修改」后正式写入名单` });
+    } catch (e) {
+      setNpError(e.message || '创建失败');
+    } finally {
+      setNpSaving(false);
+    }
   };
 
   const patchTeam = (teamId, patch) =>
@@ -1019,16 +1153,22 @@ export default function AdminTournament({ denied }) {
               </div>
 
               <div className="adm-add-row">
-                <select value={addPlayerId} onChange={(e) => setAddPlayerId(e.target.value)}>
-                  <option value="">选择要加入名单的选手…</option>
-                  {candidateOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nickname || c.group_nickname || '未命名'}（{(c.score || 0) + ' 分'}）
-                    </option>
-                  ))}
-                </select>
+                <PlayerSearchSelect
+                  value={addPlayerId}
+                  onChange={setAddPlayerId}
+                  options={candidateOptions.map((c) => ({
+                    id: c.id,
+                    label: c.nickname || c.group_nickname || '未命名',
+                    sub: `${c.score || 0} 分${c.game_id ? ` · Steam ${c.game_id}` : ''}${c.group_nickname && c.group_nickname !== (c.nickname || '') ? ` · ${c.group_nickname}` : ''}`,
+                  }))}
+                  placeholder="搜索选手加入名单（昵称 / SteamID）…"
+                  onCreate={(name) => openNewPlayer(name)}
+                />
                 <button className="btn btn-ghost" onClick={addSignup} disabled={!addPlayerId}>
                   ＋ 加入名单
+                </button>
+                <button className="btn btn-ghost" onClick={() => openNewPlayer('')}>
+                  ＋ 新建选手
                 </button>
                 {missingMembers.length > 0 && (
                   <button className="btn btn-ghost" onClick={backfillMembers}>
@@ -1136,24 +1276,23 @@ export default function AdminTournament({ denied }) {
                     )}
 
                     <div className="adm-add-row">
-                      <select
+                      <PlayerSearchSelect
                         value={memberPick[t.id] || ''}
-                        onChange={(e) => setMemberPick((p) => ({ ...p, [t.id]: e.target.value }))}
-                        disabled={pool.length === 0}
-                      >
-                        <option value="">
-                          {signups.length === 0
+                        onChange={(v) => setMemberPick((p) => ({ ...p, [t.id]: v }))}
+                        options={pool.map((s) => ({
+                          id: s.player_id,
+                          label: s.nickname || s.group_nickname || '未命名',
+                          sub: s.positions || '未标注位置',
+                        }))}
+                        placeholder={
+                          signups.length === 0
                             ? '报名名单还是空的，先去「报名名单」加人'
                             : pool.length === 0
                             ? '报名名单里的人都已经分好队了'
-                            : '从报名名单里选队员…'}
-                        </option>
-                        {pool.map((s) => (
-                          <option key={s.player_id} value={s.player_id}>
-                            {s.nickname}（{s.positions || '未标注位置'}）
-                          </option>
-                        ))}
-                      </select>
+                            : '搜索报名名单里的队员…'
+                        }
+                        disabled={pool.length === 0}
+                      />
                       <button className="btn btn-ghost" onClick={() => addMember(t.id)} disabled={!memberPick[t.id]}>
                         ＋ 添加队员
                       </button>
@@ -1309,6 +1448,95 @@ export default function AdminTournament({ denied }) {
           )}
         </div>
       </section>
+
+      {/* ---------- 新建选手弹窗 ---------- */}
+      {showNewPlayer && (
+        <div className="modal-mask" onClick={(e) => { if (e.target === e.currentTarget && !npSaving) setShowNewPlayer(false); }}>
+          <div className="modal-card modal-card-sm" role="dialog" aria-modal="true">
+            <div className="modal-head">
+              <h3>新建选手</h3>
+              <button className="modal-close" onClick={() => !npSaving && setShowNewPlayer(false)} aria-label="关闭">×</button>
+            </div>
+            <div className="modal-hint">
+              建档后自动加入本赛事报名草稿，点页面底部「保存修改」正式写入名单。SteamID 填了才能在后续赛事里按身份认出本人。
+            </div>
+            <div className="modal-body" style={{ padding: '16px 22px', overflow: 'auto' }}>
+              <div className="form-row" style={{ marginBottom: 12 }}>
+                <div className="form-field">
+                  <label>昵称（必填）</label>
+                  <input
+                    value={npForm.nickname}
+                    autoFocus
+                    placeholder="如：学徒"
+                    onChange={(e) => setNpForm((f) => ({ ...f, nickname: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>SteamID</label>
+                  <input
+                    value={npForm.game_id}
+                    placeholder="纯数字，如 113529567"
+                    onChange={(e) => setNpForm((f) => ({ ...f, game_id: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="form-row" style={{ marginBottom: 12 }}>
+                <div className="form-field">
+                  <label>群昵称</label>
+                  <input
+                    value={npForm.group_nickname}
+                    placeholder="留空则与昵称相同"
+                    onChange={(e) => setNpForm((f) => ({ ...f, group_nickname: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>天梯分</label>
+                  <input
+                    type="number"
+                    value={npForm.score}
+                    placeholder="如 5000"
+                    onChange={(e) => setNpForm((f) => ({ ...f, score: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="form-row" style={{ marginBottom: 12 }}>
+                <div className="form-field">
+                  <label>常玩位置</label>
+                  <input
+                    value={npForm.positions}
+                    placeholder="逗号分隔，如：劣势路,半辅助"
+                    onChange={(e) => setNpForm((f) => ({ ...f, positions: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>地区</label>
+                  <input
+                    value={npForm.region}
+                    placeholder="国家 省 市 区（可留空）"
+                    onChange={(e) => setNpForm((f) => ({ ...f, region: e.target.value }))}
+                  />
+                </div>
+              </div>
+              {npError && <div className="adm-error">{npError}</div>}
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setShowNewPlayer(false)} disabled={npSaving}>
+                取消
+              </button>
+              <button className="btn btn-primary" onClick={submitNewPlayer} disabled={npSaving || !String(npForm.nickname).trim()}>
+                {npSaving ? (
+                  <>
+                    <span className="spinner" />
+                    建档中…
+                  </>
+                ) : (
+                  '建档并加入报名草稿'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
