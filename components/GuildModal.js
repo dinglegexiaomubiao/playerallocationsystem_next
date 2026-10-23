@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Avatar from './Avatar';
 import GuildColorPicker from './GuildColorPicker';
+import GuildMemberPicker from './GuildMemberPicker';
 import { LIMITS, checkText } from '../lib/moderation.mjs';
 import { guildColor } from '../lib/guild-colors.mjs';
 
@@ -16,7 +17,15 @@ import { guildColor } from '../lib/guild-colors.mjs';
  *   2. 前端 checkText 预检 —— 命中违禁词立刻提示，不发请求
  *   3. 服务端 checkInput + aiModerate —— 真正的拦截，前端只是省一次往返
  */
-export default function GuildModal({ open, mode = 'create', guild = null, colors = {}, onClose, onSaved }) {
+export default function GuildModal({
+  open,
+  mode = 'create',
+  guild = null,
+  colors = {},
+  sentInvites = [],
+  onClose,
+  onSaved,
+}) {
   const isManage = mode === 'manage';
   const [name, setName] = useState('');
   const [slogan, setSlogan] = useState('');
@@ -28,20 +37,35 @@ export default function GuildModal({ open, mode = 'create', guild = null, colors
   const [dissolveOpen, setDissolveOpen] = useState(false);
   const [dissolveText, setDissolveText] = useState('');
   const [transferTo, setTransferTo] = useState(null);
+  // 邀请选择器开关（放在本弹窗内部渲染，点它的遮罩不会冒泡关掉这里）
+  const [pickerOpen, setPickerOpen] = useState(false);
   const nameRef = useRef(null);
+  // 上一次的 open 值：只在「从关到开」那一次初始化表单
+  const wasOpen = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
-    setName(guild?.name || '');
-    setSlogan(guild?.slogan || '');
-    setColorKey(guild?.colorKey || '');
-    setError('');
-    setNotice('');
-    setDissolveOpen(false);
-    setDissolveText('');
-    setTransferTo(null);
-    const t = setTimeout(() => nameRef.current && nameRef.current.focus(), 60);
-    return () => clearTimeout(t);
+    /**
+     * ⚠ 不能写成 `if (!open) return; ...初始化...` 加依赖 `[open, guild]`。
+     * `guild` 是父组件每次 reload 后的新对象，帮主邀请成功 → 父组件 reload →
+     * guild 换引用 → 这个 effect 重跑 → `setPickerOpen(false)` 把刚打开的选择器
+     * 一起关掉（表现为「邀请一个人之后弹窗自己消失」）。
+     * 所以只在 open 由 false 变 true 时初始化。
+     */
+    if (open && !wasOpen.current) {
+      setName(guild?.name || '');
+      setSlogan(guild?.slogan || '');
+      setColorKey(guild?.colorKey || '');
+      setError('');
+      setNotice('');
+      setDissolveOpen(false);
+      setDissolveText('');
+      setTransferTo(null);
+      setPickerOpen(false);
+      const t = setTimeout(() => nameRef.current && nameRef.current.focus(), 60);
+      wasOpen.current = true;
+      return () => clearTimeout(t);
+    }
+    if (!open) wasOpen.current = false;
   }, [open, guild]);
 
   useEffect(() => {
@@ -236,10 +260,21 @@ export default function GuildModal({ open, mode = 'create', guild = null, colors
           {isManage && (
             <div className="guild-members">
               <div className="guild-members-head">
-                <h4>成员</h4>
-                <span className="guild-members-count">
-                  {memberCount} / {guild?.maxMembers || 10}
-                </span>
+                <h4>
+                  成员
+                  <span className="guild-members-count">
+                    {memberCount} / {guild?.maxMembers || 10}
+                  </span>
+                </h4>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={busy || memberCount >= (guild?.maxMembers || 10)}
+                  title={memberCount >= (guild?.maxMembers || 10) ? '满员了，先移除一些成员' : ''}
+                  onClick={() => setPickerOpen(true)}
+                >
+                  + 邀请成员
+                </button>
               </div>
               <ul className="guild-member-list">
                 {members.map((m) => {
@@ -279,7 +314,7 @@ export default function GuildModal({ open, mode = 'create', guild = null, colors
                 {members.length === 0 && <li className="guild-empty">还没有成员</li>}
               </ul>
               <div className="guild-hint">
-                邀请成员在下一步开放。现在先把帮派建起来，群友卡片上就能看到。
+                被邀请的群友下次进站会收到弹窗，也可以在个人信息里同意或拒绝。
               </div>
             </div>
           )}
@@ -359,6 +394,13 @@ export default function GuildModal({ open, mode = 'create', guild = null, colors
             </div>
           </div>
         )}
+
+        <GuildMemberPicker
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          sentInvites={sentInvites}
+          onChanged={onSaved}
+        />
       </div>
     </div>
   );

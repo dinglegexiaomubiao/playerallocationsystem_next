@@ -9,10 +9,11 @@ import { aiModerate, aiModerationMessage } from '../../../lib/ai-moderate.mjs';
 import { isGuildColor } from '../../../lib/guild-colors.mjs';
 import {
   guildOfPlayer,
-  countPendingInvites,
   colorUsage,
   playerIdOfAccount,
   normalizeGuildName,
+  listMyInvites,
+  listGuildInvites,
   createGuild,
   updateGuild,
   dissolveGuild,
@@ -36,10 +37,14 @@ export default async function handler(req, res) {
     const playerId = await playerIdOfAccount(session.name);
 
     if (req.method === 'GET') {
-      const [guild, pendingInvites, colors] = await Promise.all([
-        guildOfPlayer(playerId),
-        countPendingInvites(playerId),
-        colorUsage(),
+      // 一次给全，个人信息页与「邀请成员」弹窗都不用再发请求：
+      //   guild        我所在的帮派（含成员）
+      //   myInvites    我收到的待处理邀请 —— 个人信息页要列出它们，且能直接同意/拒绝
+      //   sentInvites  本帮派发出去还没回应的 —— 「已邀请」状态与撤回要用
+      const [guild, colors] = await Promise.all([guildOfPlayer(playerId), colorUsage()]);
+      const [myInvites, sentInvites] = await Promise.all([
+        listMyInvites(playerId),
+        guild && guild.isLeader ? listGuildInvites(guild.id) : [],
       ]);
       res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({
@@ -48,7 +53,9 @@ export default async function handler(req, res) {
         bound: !!playerId,
         playerId: playerId ? String(playerId) : null,
         guild,
-        pendingInvites,
+        pendingInvites: myInvites.length,
+        myInvites,
+        sentInvites,
         colors,
         maxMembers: MAX_GUILD_MEMBERS,
       });

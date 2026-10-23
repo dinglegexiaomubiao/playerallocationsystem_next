@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useRef, useState } from 'react';
 import useSession from '../hooks/useSession';
 import ThemeToggle from './ThemeToggle';
+import GuildInvitePrompt from './GuildInvitePrompt';
 import { footerAccountItems } from '../lib/nav-items.mjs';
 
 // 顶级导航：只放「全站板块」，个人相关入口按登录态追加
@@ -243,6 +244,10 @@ export default function Layout({ children }) {
           </div>
         </div>
       </footer>
+
+      {/* 帮派邀请弹窗：挂在全局，进站有一次机会弹出来。
+          自己处理「只弹一次」与「登录页不弹」的逻辑，这里不用加条件。 */}
+      <GuildInvitePrompt />
     </div>
   );
 }
