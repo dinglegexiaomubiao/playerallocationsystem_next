@@ -157,6 +157,26 @@ echo "  ✓ $(du -h "$TAR" | cut -f1) → $TAR"
 
 # 产物也一起打包（只取运行必需的 server/static；cache 是 build 缓存，38M 且 next start 不用）
 if [ "$BUILD_MODE" = "local" ]; then
+  # ⚠ 防呆（2026-10-23 踩过，代价是线上 API 全 500）：
+  #   Turbopack 把 pg / xlsx / nodemailer 外部化成 `<包名>-<哈希>`，并在
+  #   .next/node_modules 里放符号链接指向真实包。**增量构建（cache 命中）只建一个
+  #   空目录、不补链接** —— 打包装上去就是 Cannot find module 'pg-xxxx'，所有读写库的
+  #   API 全 500。而健康检查打的是静态首页，照样 200，前端看不出任何异常。
+  #   所以：产物里有引用就必须有链接，缺了直接中止，别传上去。
+  # ⚠ set -euo pipefail 下这几个计数必须兜底：目录不存在时 ls 返回 2、无匹配时 grep
+  #   返回 1，pipefail 会让整个赋值语句失败，脚本在打印原因之前就退出了（踩过）。
+  EXT_REFS=$( { grep -rlE 'require\("(pg|xlsx|nodemailer|@anthropic-ai/sdk)-[0-9a-f]{8,}"\)' .next/server 2>/dev/null || true; } | wc -l | tr -d ' ')
+  EXT_LINKS=$( { ls -1 .next/node_modules 2>/dev/null || true; } | wc -l | tr -d ' ')
+  if [ "$EXT_REFS" -gt 0 ] && [ "$EXT_LINKS" -eq 0 ]; then
+    echo "  ✗ 产物引用了外部模块，但 .next/node_modules 是空的（$EXT_REFS 个文件引用）"
+    echo "    Turbopack 增量构建有时只建目录不填链接，传上去所有 API 会 500。"
+    echo "    解决：rm -rf .next && npm run build（全量重建）后重试。"
+    exit 1
+  fi
+  if [ "$EXT_LINKS" -gt 0 ]; then
+    echo "  ✓ 外部模块链接 $EXT_LINKS 个（服务器端会改写成相对路径）"
+  fi
+
   rm -f "$NEXT_TAR"
   tar -czf "$NEXT_TAR" --exclude=./cache --exclude=./dev -C .next . 2>/dev/null
   if [ ! -s "$NEXT_TAR" ]; then
