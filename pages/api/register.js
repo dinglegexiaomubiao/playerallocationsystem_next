@@ -9,6 +9,7 @@ import { setSessionCookie, isAdminName } from '../../lib/auth';
 import { hashPasswordWithSalt } from '../../lib/password';
 import { getClientIp } from '../../lib/rate-limit';
 import { checkText } from '../../lib/moderation.mjs';
+import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 import { notifySignup } from '../../lib/notify';
 
 let dbInitialized = false;
@@ -75,6 +76,11 @@ export default async function handler(req, res) {
   const nickHit = checkText(groupNickname);
   if (!nickHit.ok) {
     return res.status(400).json({ error: `群昵称里检测到不合适的内容（${nickHit.category}），请修改后再注册` });
+  }
+  // AI 复审（DeepSeek）：超时/出错自动放行
+  const nickAi = await aiModerate({ 群昵称: groupNickname });
+  if (!nickAi.ok) {
+    return res.status(400).json({ error: aiModerationMessage(nickAi) });
   }
   if (username.length > MAX_NAME_LEN) {
     return res.status(400).json({ error: `登录账号不能超过 ${MAX_NAME_LEN} 个字符` });

@@ -10,6 +10,7 @@ import {
 } from '../../lib/player-identity';
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 import { checkText, LIMITS } from '../../lib/moderation.mjs';
+import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 import listCache from '../../lib/list-cache';
 
 // 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
@@ -168,6 +169,15 @@ export default async function handler(req, res) {
       }
       if (typeof body.self_intro === 'string') body.self_intro = [...body.self_intro].slice(0, LIMITS.selfIntro).join('');
       if (typeof body.group_nickname === 'string') body.group_nickname = [...body.group_nickname].slice(0, LIMITS.nickname).join('');
+
+      // AI 复审（DeepSeek）：超时/出错自动放行
+      const ai = await aiModerate({
+        群昵称: body.group_nickname || '',
+        自我评价: body.self_intro || '',
+        擅长位置: Array.isArray(body.positions) ? body.positions.join('、') : '',
+        擅长英雄: Array.isArray(body.heroes) ? body.heroes.join('、') : '',
+      });
+      if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       const updated = await updatePlayer(playerId, {
         nickname: cur.nickname,

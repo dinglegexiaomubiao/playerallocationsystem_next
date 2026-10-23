@@ -1,6 +1,7 @@
 import { pool } from '../../lib/db';
 import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
 import { checkText, LIMITS } from '../../lib/moderation.mjs';
+import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 
 function clampRating(v) {
   const n = parseInt(v, 10);
@@ -39,6 +40,9 @@ export default async function handler(req, res) {
           const hitR = checkText(body.reviewer);
           if (!hitR.ok) return res.status(400).json({ success: false, error: `署名里检测到不合适的内容（${hitR.category}），请修改后再提交` });
         }
+        // AI 复审（DeepSeek）：超时/出错自动放行
+        const ai = await aiModerate({ 评价: body.content, 署名: body.reviewer || '' });
+        if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
         const row = await client.query(
           `INSERT INTO public.food_reviews (food_id, reviewer, content, rating)
            VALUES ($1,$2,$3,$4) RETURNING *`,

@@ -6,6 +6,15 @@ import PartyCard from '../../components/PartyCard';
 import PartyForm from '../../components/PartyForm';
 import { PARTY_MODES } from '../../lib/options.mjs';
 
+// 帖子时间 → 本地日期 key（YYYY-MM-DD），用于按天筛选
+const dateKeyOf = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 export default function PartyPage() {
   const { me: session, ready } = useSession();
 
@@ -17,6 +26,7 @@ export default function PartyPage() {
   const [openOnly, setOpenOnly] = useState(false);
   const [showExpired, setShowExpired] = useState(false); // 过期卡片折叠区默认收起
   const [q, setQ] = useState('');
+  const [dateFilter, setDateFilter] = useState(''); // 按日期查历史记录（YYYY-MM-DD，本地时区）
   const [showForm, setShowForm] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -48,8 +58,10 @@ export default function PartyPage() {
     const kw = q.trim().toLowerCase();
     return posts.filter((p) => {
       if (modeFilter !== 'all' && p.mode !== modeFilter) return false;
+      // 选了日期 = 查那天的记录：忽略状态/过期条件，历史贴也要能翻到
+      if (dateFilter && dateKeyOf(p.start_at) !== dateFilter) return false;
       // 「只看招募中」= 状态 open 且还没过期（时间过了的招不到人，不算招募中）
-      if (openOnly && (p.status !== 'open' || p.expired)) return false;
+      if (!dateFilter && openOnly && (p.status !== 'open' || p.expired)) return false;
       if (!kw) return true;
       const hay = [
         p.title,
@@ -68,7 +80,7 @@ export default function PartyPage() {
         .toLowerCase();
       return hay.includes(kw);
     });
-  }, [posts, modeFilter, openOnly, q]);
+  }, [posts, modeFilter, openOnly, q, dateFilter]);
 
   // 招募中（没过期）排前面正常展示；过期的一律折叠到底部，默认收起
   const activePosts = filtered.filter((p) => !p.expired);
@@ -165,6 +177,24 @@ export default function PartyPage() {
                 ))}
               </select>
             </div>
+            <div className="filter-field">
+              <label>日期</label>
+              <div className="filter-date">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  max="2100-12-31"
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className={dateFilter ? 'is-active' : ''}
+                  aria-label="按日期查看开黑记录"
+                />
+                {dateFilter && (
+                  <button type="button" className="filter-date-clear" onClick={() => setDateFilter('')} aria-label="清除日期">
+                    ×
+                  </button>
+                )}
+              </div>
+            </div>
             <div className="filter-field" style={{ flex: '0 0 auto' }}>
               <label>状态</label>
               <div className="chips">
@@ -178,9 +208,17 @@ export default function PartyPage() {
               </div>
             </div>
             <div className="filter-summary">
-              共 <b>{activePosts.length}</b> 张卡片
-              {expiredPosts.length > 0 && (
-                <span className="filter-summary-sub">（另有 {expiredPosts.length} 条已过期，在下方折叠区）</span>
+              {dateFilter ? (
+                <>
+                  <b>{dateFilter}</b> 共 <b>{filtered.length}</b> 张
+                </>
+              ) : (
+                <>
+                  共 <b>{activePosts.length}</b> 张卡片
+                  {expiredPosts.length > 0 && (
+                    <span className="filter-summary-sub">（另有 {expiredPosts.length} 条已过期，在下方折叠区）</span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -201,47 +239,70 @@ export default function PartyPage() {
             </div>
           )}
           {!loading && !error && posts.length > 0 && filtered.length === 0 && (
-            <div className="empty">没有符合筛选条件的卡片，换个条件试试。</div>
+            <div className="empty">
+              {dateFilter ? '这一天没有开黑记录，换个日期看看。' : '没有符合筛选条件的卡片，换个条件试试。'}
+            </div>
           )}
 
-          <div className="party-grid">
-            {activePosts.map((p) => (
-              <PartyCard
-                key={p.id}
-                post={p}
-                me={me}
-                onChanged={() => {
-                  setMsg('');
-                  load();
-                }}
-              />
-            ))}
-          </div>
+          {dateFilter ? (
+            /* 按日期查记录：平铺当天全部卡片（含已过期/已关闭），不做折叠 */
+            <>
+              <div className="party-grid">
+                {filtered.map((p) => (
+                  <PartyCard
+                    key={p.id}
+                    post={p}
+                    me={me}
+                    onChanged={() => {
+                      setMsg('');
+                      load();
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="party-grid">
+                {activePosts.map((p) => (
+                  <PartyCard
+                    key={p.id}
+                    post={p}
+                    me={me}
+                    onChanged={() => {
+                      setMsg('');
+                      load();
+                    }}
+                  />
+                ))}
+              </div>
 
-          {/* 过期卡片折叠区：默认收起，点一下展开 */}
-          {!loading && !error && expiredPosts.length > 0 && (
-            <div className="pg-expired-fold">
-              <button type="button" className="pg-expired-toggle" onClick={() => setShowExpired((v) => !v)}>
-                <span className="pg-expired-arrow">{showExpired ? '▾' : '▸'}</span>
-                已过期招募（{expiredPosts.length}）
-                <span className="pg-expired-hint">{showExpired ? '收起' : '展开'}</span>
-              </button>
-              {showExpired && (
-                <div className="party-grid" style={{ marginTop: 12 }}>
-                  {expiredPosts.map((p) => (
-                    <PartyCard
-                      key={p.id}
-                      post={p}
-                      me={me}
-                      onChanged={() => {
-                        setMsg('');
-                        load();
-                      }}
-                    />
-                  ))}
+              {/* 过期卡片折叠区：默认收起，点一下展开 */}
+              {!loading && !error && expiredPosts.length > 0 && (
+                <div className="pg-expired-fold">
+                  <button type="button" className="pg-expired-toggle" onClick={() => setShowExpired((v) => !v)}>
+                    <span className="pg-expired-arrow">{showExpired ? '▾' : '▸'}</span>
+                    已过期招募（{expiredPosts.length}）
+                    <span className="pg-expired-hint">{showExpired ? '收起' : '展开'}</span>
+                  </button>
+                  {showExpired && (
+                    <div className="party-grid" style={{ marginTop: 12 }}>
+                      {expiredPosts.map((p) => (
+                        <PartyCard
+                          key={p.id}
+                          post={p}
+                          me={me}
+                          onChanged={() => {
+                            setMsg('');
+                            load();
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
       </section>

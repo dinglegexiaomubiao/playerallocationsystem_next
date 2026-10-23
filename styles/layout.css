@@ -311,6 +311,17 @@ a { text-decoration: none; color: inherit; }
 /* 全字段搜索框 */
 .filter-field-search { flex: 1 1 240px; }
 .filter-search { position: relative; }
+
+/* 日期筛选（开黑 / 活动招募）：原生 date 控件 + 清除按钮 */
+.filter-date { position: relative; }
+.filter-date input { padding-right: 30px; cursor: pointer; }
+.filter-date-clear {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border: none; background: var(--bg-subtle); color: var(--text-3);
+  border-radius: 50%; cursor: pointer; font-size: .9rem; line-height: 1; display: flex;
+  align-items: center; justify-content: center; padding: 0;
+}
+.filter-date-clear:hover { background: var(--brand-soft); color: var(--brand-on-soft); }
 .filter-field input {
   width: 100%; padding: 9px 10px; font-size: .85rem; font-family: inherit;
   color: var(--text); background: var(--bg-card); border-radius: var(--radius-sm);

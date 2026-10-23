@@ -10,6 +10,7 @@ import {
 import { getSession, isAdminName, denyIfNotAdmin } from '../../lib/auth';
 import { getClientIp } from '../../lib/rate-limit';
 import { checkText } from '../../lib/moderation.mjs';
+import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
 import { notifySupportReport, supportNotifyConfigured } from '../../lib/notify';
 
 // 每类来源的入库上限：10 分钟内同一 IP、同一分类最多 3 条。
@@ -118,6 +119,11 @@ export default async function handler(req, res) {
       if (!val) continue;
       const hit = checkText(val);
       if (!hit.ok) return res.status(400).json({ success: false, error: `「${label}」里检测到不合适的内容（${hit.category}），请修改后再提交` });
+    }
+    // AI 复审（DeepSeek）：超时/出错自动放行
+    {
+      const ai = await aiModerate({ 问题描述: message, 联系方式: clip(b.contact, 120) || '' });
+      if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
     }
 
     if (kind === 'feedback' && !message) {
