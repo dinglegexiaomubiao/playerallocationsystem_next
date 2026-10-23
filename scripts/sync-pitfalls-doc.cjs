@@ -65,20 +65,24 @@ out = out.replace(
 // 去掉替换后留下的多余空行（原文件在标题与第一条之间有一空行 + 分隔线）
 out = out.replace('隧道（见第 4 节）。\n\n\n---', '隧道（见第 4 节）。\n\n---');
 
-fs.writeFileSync(OUT, out, 'utf8');
-
-// ---- 4. 自检：确认敏感内容没漏出去 ----
-const leak = [
+// ---- 3. 自检：确认敏感内容没漏出去 ----
+// ⚠ 必须在落盘之前。写完了再检查等于没检查 —— 文件已经被污染，而且脚本退出后
+// 那份带密钥的文档就躺在仓库里等着被提交。
+const LEAK_PATTERNS = [
   'hmacSha256(payload,key)',
   "base64url({n:'dom'",
   'key=sha256(secret)',
   'dd_session=',
 ];
-const bad = leak.filter((k) => out.includes(k));
-if (bad.length) {
-  console.error('✗ 共享版里仍有敏感内容：' + bad.join(' / '));
+const leaks = LEAK_PATTERNS.filter((k) => out.includes(k));
+if (leaks.length) {
+  console.error('✗ 共享版里仍有敏感内容，未写入文件：' + leaks.join(' / '));
+  console.error('  要么把它们从源文件里删掉，要么在脚本里加脱敏规则。');
   process.exit(1);
 }
+
+// ---- 4. 落盘 ----
+fs.writeFileSync(OUT, out, 'utf8');
 
 console.log('✓ docs/pitfalls.md 已生成');
 console.log('  源文件 ' + src.length + ' 字符 → 共享版 ' + out.length + ' 字符');
