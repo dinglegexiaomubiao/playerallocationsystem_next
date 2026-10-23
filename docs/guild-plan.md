@@ -102,7 +102,7 @@ CREATE INDEX IF NOT EXISTS guild_invites_player_idx
   ON public.guild_invites (player_id, status);
 ```
 
-**表要归应用账号所有**：建表放在 `lib/db.js` 的 `ensureGuildSchema()` 里，由应用进程执行
+**表要归应用账号所有**：建表放在 `lib/db.js` 的 `ensureGuildTables()` 里，由应用进程执行
 （跟 `activity_posts` 同一模式）。用 `sudo -u postgres psql` 建会让属主变成 `postgres`，
 接口随后 500 报 `permission denied` —— 这个坑已经踩过一次。
 
@@ -440,7 +440,7 @@ scripts/check-guild-contrast.mjs  对比度验算，npm run guild:contrast
 
 ```
 lib/guild.mjs                     服务端逻辑：取我的帮派 / 权限校验 / 邀请状态机
-lib/db.js                         + ensureGuildSchema()（三张表 + 索引）
+lib/db.js                         + ensureGuildTables()（三张表 + 索引）
 pages/api/guild/index.js          GET / POST / PATCH / DELETE
 pages/api/guild/invites/index.js  GET / POST
 pages/api/guild/invites/[id].js   POST / DELETE
@@ -472,13 +472,25 @@ URL 同步）和列表渲染缠在一起。邀请选择器要复用筛选，只�
 
 ## 八、阶段计划
 
-| 阶段 | 内容 | 验收 |
-|---|---|---|
-| **P1 数据与底座** | 三张表 + `ensureGuildSchema` + `lib/guild.mjs`；`/members` 筛选面板抽出；`/api/players`、`/api/profile` 带上帮派字段（暂时恒为 null） | 建表成功、`/members` 与 `/profile` 行为零变化、现有自检全过 |
-| **P2 创建与管理** | 个人信息「帮派」区块、创建弹窗、配色选择、帮派管理弹窗、改名改色改口号、解散、移除成员、退出、转让 | 名称/配色互斥真的生效（并发插入也只成功一条）、审核能拦住违禁词、无主的帮派不可能出现、第 11 人进不来 |
-| **P3 邀请与被邀请** | 邀请选择器（复用筛选）、邀请语审核、进站弹窗、个人信息里的待处理邀请、同意/拒绝、撤回 | 一人一帮在数据库层成立、重复邀请被拒、弹窗不重复骚扰、`from=/profile` 返回正确 |
-| **P4 列表与主页** | `/guilds` 列表（自己帮派置顶）、`/guild/[id]` 主页、og meta、复制链接、导航入口 | 未登录能看；分享出去标题和摘要正确；群友卡片上的帮派名可点且不抢整卡链接 |
-| **P5 视觉与自检** | 卡片渐变 + 帮派徽标、详情页「所属帮派」、`check-guild.cjs` | `npm run guild:contrast` 全过；手机上弹窗/成员列表不溢出；导航在 1280 不折行 |
+| 阶段 | 内容 | 验收 | 状态 |
+|---|---|---|---|
+| **P1 数据与底座** | 三张表 + `ensureGuildTables` + `lib/guild.mjs`；`/members` 筛选面板抽出；`/api/players`、`/api/profile` 带上帮派字段（暂时恒为 null） | 建表成功、`/members` 与 `/profile` 行为零变化、现有自检全过 | **✅ 2026-10-23 完成（`ca4c1a4`）** |
+| **P2 创建与管理** | 个人信息「帮派」区块、创建弹窗、配色选择、帮派管理弹窗、改名改色改口号、解散、移除成员、退出、转让 | 名称/配色互斥真的生效（并发插入也只成功一条）、审核能拦住违禁词、无主的帮派不可能出现、第 11 人进不来 | 待做 |
+| **P3 邀请与被邀请** | 邀请选择器（复用筛选）、邀请语审核、进站弹窗、个人信息里的待处理邀请、同意/拒绝、撤回 | 一人一帮在数据库层成立、重复邀请被拒、弹窗不重复骚扰、`from=/profile` 返回正确 | 待做 |
+| **P4 列表与主页** | `/guilds` 列表（自己帮派置顶）、`/guild/[id]` 主页、og meta、复制链接、导航入口 | 未登录能看；分享出去标题和摘要正确；群友卡片上的帮派名可点且不抢整卡链接 | 待做 |
+| **P5 视觉与自检** | 卡片渐变 + 帮派徽标、详情页「所属帮派」、`check-guild.cjs` | `npm run guild:contrast` 全过；手机上弹窗/成员列表不溢出；导航在 1280 不折行 | 待做 |
+
+### P1 实际落地的内容（2026-10-23）
+
+- **三张表已建**（线上库，属主 `laroja`）。7 项约束验证：同名/同色/一人两帮/重复 pending 邀请
+  全部被数据库拒绝；邀请结束后可重发；解散级联清成员与邀请。验证全程在事务里做，最后 ROLLBACK。
+- **`lib/guild.mjs`**：18 项空库验证（非法 id、未绑定、未入帮均返回 null/[] 而不是抛错）。
+- **筛选抽离**：`pages/members/index.js` 683 → 427 行；逻辑进 `lib/member-filter.mjs`，
+  渲染进 `components/member/MemberFilterPanel.js`。
+- **零回归有据可查**：`npm run members:check`，11 步基线（171 位真实群友）+
+  筛选栏 DOM 结构指纹，重构前后完全一致。
+- **接口**：`/api/players` 171/171 带 `guild`（恒 null），`/api/profile` 带
+  `guild` + `pendingInvites`，原有字段一个不少。
 
 **为什么 P1 单独做**：它包含一次对 `/members` 的重构（抽筛选面板）。如果和帮派业务一起改，
 出问题时分不清是重构错了还是新功能错了。
