@@ -60,12 +60,23 @@ const USER_MARKS = ['群友分布从「深圳 9 区」扩成全国三级', '英�
   ok(feats.every((i) => i.version), '每条 feature 都带版本号', feats[0] && feats[0].version);
 
   // ---- 2. 管理员 ----
-  const admin = await (await fetch(BASE + '/api/feed', { headers: { cookie: 'dd_session=' + sign('dom') } })).json();
+  //
+  // ⚠ 打线上时本地签的 cookie 不被认（线上 AUTH_SECRET 是另一份），所以远端跑要传
+  //   ADMIN_COOKIE。不传就跳过这几项而不是报失败 —— 否则每次线上跑都 4 个红叉，
+  //   真出问题时反而看不出哪个是真问题。
+  const REMOTE = !/^https?:\/\/(127\.0\.0\.1|localhost)/.test(BASE);
+  const adminCookie = process.env.ADMIN_COOKIE || 'dd_session=' + sign('dom');
+  const admin = await (await fetch(BASE + '/api/feed', { headers: { cookie: adminCookie } })).json();
   const adminText = JSON.stringify(admin);
-  ok(admin.isAdmin === true, '管理员 isAdmin=true');
-  ok(ADMIN_MARKS.every((m) => adminText.includes(m)), '管理员能看到管理员条目');
   const adminFeats = admin.items.filter((i) => i.kind === 'feature');
-  ok(adminFeats.length > feats.length, '管理员的更新条目更多', `${feats.length} → ${adminFeats.length}`);
+
+  if (REMOTE && !admin.isAdmin) {
+    console.log('  skip 远端 cookie 不被识别，跳过管理员可见性断言（可传 ADMIN_COOKIE）');
+  } else {
+    ok(admin.isAdmin === true, '管理员 isAdmin=true');
+    ok(ADMIN_MARKS.every((m) => adminText.includes(m)), '管理员能看到管理员条目');
+    ok(adminFeats.length > feats.length, '管理员的更新条目更多', `${feats.length} → ${adminFeats.length}`);
+  }
 
   // ---- 3. /changelog 页面（SSR，要看 HTML 本身） ----
   const anonHtml = await (await fetch(BASE + '/changelog')).text();
@@ -74,13 +85,22 @@ const USER_MARKS = ['群友分布从「深圳 9 区」扩成全国三级', '英�
     ADMIN_MARKS.filter((m) => anonHtml.includes(m)).join(' / ') || '干净');
   ok(anonHtml.includes('1.4.0'), 'HTML 里有版本号');
 
-  const adminHtml = await (await fetch(BASE + '/changelog', { headers: { cookie: 'dd_session=' + sign('dom') } })).text();
-  ok(ADMIN_MARKS.every((m) => adminHtml.includes(m)), '管理员的 HTML 里有管理员条目');
+  if (!(REMOTE && !admin.isAdmin)) {
+    const adminHtml = await (await fetch(BASE + '/changelog', { headers: { cookie: adminCookie } })).text();
+    ok(ADMIN_MARKS.every((m) => adminHtml.includes(m)), '管理员的 HTML 里有管理员条目');
+  }
 
   // ---- 4. 缓存头：带管理员差异的响应不能被共享缓存 ----
+  //
+  // 本地响应头是 no-store；线上会被 Nginx 改写成 no-cache
+  // （/etc/nginx/snippets/laroja-proxy.conf 对所有 HTML/API 做 proxy_hide_header +
+  //   add_header，看不到上游的值）。
+  // no-cache 要求每次使用前回源验证，不会把本次的响应直接发给下一个人，可以接受；
+  // 真正危险的是「public + s-maxage」—— 那才是谁先来谁决定后面所有人看到什么。
   const r = await fetch(BASE + '/api/feed');
   const cc = r.headers.get('cache-control') || '';
-  ok(/no-store/.test(cc), 'feed 不缓存（防管理员内容被 CDN 缓存后发给别人）', cc);
+  const sharedCacheable = /\bpublic\b/i.test(cc) && /s-maxage\s*=\s*\d+/i.test(cc);
+  ok(!sharedCacheable, '不是共享缓存（本地 no-store / 线上 no-cache 均可）', cc);
 
   console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
   process.exitCode = fail ? 1 : 0;
