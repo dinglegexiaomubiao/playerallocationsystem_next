@@ -84,6 +84,7 @@ echo ""
 echo "[2/5] 打包源码"
 tar -czf "$TAR" \
   --exclude=node_modules --exclude=.next --exclude=.cache \
+  --exclude=.next-build --exclude=.next-prev \
   --exclude=.git --exclude=.workbuddy --exclude=.env.local \
   --exclude=logs --exclude='*.log' \
   --exclude='./测试的数据.json' --exclude='./测试的数据.txt' --exclude='./测试的数据.xlsx' \
@@ -116,6 +117,7 @@ mkdir -p "$SNAP"
 # 1) 源码快照（排除依赖/产物/密钥，体积约 10~20M）
 tar -czf "$SNAP/source.tar.gz" \
   --exclude=./node_modules --exclude=./.next --exclude=./.git \
+  --exclude=./.next-build --exclude=./.next-prev \
   --exclude=./.cache --exclude=./.env.local --exclude=./logs --exclude='*.log' \
   . 2>/dev/null
 
@@ -196,25 +198,55 @@ if [ "$WITH_DEPS" = "1" ]; then
   npm ci --no-audit --no-fund 2>&1 | tail -3
 fi
 
-# 5.3 构建；失败就回滚，绝不留一个跑不起来的站点
-if ! NODE_OPTIONS=--max-old-space-size=1024 npm run build > /tmp/laroja-build.log 2>&1; then
+# 5.2.5 备份当前静态产物
+# 为什么要留：微信 / QQ 内置浏览器会把 HTML 缓存很久，用户手里那一页仍然引用旧 hash 的
+# chunk。新构建会把旧文件删掉，于是它 404 → React 起不来 → 「页面看得见但按钮全按不动」。
+# 2026-10-23 10:48 那次就是这么发生的（16 次 chunk 404 + 11 次 500）。
+if [ -d .next/static ]; then
+  rm -rf /tmp/laroja-static-prev
+  cp -a .next/static /tmp/laroja-static-prev
+  echo "  → 已备份上一版静态产物（$(du -sh /tmp/laroja-static-prev | cut -f1)）"
+fi
+
+# 5.3 构建到独立目录（.next-build）
+# ⚠ 不能原地 build：旧进程正在读 .next，`next build` 会边写边删，读到半成品的请求直接 500。
+#   2026-10-23 10:48 那次部署就产生 11 个 `GET / 500` + 4 个 502 —— 用户看到的就是「报错 500」。
+#   构建到 .next-build 期间线上一个字都不动，构建完再原子切换。
+BUILD_OK=1
+# 先清干净：万一上次部署中途被打断留下了半个 .next-build，next build 复用会产出残缺产物
+rm -rf .next-build
+NODE_OPTIONS=--max-old-space-size=1024 NEXT_DIST_DIR=.next-build npm run build > /tmp/laroja-build.log 2>&1 || BUILD_OK=0
+# BUILD_ID 是「构建真的产出了完整产物」的铁证，光看退出码不够（postscript 失败也会非 0）
+[ -f .next-build/BUILD_ID ] || BUILD_OK=0
+
+if [ "$BUILD_OK" != "1" ]; then
   echo "  ✗ 服务器构建失败，日志尾部："
   tail -30 /tmp/laroja-build.log
-  if [ -n "$SNAP" ] && [ -d "$SNAP/.next" ]; then
-    echo "  ↺ 自动回滚到 $SNAP ..."
-    pm2 stop "$PM2_APP" > /dev/null 2>&1 || true
-    rm -rf .next
-    cp -a "$SNAP/.next" .next
-    tar -xzf "$SNAP/source.tar.gz"
-    pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1 || pm2 start "$PM2_APP" > /dev/null 2>&1 || true
-    sleep 4
-    echo "  ✓ 已回滚，站点返回 $(health)"
-  else
-    echo "  ⚠ 没有可用快照，请手动处理：cd $REMOTE_DIR && pm2 restart $PM2_APP"
-  fi
+  # 关键：这次 .next 完全没被碰过，站点还在正常跑，不需要回滚也不需要重启
+  rm -rf .next-build
+  echo "  ✓ 线上产物未被触碰，站点仍返回 $(health)（源码已更新，下次成功后生效）"
   exit 1
 fi
 echo "  → 构建完成"
+
+# 5.3.1 把上一版独有的 chunk 合并进新产物（-n 不覆盖新版同名文件）
+# 这样还开着旧页面的用户也能把 JS 加载完、水合成功，不必等自己手动刷新。
+if [ -d /tmp/laroja-static-prev ]; then
+  cp -an /tmp/laroja-static-prev/. .next-build/static/ 2>/dev/null || true
+  rm -rf /tmp/laroja-static-prev
+fi
+# 只留两周内的：更老的 chunk 不可能还有活跃页面在引用，没必要一直占空间
+find .next-build/static -type f -mtime +14 -delete 2>/dev/null || true
+echo "  → 静态产物 $(du -sh .next-build/static | cut -f1)（含上一版 chunk，旧页面不会 404）"
+
+# 5.3.2 原子切换：rename 是瞬间的，旧进程手里的 inode 不受影响，
+# 真正会 5xx 的窗口只剩「切换 → pm2 restart 完成」这一两秒（原来有二十秒）
+rm -rf .next-prev
+# set -e 下别写 `[ -d .next ] && mv ...`：条件为假时整句返回 1 会直接退出脚本
+if [ -d .next ]; then mv .next .next-prev; fi
+mv .next-build .next
+rm -rf .next-prev
+echo "  → 产物已切换"
 
 # 5.4 重启
 pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1
