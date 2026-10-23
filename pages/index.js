@@ -48,11 +48,26 @@ const fmtRange = (a, b) => {
   return s && e ? `${s} — ${e}` : s || e || '时间待定';
 };
 
+/** 动态栏用相对时间：「3 小时前」比「10/23 17:00」好读，超过一个月才退回日期 */
+const relTime = (iso) => {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '';
+  const diff = Date.now() - t;
+  if (diff < 60e3) return '刚刚';
+  if (diff < 3600e3) return `${Math.floor(diff / 60e3)} 分钟前`;
+  if (diff < 86400e3) return `${Math.floor(diff / 3600e3)} 小时前`;
+  if (diff < 2 * 86400e3) return '昨天';
+  if (diff < 30 * 86400e3) return `${Math.floor(diff / 86400e3)} 天前`;
+  const d = new Date(t);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+};
+
 export default function Home() {
   const [tours, setTours] = useState([]);
   const [players, setPlayers] = useState([]);
   const [foods, setFoods] = useState([]);
   const [rooms, setRooms] = useState(0);
+  const [feed, setFeed] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -62,7 +77,8 @@ export default function Home() {
       fetch('/api/players').then((r) => r.json()).catch(() => ({ players: [] })),
       fetch('/api/foods').then((r) => r.json()).catch(() => ({ foods: [] })),
       fetch('/api/party').then((r) => r.json()).catch(() => ({ posts: [] })),
-    ]).then(([td, pd, fd, rd]) => {
+      fetch('/api/feed').then((r) => r.json()).catch(() => ({ items: [] })),
+    ]).then(([td, pd, fd, rd, ff]) => {
       if (!alive) return;
       const ts = td.tournaments || [];
       // 最近的排前面：有起止时间按开始时间，没有的沉底
@@ -75,6 +91,7 @@ export default function Home() {
       setPlayers(pd.players || []);
       setFoods(fd.foods || []);
       setRooms((rd.posts || []).filter((p) => !p.expired).length);
+      setFeed(Array.isArray(ff.items) ? ff.items : []);
       setLoaded(true);
     });
     return () => {
@@ -171,6 +188,33 @@ export default function Home() {
               <img src="/images/tournament/hero-radiant.jpg" alt="Dota 2 地图" />
             </div>
           </section>
+
+          {/* ==================== 最近动态 ====================
+              比赛 / 活动 / 开黑 / 群友 / 美食 / 功能更新混排，按时间倒序。
+              数据来自 /api/feed 一次聚合；某一类没有内容就不出现在列表里，
+              不摆「暂无」占位 —— 动态栏空着比摆一排「暂无」好看。 */}
+          {feed.length > 0 && (
+            <section className="home-feed">
+              <div className="home-sec-head">
+                <h2>最近动态</h2>
+                <span className="home-feed-hint">比赛 · 开黑 · 活动 · 群友 · 美食 · 功能更新</span>
+              </div>
+              <ul className="home-feed-list">
+                {feed.map((it, i) => (
+                  <li key={`${it.kind}-${i}`}>
+                    <Link href={it.href || '/'} className="home-feed-row">
+                      <span className={`home-feed-tag is-${it.kind}`}>{it.label}</span>
+                      <span className="home-feed-title">{it.title}</span>
+                      {it.meta ? <span className="home-feed-sub">{it.meta}</span> : null}
+                      <time className="home-feed-at" dateTime={it.at}>
+                        {relTime(it.at)}
+                      </time>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {/* ==================== 2×2 入口 ==================== */}
           <div className="home-grid">

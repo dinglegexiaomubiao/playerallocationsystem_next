@@ -309,3 +309,87 @@
     text-align: left;
   }
 }
+
+/* ==================== 首页 · 最近动态 ====================
+   比赛 / 开黑 / 活动 / 群友 / 美食 / 功能更新混排成一条时间线。
+   刻意做成「信息行 + 分隔线」而不是卡片堆：首页第一屏已经有 Hero 和四宫格，
+   再摆一堆卡片会把层次压平。 */
+.home-feed {
+  margin-top: 34px;
+}
+.home-feed-hint {
+  font-size: .74rem;
+  color: var(--text-3);
+  letter-spacing: .02em;
+}
+.home-feed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line-hairline);
+}
+.home-feed-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--line-hairline);
+  text-decoration: none;
+  color: var(--text);
+  transition: background .14s ease;
+}
+.home-feed-row:hover { background: var(--bg-subtle); }
+.home-feed-row:hover .home-feed-title { color: var(--brand); }
+
+/* 类型标签：六类各一档低饱和色，靠色相区分而不是靠六个不同的花哨底 */
+.home-feed-tag {
+  flex: 0 0 auto;
+  min-width: 2.9em;
+  text-align: center;
+  padding: 2px 0;
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  border-radius: 3px;
+  background: var(--bg-subtle);
+  color: var(--text-2);
+}
+.home-feed-tag.is-match { background: var(--brand-soft); color: var(--brand-on-soft); }
+.home-feed-tag.is-party { background: var(--green-soft); color: var(--ok); }
+.home-feed-tag.is-activity { background: var(--gold-soft); color: var(--gold); }
+.home-feed-tag.is-member { background: var(--accent-soft); color: var(--brand-on-soft); }
+.home-feed-tag.is-food { background: var(--color-warning-bg); color: var(--color-warning); }
+.home-feed-tag.is-feature { background: var(--bg-subtle); color: var(--text-2); }
+
+.home-feed-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .88rem;
+}
+.home-feed-sub {
+  flex: 0 0 auto;
+  max-width: 12em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .76rem;
+  color: var(--text-3);
+}
+.home-feed-at {
+  flex: 0 0 auto;
+  min-width: 4.2em;
+  text-align: right;
+  font-size: .74rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 手机上把次要信息让掉，先保住标题和时间的可读性 */
+@media (max-width: 640px) {
+  .home-feed-sub,
+  .home-feed-hint { display: none; }
+  .home-feed-title { font-size: .84rem; }
+}
