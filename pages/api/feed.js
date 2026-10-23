@@ -1,5 +1,6 @@
 import { pool } from '../../lib/db';
-import { CHANGELOG } from '../../lib/changelog';
+import { getSession, isAdminName } from '../../lib/auth';
+import { flattenChangelog } from '../../lib/changelog';
 
 /**
  * 首页「最近动态」：一次取回所有会出现在动态栏里的东西。
@@ -23,8 +24,9 @@ import { CHANGELOG } from '../../lib/changelog';
  *   也不该让首页白屏。
  */
 
-const PER_KIND = 4; // 每类最多取几条
-const MAX_ITEMS = 10; // 动态栏最终展示几条
+// 首页右栏每个 Tab 展示 6 条，所以每类就取 6 条。
+// 没有再设总上限：六类 × 6 = 36 条封顶，一次响应完全扛得住，切 Tab 也不必再请求。
+const PER_KIND = 6;
 
 const KIND_LABEL = {
   match: '赛程',
@@ -181,46 +183,41 @@ export default async function handler(req, res) {
     })
   );
 
-  // 6) 功能更新（静态清单，不查库）
-  counts.feature = CHANGELOG.length;
-  for (const c of CHANGELOG.slice(0, PER_KIND)) {
-    const at = toIso(c.date + 'T12:00:00+08:00'); // 当天中午，避免和凌晨的数据抢位置
-    if (!at) continue;
+  // 6) 功能更新（来自 lib/changelog.js，不查库）
+  //
+  // 管理员条目在这里过滤，**不在前端隐藏**：前端隐藏只是不渲染，数据照样发出去了，
+  // 打开网络面板就能看到「后台改了账号名」这类不该给普通群友看的东西。
+  const session = getSession(req);
+  const isAdmin = !!session && isAdminName(session.name);
+  const changelog = flattenChangelog({ isAdmin });
+  counts.feature = changelog.length;
+  for (const c of changelog) {
     items.push({
       kind: 'feature',
       label: KIND_LABEL.feature,
       title: c.title,
-      meta: '',
+      // 版本号放 meta：Tab 里一行一条，标题太长会把版本号挤掉
+      meta: c.version,
+      version: c.version,
       href: c.href || '',
-      at,
+      at: c.at,
     });
   }
 
   items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   /**
-   * 纯按时间取前 N 条会出事：某一类只要最近特别活跃（比如今天连着进了几个群友），
-   * 别的类就被整类挤掉 —— 实测「美食」一条都进不了前 10。
-   * 所以先给每一类保底最新一条，剩下的位子再按时间填，最后整体仍按时间倒序输出。
+   * 首页右栏改成了「按类切换」的 Tab：每个 Tab 自己取前几条，
+   * 所以这里不再做「每类保底一条 + 截断到 10 条」的混排 —— 那套是为单一混排列表设计的。
+   * 现在把全部条目（每类最多 PER_KIND 条）交给前端，切 Tab 不用重新请求。
    */
-  const newestByKind = new Map();
-  for (const it of items) {
-    if (!newestByKind.has(it.kind)) newestByKind.set(it.kind, it);
-  }
-  const guaranteed = [...newestByKind.values()];
-  const picked = new Set(guaranteed);
-  const rest = items.filter((it) => !picked.has(it));
-  const list = [...guaranteed, ...rest]
-    .slice(0, MAX_ITEMS)
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-
-  // 动态栏 30 秒缓存：够挡住刷新风暴，又不至于让人建完房间还看不到自己
-  res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=120');
+  res.setHeader('Cache-Control', 'no-store');
   return res.status(200).json({
     success: true,
-    items: list,
+    items,
     counts,
     total: items.length,
+    isAdmin,
     ...(failed.length ? { failed } : {}),
   });
 }

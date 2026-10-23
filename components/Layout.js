@@ -195,6 +195,7 @@ export default function Layout({ children }) {
               <Link href="/food">群友美食</Link>
               <Link href="/party">开黑组队</Link>
               <Link href="/members/assign">阵容分配</Link>
+              <Link href="/changelog">更新日志</Link>
             </div>
             <div>
               <h5>社区</h5>

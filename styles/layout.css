@@ -3278,3 +3278,92 @@ a.mh-row:hover { background: var(--bg-subtle); }
   .guild-member-grow { display: none; }
   .guild-modal { width: 100%; }
 }
+
+/* ==================== 更新日志页 ====================
+   按版本分组，每组是一段「版本号 + 日期 + 一句话 + 条目」。
+   不用卡片：一页里可能有十几个版本，卡片堆起来全是边框，反而找不到版本号在哪。 */
+.changelog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  /* 阅读型页面：限制行长（约 75 字符），否则宽屏上一行拉太远，眼睛换行找不到行首。
+     不居中 —— 和页头标题左对齐，整页看起来才是一条线。 */
+  max-width: 820px;
+}
+.changelog-group {
+  border-left: 2px solid var(--border);
+  padding-left: 18px;
+}
+.changelog-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.changelog-ver {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--brand);
+  letter-spacing: 0.02em;
+}
+.changelog-date {
+  font-size: 0.76rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.changelog-summary {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.changelog-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.changelog-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.changelog-item a { color: var(--text-2); text-decoration: none; }
+.changelog-item a:hover { color: var(--brand); text-decoration: underline; }
+.changelog-dot {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transform: translateY(-3px);
+}
+.changelog-admin {
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--gold);
+  background: var(--gold-soft);
+}
+.changelog-foot {
+  margin-top: 26px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+  line-height: 1.7;
+}
+.changelog-foot a { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .changelog-list { gap: 24px; }
+  .changelog-group { padding-left: 12px; }
+  .changelog-item { font-size: 0.82rem; }
+}

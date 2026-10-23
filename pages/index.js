@@ -62,8 +62,29 @@ const relTime = (iso) => {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 };
 
+/** 只取「月/日」。功能更新用它 —— 那类是「哪个版本哪天改的」，不是「多久前发布」 */
+const monthDay = (iso) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : `${d.getMonth() + 1}/${d.getDate()}`;
+};
+
 /** Hero 右栏最多摆几条动态 —— 再多会把首屏撑高，剩下的看列表本身的信息密度 */
 const FEED_ON_HERO = 6;
+
+/**
+ * 首页右栏的分类 Tab。
+ *
+ * 为什么只有这 5 个：赛程和美食在「全部」里能看到，但没有单独的 Tab ——
+ * 右栏宽度只够放 5 个两字标签，再加就把标题挤成两行。
+ * 标签一律两个字：窄屏下三字会换行，整条 Tab 就散了。
+ */
+const FEED_TABS = [
+  { key: 'all', label: '全部' },
+  { key: 'party', label: '开黑' },
+  { key: 'activity', label: '活动' },
+  { key: 'member', label: '群友' },
+  { key: 'feature', label: '更新' },
+];
 
 export default function Home() {
   const [tours, setTours] = useState([]);
@@ -71,6 +92,8 @@ export default function Home() {
   const [foods, setFoods] = useState([]);
   const [rooms, setRooms] = useState(0);
   const [feed, setFeed] = useState([]);
+  // 右栏 Tab。默认「全部」：一进来应该先看到今天最热闹的事，而不是某一类
+  const [feedTab, setFeedTab] = useState('all');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -104,6 +127,33 @@ export default function Home() {
 
   const recent = tours.slice(0, 3);
   const hot = tours.find((t) => t.status === 'active' || t.status === 'ongoing');
+
+  /* 右栏当前 Tab 的显示内容。切 Tab 纯前端过滤，不再请求 —— /api/feed 一次给全了 */
+  const feedList = (() => {
+    if (feedTab !== 'all') {
+      return feed.filter((it) => it.kind === feedTab).slice(0, FEED_ON_HERO);
+    }
+    /**
+     * 「全部」不能纯按时间取前 6 条：某一类当天特别活跃（比如连着进了几个群友），
+     * 就会把整屏占满 —— 实测 6 条全是「某某更新了资料」，看着像动态栏坏了。
+     * 所以先给每一类保底最新一条，剩下的位子再按时间填，最后整体按时间倒序。
+     * （这条规则原来在 /api/feed 里，改成 Tab 后由前端算 —— 分类 Tab 各自过滤，
+     *   不需要保底；只有「全部」需要。）
+     */
+    const newestByKind = new Map();
+    for (const it of feed) if (!newestByKind.has(it.kind)) newestByKind.set(it.kind, it);
+    const guaranteed = [...newestByKind.values()];
+    const picked = new Set(guaranteed);
+    const rest = feed.filter((it) => !picked.has(it));
+    return [...guaranteed, ...rest]
+      .slice(0, FEED_ON_HERO)
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  })();
+  /* Tab 上的条数：让「这个 Tab 有没有东西」一眼可见，不用点进去才发现是空的 */
+  const feedCounts = feed.reduce((m, it) => {
+    m[it.kind] = (m[it.kind] || 0) + 1;
+    return m;
+  }, {});
 
   /* 入口卡：只放真实存在的板块，指标也取真实条数 */
   const ENTRIES = [
@@ -193,24 +243,68 @@ export default function Home() {
               <div className="home-hero-feed">
                 <div className="home-hero-feed-head">
                   <h2>最近动态</h2>
-                  <span className="home-hero-feed-more">
-                    {/* 别写「共 N 条」—— 这里只摆 6 条，写了会让人以为还有地方能看全 */}
-                    {feed.length > FEED_ON_HERO ? `最近 ${FEED_ON_HERO} 条` : ''}
-                  </span>
+                  {/* 右栏只摆 6 条，想看全部更新去日志页 —— 别写「共 N 条」，
+                      写了会让人以为这里还能展开 */}
+                  <Link href="/changelog" className="home-hero-feed-more">
+                    更新日志 →
+                  </Link>
                 </div>
-                <ul className="home-hero-feed-list">
-                  {feed.slice(0, FEED_ON_HERO).map((it, i) => (
-                    <li key={`${it.kind}-${i}`}>
-                      <Link href={it.href || '/'} className="home-hero-feed-row">
-                        <span className={`home-feed-tag is-${it.kind}`}>{it.label}</span>
-                        <span className="home-hero-feed-title">{it.title}</span>
-                        <time className="home-hero-feed-at" dateTime={it.at}>
-                          {relTime(it.at)}
-                        </time>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+
+                {/* 分类 Tab：纯前端过滤，切一下不重新请求。
+                    aria-selected 要真的跟着切，不然读屏用户听到的永远是第一个。
+
+                    刻意不显示条数：右栏最多摆 6 条，而某一类可能有 14 条，
+                    标个「14」会让人以为这里能看全。空分类直接把文字压灰，
+                    点进去才知道是空的最烦。 */}
+                <div className="home-feed-tabs" role="tablist" aria-label="动态分类">
+                  {FEED_TABS.map((t) => {
+                    const n = t.key === 'all' ? feed.length : feedCounts[t.key] || 0;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={feedTab === t.key}
+                        className={
+                          'home-feed-tab' +
+                          (feedTab === t.key ? ' is-on' : '') +
+                          (n === 0 ? ' is-empty' : '')
+                        }
+                        onClick={() => setFeedTab(t.key)}
+                        title={n === 0 ? '这一类暂时没有新动态' : ''}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {feedList.length ? (
+                  <ul className="home-hero-feed-list">
+                    {feedList.map((it, i) => (
+                      <li key={`${it.kind}-${i}`}>
+                        <Link href={it.href || '/'} className="home-hero-feed-row">
+                          {/* 已经在分类 Tab 里时不再重复同类标签，把宽度让给标题；
+                              但「更新」Tab 要显示版本号，那是这一类的关键信息 */}
+                          {feedTab === 'all' && (
+                            <span className={`home-feed-tag is-${it.kind}`}>{it.label}</span>
+                          )}
+                          {feedTab === 'feature' && it.version && (
+                            <span className="home-feed-ver">{it.version}</span>
+                          )}
+                          <span className="home-hero-feed-title">{it.title}</span>
+                          {/* 功能更新显示日期而不是「10 小时前」：那一条的时间是「版本日期」，
+                              相对时间会让所有条目都变成同一个「N 小时前」，看着像同时发的 */}
+                          <time className="home-hero-feed-at" dateTime={it.at}>
+                            {it.kind === 'feature' ? monthDay(it.at) : relTime(it.at)}
+                          </time>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="home-feed-empty">这一类还没有新动态</p>
+                )}
               </div>
             ) : (
               <div className="home-shot">

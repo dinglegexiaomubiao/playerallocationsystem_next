@@ -339,7 +339,10 @@
 .home-hero-feed-more {
   font-size: 0.7rem;
   color: var(--text-3);
+  text-decoration: none;
+  transition: color .14s ease;
 }
+.home-hero-feed-more:hover { color: var(--brand); }
 .home-hero-feed-list {
   list-style: none;
   margin: 0;
@@ -400,4 +403,61 @@
     padding-left: 0;
     padding-top: 14px;
   }
+}
+
+/* ==================== 首页右栏的分类 Tab ====================
+   5 个两字标签，右栏窄（0.6fr），所以每个都压到最小：
+   无边框、无底色，只有选中态给一条下划线 —— 一排实心按钮会把 6 条动态挤掉两行。
+   数字徽标只在这个分类确实有内容时才出现，空分类不显示 "0"。 */
+.home-feed-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 2px 0 4px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.home-feed-tabs::-webkit-scrollbar { display: none; }
+
+.home-feed-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 3px 7px 4px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+  transition: color .14s ease, border-color .14s ease;
+}
+.home-feed-tab:hover { color: var(--text-2); }
+.home-feed-tab.is-on {
+  color: var(--brand);
+  border-bottom-color: var(--brand);
+}
+/* 这一类没有内容：压灰提示，但选中时不能灰（否则看着像禁用） */
+.home-feed-tab.is-empty:not(.is-on) { color: var(--text-3); opacity: 0.5; }
+
+/* 「更新」Tab 里用版本号替代类型标签：这一类的关键信息就是「哪个版本改的」 */
+.home-feed-ver {
+  flex: 0 0 auto;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 0;
+  min-width: 3.2em;
+}
+
+.home-feed-empty {
+  margin: 14px 0 4px;
+  font-size: 0.78rem;
+  color: var(--text-3);
 }
