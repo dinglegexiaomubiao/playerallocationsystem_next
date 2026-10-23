@@ -2951,7 +2951,14 @@ a.mh-row:hover { background: var(--bg-subtle); }
 .map-group-empty a { color: var(--brand); text-decoration: none; }
 
 /* ---- 群友列表：头像 + 昵称 + 箭头，整行可点 ---- */
-.map-member-list { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+/* 群友与美食列表都自己滚：右栏要能看全，不能只给 14 家再让人跳去 /food。
+   高度用 vh 夹住，屏幕矮时也跟着收，避免整页被一个长列表顶到天边。
+   overscroll-behavior 防止滚到底把外层一起带走（手机上尤其明显）。 */
+.map-member-list {
+  display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0;
+  max-height: min(38vh, 320px); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+}
 .map-member {
   display: flex; align-items: center; gap: 8px;
   padding: 5px 6px;
@@ -3018,7 +3025,23 @@ a.mh-row:hover { background: var(--bg-subtle); }
 
 /* ---- 美食卡：名字 + 星级 / 菜系 + 评价条数 / 最新一条评价（两行截断） ----
    整张卡是 <a href="/food?focus=id">，点进去会滚到那一家并高亮。 */
-.map-food-list { display: flex; flex-direction: column; gap: 6px; }
+/* 美食卡片比群友行高，给得多一点；55 家也在这块里滚完 */
+.map-food-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: min(52vh, 460px); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent;
+}
+/* 细滚动条（WebKit）：默认那根太粗，会把右栏挤窄 */
+.map-member-list::-webkit-scrollbar,
+.map-food-list::-webkit-scrollbar { width: 6px; }
+.map-member-list::-webkit-scrollbar-thumb,
+.map-food-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong); border-radius: 3px;
+}
+.map-member-list::-webkit-scrollbar-thumb:hover,
+.map-food-list::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+.map-member-list::-webkit-scrollbar-track,
+.map-food-list::-webkit-scrollbar-track { background: transparent; }
 .map-food {
   display: block;
   padding: 7px 8px;

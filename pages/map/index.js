@@ -73,16 +73,21 @@ export default function MapPage({ initial, initialError }) {
    *   排在前面的都是最新录入、一条评价都还没有的新店，右栏会整片「暂无评价」，
    *   看起来像评价功能没做。真正有内容的店全被挤在后面。
    */
+  /**
+   * 右栏的美食按「有群友评价的优先 → 星级高 → 新的」排。
+   * ⚠ 不要直接拿原顺序：数据层是按 id 倒序出来的，排在前面的都是最新录入、
+   *   一条评价都没有的新店，右栏会整片「暂无评价」，看起来像评价功能没做。
+   * 这里不截断数量 —— 列表自己滚动（`.map-food-list` 有 max-height），
+   * 想看全部就在右栏里滚，不用跳去 /food。
+   */
   const sideFoods = useMemo(() => {
     if (!activeData) return [];
-    return [...activeData.foods]
-      .sort(
-        (a, b) =>
-          (b.reviewCount || 0) - (a.reviewCount || 0) ||
-          (Number(b.rating) || 0) - (Number(a.rating) || 0) ||
-          String(b.id).localeCompare(String(a.id))
-      )
-      .slice(0, 14);
+    return [...activeData.foods].sort(
+      (a, b) =>
+        (b.reviewCount || 0) - (a.reviewCount || 0) ||
+        (Number(b.rating) || 0) - (Number(a.rating) || 0) ||
+        String(b.id).localeCompare(String(a.id))
+    );
   }, [activeData]);
 
   // ---- 选区跟着地址栏走（?adcode=440300&dist=南山区）----
@@ -559,12 +564,6 @@ export default function MapPage({ initial, initialError }) {
                               </div>
                             ) : (
                               <p className="map-group-empty">这里还没有美食记录。</p>
-                            )}
-                            {activeData.foods.length > 14 && (
-                              <p className="map-group-empty">
-                                还有 {activeData.foods.length - 14} 家没列出，
-                                <Link href="/food">去群友美食看全部</Link>。
-                              </p>
                             )}
                           </div>
                         </details>

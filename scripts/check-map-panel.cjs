@@ -39,22 +39,30 @@ const BASE = process.env.BASE || 'http://127.0.0.1:3006';
   });
   await p.waitForTimeout(1500);
 
+  // 数量从接口取，别写死 —— 群友和美食是会变的，写死会误报
+  const api = await fetch(`${BASE}/api/map/geo?adcode=440300`).then((r) => r.json());
+  const ns = (api.areas || []).find((a) => a.name === '南山区') || {};
+  const expMembers = ns.playerCount || 0;
+  const expFoods = ns.foodCount || 0;
+
   const name = (await p.locator('.map-panel-name').first().textContent().catch(() => '')) || '';
   ok(name.includes('南山区'), '右栏还原到南山区', '实际 ' + name.trim());
 
   const stat = ((await p.locator('.map-panel-stat').first().textContent().catch(() => '')) || '')
     .replace(/\s+/g, ' ')
     .trim();
-  ok(/\b9\b/.test(stat) && /\b55\b/.test(stat), '统计行显示 9 位群友 / 55 家美食', stat);
+  ok(stat.includes(String(expMembers)) && stat.includes(String(expFoods)), '统计行与接口一致', stat);
 
   const members = await p.locator('.map-member').count();
-  ok(members === 9, '群友列表 9 人', '实际 ' + members);
+  ok(members === expMembers, '群友全部列出', `${members}/${expMembers}`);
 
   const avatars = await p.locator('.map-member-avatar').count();
   ok(avatars === members, '每人一个头像位', avatars + '/' + members);
 
+  // 以前这里写死 14 —— 右栏只列 14 家、其余让人跳去 /food。现在要求全部列出并可滚动。
   const foods = await p.locator('.map-food').count();
-  ok(foods === 14, '美食最多列 14 家', '实际 ' + foods);
+  ok(foods === expFoods, '美食全部列出（不再截断）', `${foods}/${expFoods}`);
+  ok(foods > 14, '确认超过旧的 14 家上限', foods + ' 家');
 
   const rcs = await p.locator('.map-food-rc').count();
   ok(rcs === foods, '每家都有评价数标签', rcs + '/' + foods);
@@ -64,6 +72,39 @@ const BASE = process.env.BASE || 'http://127.0.0.1:3006';
 
   const firstRc = ((await p.locator('.map-food-rc').first().textContent().catch(() => '')) || '').trim();
   ok(!firstRc.includes('暂无'), '首条美食已有评价（按评价数排序生效）', firstRc);
+
+  // ---- 滚动：内容超出时能滚，且滚到底能看到最后一家 ----
+  const scroll = await p.evaluate(() => {
+    const el = document.querySelector('.map-food-list');
+    if (!el) return { ok: false, why: '没有 .map-food-list' };
+    const sy = getComputedStyle(el).overflowY;
+    return {
+      ok: el.scrollHeight > el.clientHeight && /auto|scroll/.test(sy),
+      why: `scrollHeight=${el.scrollHeight} clientHeight=${el.clientHeight} overflowY=${sy}`,
+    };
+  });
+  ok(scroll.ok, '美食列表可滚动（不被截断）', scroll.why);
+
+  const lastVisible = await p.evaluate(() => {
+    const el = document.querySelector('.map-food-list');
+    if (!el) return false;
+    el.scrollTop = el.scrollHeight;
+    const items = el.querySelectorAll('.map-food');
+    const last = items[items.length - 1];
+    if (!last) return false;
+    const r = last.getBoundingClientRect();
+    const c = el.getBoundingClientRect();
+    return r.top >= c.top - 2 && r.bottom <= c.bottom + 2;
+  });
+  ok(lastVisible, '滚到底能看到最后一家（能看全）');
+
+  const memberScroll = await p.evaluate(() => {
+    const el = document.querySelector('.map-member-list');
+    if (!el) return false;
+    const sy = getComputedStyle(el).overflowY;
+    return /auto|scroll/.test(sy);
+  });
+  ok(memberScroll, '群友列表也带滚动（人多时可看全）');
 
   // ---- B. 点区块把选区写回地址栏 ----
   console.log('\n[B] 点列表里的「南山区」，看 URL 是否写入 dist');
