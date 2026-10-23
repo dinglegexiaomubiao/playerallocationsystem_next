@@ -373,6 +373,43 @@ a { text-decoration: none; color: inherit; }
 .p-region-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-score { margin-left: auto; font-weight: 800; font-size: 1.02rem; padding: 4px 10px; border-radius: 9px; }
 
+/* ===== 帮派配色（P5） =====
+   一层 135° 的薄渐变（0.12 → 0.04）+ 左侧一条实色线，让「同帮」在列表里一眼可见，
+   不用逐个去读名字。透明度不是随手调的：0.12 是 12 套配色在日夜两套主题下
+   让最弱一档文字（--text-3）都还 ≥4.5:1 的上限（见 lib/guild-colors.mjs，
+   npm run guild:contrast 验算）。
+   色线只 2px、上下各留 10px —— 通到顶会被卡片的圆角切出一个小方角。 */
+.p-card.has-guild {
+  background-color: var(--bg-card);
+  background-image: linear-gradient(135deg, var(--guild-a), var(--guild-b));
+  border-color: var(--guild-line);
+}
+.p-card.has-guild::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--guild-solid);
+}
+.p-card.has-guild:hover { border-color: var(--guild-solid); }
+/* 帮派徽标：色块 + 帮名。名字用 serif，和队伍名/店名一个语气 */
+.p-guild { display: flex; align-items: center; gap: 5px; margin-top: 3px; min-width: 0; }
+.p-guild-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 2px; background: var(--guild-solid); }
+.p-guild-name {
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* steamID 独占一行：卡片宽度放不下「steamID + 17 位数字」，与其截断不如换行完整展示 */
 .p-steam {
   position: relative; z-index: 2; /* 浮到整卡覆盖层之上，文字可选中、按钮可点 */
@@ -535,6 +572,15 @@ a { text-decoration: none; color: inherit; }
 .detail-aside { grid-column: 1; grid-row: 1; min-width: 0; }
 .kv { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--bg-subtle); font-size: .9rem; }
 .kv:last-child { border: none; }
+/* 详情页「所属帮派」的值：色点 + 帮名，和群友卡片上那个徽标同一套观感 */
+.detail-guild { display: inline-flex; align-items: center; gap: 6px; }
+.detail-guild-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--guild-solid, var(--text-3));
+}
 .kv .k { color: var(--text-3); min-width: 72px; }
 .kv .v { color: var(--text); }
 

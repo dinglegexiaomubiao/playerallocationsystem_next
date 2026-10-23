@@ -10,6 +10,9 @@ import MemberFilterPanel from '../../components/member/MemberFilterPanel';
 import { PLAYER_COLUMNS, splitList } from '../../lib/excel';
 import { tierOf } from '../../lib/tier.mjs';
 import { regionFull, regionShort } from '../../lib/regions';
+/* 帮派配色：卡片上那层薄渐变和左侧色线都由这个色派生（透明度在 lib 里算过对比度，
+   不要在这里另调一个数）。没有帮派时 guildCardStyle 返回 null，卡片按原样渲染。 */
+import { guildCardStyle } from '../../lib/guild-colors.mjs';
 /* 筛选逻辑统一在 lib/member-filter.mjs（2026-10-23 从本页抽出）。
    帮派的「邀请成员」选择器复用同一份 —— 不要再在这里内联一份筛选条件。 */
 import {
@@ -267,8 +270,11 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
                   ? p.runner_up
                   : (p.records || []).filter((r) => r.team_rank === 2).length;
               const steamId = String(p.game_id || '').trim();
+              /* 帮派配色变量：有帮派才挂 style 和 has-guild 类。
+                 用 CSS 变量而不是直接拼渐变，是为了让 hover 态的边框、色线也能复用同一个色。 */
+              const guildVars = p.guild ? guildCardStyle(p.guild.colorKey) : null;
               return (
-                <div className="p-card" key={p.id}>
+                <div className={'p-card' + (guildVars ? ' has-guild' : '')} style={guildVars || undefined} key={p.id}>
                   {/* 整卡可点：绝对定位的链接盖住卡片，复制按钮/steamID 行再浮到它上面 */}
                   <Link
                     href={'/members/' + p.id}
@@ -285,6 +291,14 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
                         </span>
                         <span className="p-region-val">{regionShort(p.region) || '未填写地区'}</span>
                       </div>
+                      {/* 帮派徽标：色点 + 名字。先只做展示，等 P4 有了 /guild/[id]
+                          再把它包成链接 —— 现在链出去是 404，不如不给。 */}
+                      {p.guild && (
+                        <div className="p-guild" title={`所属帮派：${p.guild.name}`}>
+                          <span className="p-guild-dot" aria-hidden="true" />
+                          <span className="p-guild-name">{p.guild.name}</span>
+                        </div>
+                      )}
                     </div>
                     <div className={`p-score ${t.cls}`} title={t.label}>
                       {p.score || 0}

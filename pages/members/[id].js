@@ -10,6 +10,7 @@ import AiPanel from '../../components/member/AiPanel';
 import { rankLabel, rankCls } from '../../lib/tournament-format.mjs';
 import { backLabelOf, memberHref } from '../../lib/member-href';
 import { isShenzhen, regionFull, regionIsEmpty } from '../../lib/regions';
+import { guildColor } from '../../lib/guild-colors.mjs';
 
 // 只到「日」，比赛时间不需要精确到分
 function fmtDay(v) {
@@ -256,6 +257,19 @@ export default function MemberDetail() {
                   <span className="k">擅长位置</span>
                   <span className="v">{(player.positions || []).join(' / ') || '未填写'}</span>
                 </div>
+                {/* 所属帮派：/api/players 已经带上 guild（id/name/colorKey），这里不必再请求。
+                    没有帮派就整行不出现 —— 写个「未加入」只会让侧栏变长。 */}
+                {player.guild && (
+                  <div className="kv">
+                    <span className="k">所属帮派</span>
+                    <span className="v">
+                      <span className="detail-guild" style={{ '--guild-solid': guildColor(player.guild.colorKey)?.solid }}>
+                        <span className="detail-guild-dot" aria-hidden="true" />
+                        {player.guild.name}
+                      </span>
+                    </span>
+                  </div>
+                )}
                 <div className="kv">
                   <span className="k">自报胜率</span>
                   <span className="v">{player.win_rate || 0}%</span>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import GuildModal from './GuildModal';
-import { guildColor, GUILD_ALPHA_START, GUILD_ALPHA_END, hexToRgba } from '../lib/guild-colors.mjs';
+import { guildColor, GUILD_ALPHA_START, GUILD_ALPHA_END, GUILD_BORDER_ALPHA, hexToRgba } from '../lib/guild-colors.mjs';
 
 /**
  * 个人信息页「基本信息」里的帮派区块。
@@ -123,7 +123,7 @@ export default function GuildPanel() {
           color.solid,
           GUILD_ALPHA_END
         )})`,
-        borderColor: hexToRgba(color.solid, 0.42),
+        borderColor: hexToRgba(color.solid, GUILD_BORDER_ALPHA),
       }
     : undefined;
 

@@ -30,7 +30,8 @@
     "home:tabs": "node scripts/check-home-tabs.cjs",
     "feed:admin": "node scripts/check-feed-admin.cjs",
     "guild:invite": "node scripts/check-guild-invite.cjs",
-    "guild:invite-ui": "node scripts/check-guild-invite-ui.cjs"
+    "guild:invite-ui": "node scripts/check-guild-invite-ui.cjs",
+    "guild:card": "node scripts/check-guild-card.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
