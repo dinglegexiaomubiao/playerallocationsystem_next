@@ -26,6 +26,7 @@
     "members:check": "node scripts/check-members-filter.cjs",
     "guild:api": "node scripts/check-guild-api.cjs",
     "guild:ui": "node scripts/check-guild-ui.cjs",
+    "guild:pages": "node scripts/check-guild-pages.cjs",
     "guild:a11y": "node scripts/check-guild-a11y.cjs",
     "home:tabs": "node scripts/check-home-tabs.cjs",
     "feed:admin": "node scripts/check-feed-admin.cjs",

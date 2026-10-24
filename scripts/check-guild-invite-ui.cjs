@@ -185,7 +185,8 @@ const api = async (who, method, p, body) => {
 
   // 头像走 /api/avatar 代理拉 Steam，偶发 502 与帮派无关，别让它把断言带红
   const allErrors = [...aErrors, ...bErrors];
-  const realErrors = allErrors.filter((t) => !/Failed to load resource|502/.test(t));
+  // dev server 的 HMR WebSocket 在这套环境里必然握手失败，与功能无关
+  const realErrors = allErrors.filter((t) => !/Failed to load resource|502|_next\/hmr|WebSocket/.test(t));
   console.log('\nconsole 错误: 共 ' + allErrors.length + ' 条，其中与功能相关的 ' + realErrors.length + ' 条', realErrors.slice(0, 3));
   ok(realErrors.length === 0, '无与功能相关的 console 报错');
 

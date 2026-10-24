@@ -86,8 +86,13 @@ const ok = (c, label, detail = '') => {
   ok(true, '弹窗打开');
   const colors = await p.locator('.guild-color').count();
   ok(colors === 12, '12 个色块', colors + ' 个');
+  // 被置灰的色块数 == 已被别的帮派占用的配色数。
+  // ⚠ 别写成「一定 0 支」：这只在空库里成立。真实数据里还有别人建的帮派
+  // （「阴暗组」占着 steel），它们的配色本来就该置灰 —— 那不是 bug。
+  const taken = Object.keys((await (await fetch(BASE + '/api/guild', { headers: { cookie: 'dd_session=' + token } })).json()).colors?.used || {}).length;
   const disabledColors = await p.locator('.guild-color:disabled').count();
-  ok(disabledColors === 0, '没有人建帮时 12 支都可选', disabledColors + ' 支被占用');
+  ok(disabledColors === taken, '占用数与置灰数一致', `置灰 ${disabledColors} / 已占用 ${taken}`);
+  ok(disabledColors < colors, '还有空配色可选', `${colors - disabledColors} 支`);
   ok(await p.locator('#guild-name').count() === 1, '有名称输入框');
   ok(await p.locator('#guild-slogan').count() === 1, '有口号输入框');
   const lenHint = ((await p.locator('.guild-len').first().textContent()) || '').trim();
@@ -131,9 +136,11 @@ const ok = (c, label, detail = '') => {
   const memberRole = ((await p.locator('.guild-member-row .guild-role').first().textContent()) || '').trim();
   ok(memberRole === '帮主', '成员行标了帮主', memberRole);
   ok(await p.locator('.guild-dissolve-btn').count() === 1, '有「解散帮派」按钮');
-  // 当前配色不该被自己占用而置灰
-  const disabled2 = await p.locator('.guild-color:disabled').count();
-  ok(disabled2 === 0, '自己用的配色不被置灰（仍可切换）', disabled2 + ' 支禁用');
+  // 当前配色不该被自己占用而置灰。
+  // ⚠ 别断言「一支都不该禁用」：库里可能有别的帮派占着别的颜色（真实数据里就有「阴暗组」），
+  // 那些被置灰是对的。要验的不变量只是「我正在用的这支自己没被自己挡住」。
+  const onColorDisabled = await p.locator('.guild-color.is-on').first().isDisabled().catch(() => null);
+  ok(onColorDisabled === false, '自己用的配色不被置灰（仍可切换）');
   const onColor = ((await p.locator('.guild-color.is-on .guild-color-name').first().textContent()) || '').trim();
   ok(onColor === '青碧', '当前配色高亮', onColor);
 
@@ -151,8 +158,11 @@ const ok = (c, label, detail = '') => {
   await p.waitForTimeout(200);
   ok(await confirmBtn.isEnabled(), '输对名字后可以点');
 
-  // 头像走 /api/avatar 代理拉 Steam，偶发 502 与帮派无关，别让它把断言带红
-  const realErrors = errors.filter((t) => !/Failed to load resource|502/.test(t));
+  // 头像走 /api/avatar 代理拉 Steam，偶发 502 与帮派无关，别让它把断言带红。
+  // dev server 的 HMR WebSocket 在这套环境里必然握手失败，同样与功能无关。
+  const realErrors = errors.filter(
+    (t) => !/Failed to load resource|502|_next\/hmr|WebSocket/.test(t)
+  );
   console.log('\nconsole 错误: 共 ' + errors.length + ' 条，其中与功能相关的 ' + realErrors.length + ' 条', realErrors.slice(0, 3));
   ok(realErrors.length === 0, '无与功能相关的 console 报错');
 

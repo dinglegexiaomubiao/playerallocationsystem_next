@@ -15,6 +15,7 @@ const PRIMARY_NAV = [
   { href: '/activities', label: '活动招募' },
   { href: '/tournaments', label: '赛事信息' },
   { href: '/members', label: '群友信息' },
+  { href: '/guilds', label: '帮派' },
   { href: '/map', label: '群友分布' },
   { href: '/food', label: '群友美食' },
 ];
@@ -193,6 +194,7 @@ export default function Layout({ children }) {
               <h5>板块</h5>
               <Link href="/tournaments">赛事信息</Link>
               <Link href="/members">群友信息</Link>
+              <Link href="/guilds">帮派</Link>
               <Link href="/food">群友美食</Link>
               <Link href="/party">开黑组队</Link>
               <Link href="/members/assign">阵容分配</Link>

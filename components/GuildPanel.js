@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import GuildModal from './GuildModal';
 import { guildColor, GUILD_ALPHA_START, GUILD_ALPHA_END, GUILD_BORDER_ALPHA, hexToRgba } from '../lib/guild-colors.mjs';
 
 /**
- * 个人信息页「基本信息」里的帮派区块。
+ * 帮派区块。两个地方用，靠 variant 区分外壳：
+ *   block（默认）个人信息页「基本信息」里的一小块
+ *   page        /guilds 页顶部的操作区，宽容器、标题叫「我的帮派」
  *
  * 数据自己拉（GET /api/guild），不依赖 profile 接口的 guild 字段 ——
  * 那个字段是给「不需要配色占用表」的场景用的，这里要额外拿 colors.used
@@ -12,10 +15,15 @@ import { guildColor, GUILD_ALPHA_START, GUILD_ALPHA_END, GUILD_BORDER_ALPHA, hex
  * 五种状态都要照顾到，少一种就会显示成空白：
  *   加载中 / 未绑定选手 / 未加入帮派 / 已加入（帮主 or 成员）/ 有待处理邀请
  */
-export default function GuildPanel() {
+export default function GuildPanel({ variant = 'block', label = '帮派', onChanged }) {
+  const isPage = variant === 'page';
+  const rootCls = 'guild-block' + (isPage ? ' guild-block-page' : '');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // 未登录 ≠ 出错。帮派页是公开的，匿名访客会拿到 401，
+  // 这时候该给「登录」按钮，而不是一个带「重试」的错误框（重试多少次都还是 401）
+  const [needLogin, setNeedLogin] = useState(false);
   const [modal, setModal] = useState(null); // null | 'create' | 'manage'
   const [busyInvite, setBusyInvite] = useState(null);
   const [msg, setMsg] = useState('');
@@ -26,10 +34,16 @@ export default function GuildPanel() {
     try {
       const r = await fetch('/api/guild', { cache: 'no-store' });
       const d = await r.json().catch(() => ({}));
+      if (r.status === 401) {
+        setNeedLogin(true);
+        setError('');
+        return;
+      }
       if (!r.ok || !d.success) {
         setError(d.error || `加载失败（HTTP ${r.status}）`);
         return;
       }
+      setNeedLogin(false);
       setData(d);
       setError('');
     } catch (e) {
@@ -42,6 +56,13 @@ export default function GuildPanel() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // 写操作成功后要让外面知道 —— /guilds 的「所有帮派」列表是另一份数据，
+  // 不通知它就会「刚建完帮，下面列表里还没有」。
+  // 只在写操作后调，初始加载不调，否则会白拉一次列表。
+  const changed = () => {
+    if (onChanged) onChanged();
+  };
 
   const respond = async (inviteId, action) => {
     if (busyInvite) return;
@@ -60,6 +81,7 @@ export default function GuildPanel() {
       }
       setMsg(action === 'accept' ? `已加入「${d.guildName || ''}」` : '已拒绝');
       await load();
+      changed();
     } catch (e) {
       setMsg((e && e.message) || '网络异常');
     } finally {
@@ -79,6 +101,7 @@ export default function GuildPanel() {
       setExitConfirm(false);
       setMsg('已退出帮派');
       await load();
+      changed();
     } catch (e) {
       setMsg((e && e.message) || '网络异常');
     }
@@ -86,20 +109,36 @@ export default function GuildPanel() {
 
   if (loading) {
     return (
-      <div className="guild-block">
+      <div className={rootCls}>
         <div className="guild-block-head">
-          <span className="guild-block-label">帮派</span>
+          <span className="guild-block-label">{label}</span>
         </div>
         <div className="guild-block-hint">加载中…</div>
       </div>
     );
   }
 
+  if (needLogin) {
+    return (
+      <div className={rootCls}>
+        <div className="guild-block-head">
+          <span className="guild-block-label">{label}</span>
+        </div>
+        <Link href="/login" className="btn btn-primary btn-sm">
+          登录
+        </Link>
+        <div className="guild-block-hint">
+          登录之后才能建帮派，或者被帮主拉进去。没账号找管理员要一个。
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
-      <div className="guild-block">
+      <div className={rootCls}>
         <div className="guild-block-head">
-          <span className="guild-block-label">帮派</span>
+          <span className="guild-block-label">{label}</span>
         </div>
         <div className="guild-block-hint">{error}</div>
         <button type="button" className="btn btn-ghost btn-sm" onClick={load}>
@@ -128,9 +167,9 @@ export default function GuildPanel() {
     : undefined;
 
   return (
-    <div className="guild-block">
+    <div className={rootCls}>
       <div className="guild-block-head">
-        <span className="guild-block-label">帮派</span>
+        <span className="guild-block-label">{label}</span>
         {guild && guild.isLeader && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setModal('manage')}>
             帮派管理
@@ -251,7 +290,10 @@ export default function GuildPanel() {
         colors={colors}
         sentInvites={sentInvites}
         onClose={() => setModal(null)}
-        onSaved={load}
+        onSaved={() => {
+          load();
+          changed();
+        }}
       />
     </div>
   );
