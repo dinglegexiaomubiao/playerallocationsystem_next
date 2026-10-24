@@ -24,6 +24,12 @@ const BASE = process.env.BASE || 'http://127.0.0.1:3006';
 const OUT = path.join(process.cwd(), 'shots', 'guild');
 const NAME = String(process.env.ADMIN_NAMES || 'dom').split(',')[0].trim();
 
+// 这套自检里有一段会真的建一个帮派（验「已加入」态）。
+// 打线上时那等于占用一支真实配色、还会触发一次 AI 审核，所以默认只跑只读部分；
+// 要远端也写库必须显式 ALLOW_REMOTE=1（和 guild:api / guild:ui 同一个口径）。
+const IS_LOCAL = /^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(BASE);
+const ALLOW_WRITE = IS_LOCAL || process.env.ALLOW_REMOTE === '1';
+
 // 打线上要先注入服务器那把 AUTH_SECRET（两边不是同一个），见 pitfalls 第 15 节
 const cookie = () => {
   if (process.env.COOKIE) return process.env.COOKIE;
@@ -128,6 +134,26 @@ const ok = (cond, label, extra = '') => {
     ok((await overflow(p1)) <= 0, '1440 宽度无横向溢出', `${await overflow(p1)}px`);
     await p1.screenshot({ path: path.join(OUT, 'guilds-anon.png'), fullPage: true });
 
+    // ---- 详情页：公开帮派，只读（线上也跑这一段） ----
+    if (guilds.length) {
+      const g0 = guilds[0];
+      console.log(`\n[详情页 /guild/${g0.id} · 只读]`);
+      const ctxD = await makeCtx({ anon: true });
+      const pd0 = await ctxD.newPage();
+      watch(pd0);
+      const rd = await pd0.goto(BASE + '/guild/' + g0.id, { waitUntil: 'networkidle', timeout: 60000 });
+      ok(rd && rd.status() === 200, 'HTTP 200', String(rd && rd.status()));
+      ok((await pd0.locator('.guild-hero h1').innerText()).trim() === g0.name, '标题是帮派名');
+      ok(
+        (await pd0.locator('.guild-member').count()) === g0.memberCount,
+        '成员行数 == 接口人数',
+        `${await pd0.locator('.guild-member').count()} / ${g0.memberCount}`
+      );
+      ok((await pd0.locator('.guild-hero-meta').count()) === 1, 'meta 行在（帮主/人数/成立日）');
+      ok((await pd0.locator('.guild-hero-dot').count()) === 1, '配色色块在');
+      await pd0.screenshot({ path: path.join(OUT, 'guild-public.png'), fullPage: true });
+    }
+
     // ---- 列表页：登录但未加入 ----
     console.log('\n[列表页 /guilds · 已登录未加入]');
     const ctx2 = await makeCtx();
@@ -142,9 +168,11 @@ const ok = (cond, label, extra = '') => {
 
     // ---- 建一个临时帮派，验「已加入（帮主）」 ----
     console.log('\n[临时建帮，验已加入态]');
-    const colors = await api('/api/guild');
-    const free = (colors.d && colors.d.colors && colors.d.colors.free) || [];
-    if (!free.length) {
+    const colors = ALLOW_WRITE ? await api('/api/guild') : { d: {} };
+    const free = ALLOW_WRITE ? (colors.d && colors.d.colors && colors.d.colors.free) || [] : [];
+    if (!ALLOW_WRITE) {
+      console.log('  · 只读模式（远端且未设 ALLOW_REMOTE=1）：跳过建帮、详情页与夜间/手机截图');
+    } else if (!free.length) {
       ok(false, '没有空闲配色，跳过建帮验证');
     } else {
       const created = await api('/api/guild', {
