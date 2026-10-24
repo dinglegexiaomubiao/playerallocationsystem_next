@@ -354,3 +354,17 @@ dev 的 Turbopack 下页面路由与 API 路由各有一份 `lib/list-cache`。
 - 判据：接口对、页面不对，且等 45 秒（缓存 TTL）后页面自己好了。
 - 线上单进程单实例，共享同一份，不存在这个问题。
 - 所以自检脚本不能「建完就断言」，要按 5～6 秒轮询到出现为止（`check-guild-card.cjs`）。
+
+## 14. 每张表的时间列类型不一样，写查询前先 `\d 表名`
+
+`/api/feed` 里同一段代码有两种写法，因为类型不同：
+
+| 表 | 列 | 类型 | 取绝对时刻的写法 |
+|---|---|---|---|
+| `matches` / `activity_posts` / `party_posts` / `foods` | `created_at` | `timestamp` | `(created_at AT TIME ZONE current_setting('TimeZone'))` |
+| `guilds` / `guild_members` / `players.avatar_synced_at` | `created_at` | `timestamptz` | 直接取，**再套 AT TIME ZONE 就错了** |
+| `players` | `created_at` / `updated_at` | **varchar** | 不能套（会报 `pg_catalog.timezone(text, varchar)`），交给 JS `new Date()` |
+
+- timestamp 那种存的是「服务器本地墙钟」，不套 AT TIME ZONE 就会差 8 小时；
+  timestamptz 存的是绝对时刻，套了等于把它当成墙钟再转一次。
+- 症状都一样：时间显示偏 8 小时 / 排序反了。**别靠症状猜，去 `\d` 一下。**
