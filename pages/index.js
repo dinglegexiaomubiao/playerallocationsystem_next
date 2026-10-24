@@ -86,15 +86,17 @@ const FEED_ON_HERO = 6;
 /**
  * 首页右栏的分类 Tab。
  *
- * 为什么只有这 5 个：赛程和美食在「全部」里能看到，但没有单独的 Tab ——
- * 右栏宽度只够放 5 个两字标签，再加就把标题挤成两行。
- * 标签一律两个字：窄屏下三字会换行，整条 Tab 就散了。
+ * 为什么没有「赛程」和「美食」的 Tab：它们在「全部」里能看到，但右栏宽度只够放
+ * 这么几个两字标签 —— 再往里塞就要横向滚动了，而滚动条是隐藏的，
+ * 等于「第六个 Tab 存在但你不知道」。所以加 Tab 之前先量宽度（见 check-home-tabs 的溢出断言）。
+ * 标签一律两个字：三字会换行，整条 Tab 就散了。
  */
 const FEED_TABS = [
   { key: 'all', label: '全部' },
   { key: 'party', label: '开黑' },
   { key: 'activity', label: '活动' },
   { key: 'member', label: '群友' },
+  { key: 'guild', label: '帮派' },
   { key: 'feature', label: '更新' },
 ];
 
@@ -154,6 +156,11 @@ export default function Home() {
      * 所以先给每一类保底最新一条，剩下的位子再按时间填，最后整体按时间倒序。
      * （这条规则原来在 /api/feed 里，改成 Tab 后由前端算 —— 分类 Tab 各自过滤，
      *   不需要保底；只有「全部」需要。）
+     *
+     * ⚠ 种类数（7）已经超过格子数（6）：保底列表本身就放不下，多出来的那条
+     *   （按时间最旧的那个「每类最新一条」）会被挤掉。这是有意的取舍 ——
+     *   与其为了雨露均沾把行数撑到 7 行（首屏变高、切 Tab 的预留高度也要跟着改），
+     *   不如让最久没动静的那一类先让位。分类 Tab 里仍然能看到它自己的全部条目。
      */
     const newestByKind = new Map();
     for (const it of feed) if (!newestByKind.has(it.kind)) newestByKind.set(it.kind, it);

@@ -1,5 +1,5 @@
 /**
- * 首页分类 Tab 的自检：5 个 Tab、默认选中、切 Tab 过滤、分类内不重复类型标签、
+ * 首页分类 Tab 的自检：6 个 Tab、默认选中、切 Tab 过滤、分类内不重复类型标签、
  * 「更新」Tab 带版本号、空分类走空态、切 Tab 时卡片高度不抖、手机端不溢出，
  * 以及 /changelog 页的分组与日期。
  *
@@ -38,9 +38,10 @@ const ok = (c, label, detail = '') => {
   await p.waitForTimeout(800);
 
   const tabs = await p.locator('.home-feed-tab').count();
-  ok(tabs === 5, '5 个分类 Tab', tabs + ' 个');
+  ok(tabs === 6, '6 个分类 Tab', tabs + ' 个');
   const labels = await p.locator('.home-feed-tab').evaluateAll((els) => els.map((e) => e.textContent.trim()));
-  ok(labels.length === 5 && labels[0].startsWith('全部'), '第一个是「全部」', labels.join(' / '));
+  ok(labels.length === 6 && labels[0].startsWith('全部'), '第一个是「全部」', labels.join(' / '));
+  ok(labels.includes('帮派'), '有「帮派」Tab', labels.join(' / '));
 
   const onCount = await p.locator('.home-feed-tab.is-on').count();
   ok(onCount === 1, '只有一个选中态');
@@ -60,7 +61,7 @@ const ok = (c, label, detail = '') => {
   const heroH = () =>
     p.locator('.home-hero').evaluate((el) => Math.round(el.getBoundingClientRect().height * 10) / 10);
   const heights = {};
-  for (const label of ['开黑', '活动', '群友', '更新', '全部']) {
+  for (const label of ['开黑', '活动', '群友', '帮派', '更新', '全部']) {
     await p.locator('.home-feed-tab').filter({ hasText: label }).first().click();
     await p.waitForTimeout(260);
     heights[label] = await heroH();
@@ -99,6 +100,26 @@ const ok = (c, label, detail = '') => {
   const rowsAct = await p.locator('.home-hero-feed-row').count();
   const emptyShown = await p.locator('.home-feed-empty').count();
   ok(rowsAct === 0 && emptyShown === 1, '空分类显示空态文案而不是空白', `行 ${rowsAct} / 空态 ${emptyShown}`);
+
+  // ---- 「帮派」Tab：有帮派看句式与链接，没帮派看空态，两边都得验 ----
+  //
+  // 这一类是「新建帮派就出现在动态栏」的落点，也是最容易写成「接口有、页面没有」的一类 ——
+  // 所以不只看行数，还比对接口的 counts 和行首那个「新帮派：」句式。
+  const api = await fetch(BASE + '/api/feed').then((r) => r.json()).catch(() => ({}));
+  const nGuild = (api.counts && api.counts.guild) || 0;
+  await p.locator('.home-feed-tab').filter({ hasText: '帮派' }).click();
+  await p.waitForTimeout(350);
+  const rowsGuild = await p.locator('.home-hero-feed-row').count();
+  if (nGuild > 0) {
+    ok(rowsGuild === Math.min(nGuild, 6), '「帮派」Tab 行数与接口一致', rowsGuild + ' 行 / 接口 ' + nGuild + ' 条');
+    const gt = await p.$$eval('.home-hero-feed-title', (els) => els.map((e) => e.textContent.trim()));
+    ok(gt.every((t) => t.startsWith('新帮派：')), '帮派条目的句式是「新帮派：X」', gt[0] || '无');
+    const gh = await p.$$eval('.home-hero-feed-row', (els) => els.map((e) => e.getAttribute('href')));
+    ok(gh.every((h) => !!h && h !== '/'), '帮派条目能点（不是空链接）', gh[0] || '无');
+  } else {
+    ok(rowsGuild === 0 && (await p.locator('.home-feed-empty').count()) === 1, '库里暂无帮派时走空态');
+  }
+  await p.locator('.home-hero-feed').screenshot({ path: 'shots/home-tabs-guild.png' });
 
   // ---- 回到「全部」 ----
   await p.locator('.home-feed-tab').filter({ hasText: '全部' }).click();

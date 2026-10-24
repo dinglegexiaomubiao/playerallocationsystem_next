@@ -405,6 +405,10 @@
 .home-feed-tag.is-member { background: var(--accent-soft); color: var(--brand-on-soft); }
 .home-feed-tag.is-food { background: var(--color-warning-bg); color: var(--color-warning); }
 .home-feed-tag.is-feature { background: var(--bg-subtle); color: var(--text-2); }
+/* 帮派用**实底**而不是又一支淡色：调色板里可用的柔和底只有红/金/绿三支，
+   再复制一支就是「两个 帮派/活动 长得一样」。实底红是全站唯一一个实底标签，
+   一眼就分开，也符合它「不常发生、值得看一眼」的分量（白字 5.4:1）。 */
+.home-feed-tag.is-guild { background: var(--brand-solid); color: #fff; }
 
 /* 窄屏 Hero 变单列，动态从「右侧栏」变成「文案下面一块」，分割线跟着转成横的 */
 @media (max-width: 900px) {

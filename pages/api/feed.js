@@ -8,11 +8,12 @@ import { flattenChangelog } from '../../lib/changelog';
  * 为什么合成一个接口：首页本来就在客户端 Promise.all 拉四份数据，动态栏再开五个
  * 请求会让首屏多等一轮。这里一次查完、服务端合并排序，前端只负责渲染。
  *
- * 六类来源（各取最近几条，够填满动态栏就行）：
+ * 七类来源（各取最近几条，够填满动态栏就行）：
  *   match     还没结束的赛程对阵
  *   activity  招募中的活动
  *   party     招募中的开黑
  *   member    新加入 / 刚更新资料的群友
+ *   guild     新成立的帮派
  *   food      最新推荐的美食
  *   feature   功能更新（来自 lib/changelog.js，不查库）
  *
@@ -25,7 +26,7 @@ import { flattenChangelog } from '../../lib/changelog';
  */
 
 // 首页右栏每个 Tab 展示 6 条，所以每类就取 6 条。
-// 没有再设总上限：六类 × 6 = 36 条封顶，一次响应完全扛得住，切 Tab 也不必再请求。
+// 没有再设总上限：七类 × 6 = 42 条封顶，一次响应完全扛得住，切 Tab 也不必再请求。
 const PER_KIND = 6;
 
 const KIND_LABEL = {
@@ -33,6 +34,7 @@ const KIND_LABEL = {
   activity: '活动',
   party: '开黑',
   member: '群友',
+  guild: '帮派',
   food: '美食',
   feature: '更新',
 };
@@ -58,7 +60,7 @@ export default async function handler(req, res) {
   }
 
   const items = [];
-  const counts = { match: 0, activity: 0, party: 0, member: 0, food: 0, feature: 0 };
+  const counts = { match: 0, activity: 0, party: 0, member: 0, guild: 0, food: 0, feature: 0 };
   const failed = [];
 
   const collect = async (kind, sql, shape) => {
@@ -167,7 +169,42 @@ export default async function handler(req, res) {
     }
   );
 
-  // 5) 最新推荐的美食
+  // 5) 新成立的帮派
+  //
+  // 只报「成立」，不报「换帮主 / 有人退帮」：那两类对群友是噪音，而建帮是社区里
+  // 值得被看见的一件事（还要抢配色，晚一步就没了）。
+  //
+  // ⚠ guilds.created_at 是 **timestamptz**（不像活动/美食那些 timestamp），
+  //   pg 直接给 Date，绝对时刻是对的，所以**不要**再套 AT TIME ZONE，套了反而错。
+  //   帮派表不存在时这里会抛错，collect 会把它记进 failed，不影响其它类。
+  await collect(
+    'guild',
+    `SELECT g.id, g.name, g.color_key, g.slogan, g.leader_player_id,
+            g.created_at AS at,
+            pl.nickname AS leader,
+            (SELECT count(*)::int FROM public.guild_members gm WHERE gm.guild_id = g.id) AS members
+       FROM public.guilds g
+       LEFT JOIN public.players pl ON pl.id = g.leader_player_id
+      ORDER BY g.created_at DESC
+      LIMIT ${PER_KIND}`,
+    (r) => ({
+      // 和「新推荐：」同一句式：一眼看出这是件「刚发生的事」，不是某个固定栏目
+      title: `新帮派：${r.name}`,
+      // meta 在右栏一行里不渲染（宽度不够），留给接口消费方 / 排查用
+      meta: [r.leader ? '帮主 ' + r.leader : '', r.members ? r.members + ' 人' : '']
+        .filter(Boolean)
+        .join(' · '),
+      // ⚠ 帮派还没有独立主页（P4 的 /guild/[id]）。这里落到**帮主**的档案页：
+      //   那里「基本信息」里就写着「所属帮派」，点一下能看清是谁立的山头。
+      //   不要落到 /profile —— 那一页要登录，匿名群友点动态会被甩到登录页；
+      //   也别临时造一个 /guilds 空路由，空页面比多点一次更糟。P4 上线后改这里。
+      href: r.leader_player_id ? `/members/${r.leader_player_id}` : '/members',
+      colorKey: r.color_key || '',
+      at: toIso(r.at),
+    })
+  );
+
+  // 6) 最新推荐的美食
   await collect(
     'food',
     `SELECT id, name, cuisine, recommender,
@@ -183,7 +220,7 @@ export default async function handler(req, res) {
     })
   );
 
-  // 6) 功能更新（来自 lib/changelog.js，不查库）
+  // 7) 功能更新（来自 lib/changelog.js，不查库）
   //
   // 管理员条目在这里过滤，**不在前端隐藏**：前端隐藏只是不渲染，数据照样发出去了，
   // 打开网络面板就能看到「后台改了账号名」这类不该给普通群友看的东西。
