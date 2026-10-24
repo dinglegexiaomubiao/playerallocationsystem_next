@@ -1803,3 +1803,19 @@ button.back-link:hover {
   color: var(--text-2);
 }
 .pwd-notice b { color: var(--gold); }
+
+/* 导航第 9 项（群友语录）之后，1120 以下必须收 gap。
+   算一下：logo 区 ~170 + 9 项 ~633 + 账号区 ~300 + 容器内距 40 = 1143，
+   1024 的笔记本会溢出 16px（实测 nav-inner scrollWidth 1032 / clientWidth 1016）。
+   注意这段必须写在本文件 —— layout.css 里也有个 1120 的 media 在调
+   `.nav-links a` 的 padding，但本文件后加载、特异性相同，会把它覆盖掉。 */
+@media (max-width: 1120px) {
+  .nav-links { gap: 14px; }
+}
+@media (max-width: 1024px) {
+  .nav-links { gap: 8px; }
+  .nav-links a { font-size: 13px; }
+  /* 大区块之间的间距也收一点：1024 下登录态（用户名 + 管理后台 + 登出）
+     比匿名态宽 100px 左右，不收这里还会差 24px */
+  .nav-inner { gap: 16px; }
+}

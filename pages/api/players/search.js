@@ -23,6 +23,9 @@ export default async function handler(req, res) {
       group_nickname: p.group_nickname || '',
       game_id: p.game_id != null ? String(p.game_id) : '',
       score: p.score ? parseInt(p.score) : 0,
+      // 头像走站内代理：直连 steamstatic 会被 CSP 的 img-src 拦掉，
+      // 拦掉后选择器里就只剩一片首字母色块。语录收录的「选群友」要用这个。
+      avatar: p.avatar_url ? `/api/avatar/${p.id}` : null,
     }));
     res.status(200).json({ success: true, players: formatted });
   } catch (error) {

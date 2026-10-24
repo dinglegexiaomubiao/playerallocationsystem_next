@@ -18,6 +18,7 @@ const PRIMARY_NAV = [
   { href: '/guilds', label: '帮派' },
   { href: '/map', label: '群友分布' },
   { href: '/food', label: '群友美食' },
+  { href: '/quotes', label: '群友语录' },
 ];
 
 // 登录后追加的次级入口
@@ -196,6 +197,7 @@ export default function Layout({ children }) {
               <Link href="/members">群友信息</Link>
               <Link href="/guilds">帮派</Link>
               <Link href="/food">群友美食</Link>
+              <Link href="/quotes">群友语录</Link>
               <Link href="/party">开黑组队</Link>
               <Link href="/members/assign">阵容分配</Link>
               <Link href="/changelog">更新日志</Link>

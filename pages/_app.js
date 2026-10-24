@@ -13,6 +13,7 @@ import '../styles/tournament-dark.css';
 import '../styles/admin.css';
 import Layout from '../components/Layout';
 import FeedbackWidget from '../components/FeedbackWidget';
+import QuoteTicker from '../components/QuoteTicker';
 import ForcePasswordChange from '../components/ForcePasswordChange';
 import { installErrorReporting } from '../lib/support-client.mjs';
 
@@ -69,6 +70,8 @@ function MyApp({ Component, pageProps }) {
       <Component {...pageProps} />
       {/* 反馈浮窗挂在 Layout 外层：登录页不套 Layout，但也得能反馈 */}
       <FeedbackWidget />
+      {/* 底部语录栏：自己判断该不该出现（登录页 / 后台 / 语录页都不显示） */}
+      <QuoteTicker />
     </Layout>
   );
 }

@@ -2088,21 +2088,24 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 .pkg-result li > b { font-weight: 700; }
 .pkg-result .ok { color: var(--brand); }
 
-/* ===== 右下角反馈浮窗（全站常驻） ===== */
+/* ===== 右下角反馈浮窗（全站常驻） =====
+   bottom 里带 --quote-bar-h：底部语录栏出现时（48/52px），浮球和面板整体抬上去，
+   否则浮球会正好压在语录栏的关闭按钮上（见 components/QuoteTicker.js 开头注释）。
+   栏不显示时变量不存在，兜底 0px，位置和以前一模一样。 */
 .fb-fab {
-  position: fixed; right: 20px; bottom: 20px; z-index: 90;
+  position: fixed; right: 20px; bottom: calc(20px + var(--quote-bar-h, 0px)); z-index: 90;
   min-width: 56px; height: 44px; padding: 0 16px;
   display: inline-flex; align-items: center; justify-content: center;
   border: none; border-radius: 22px; cursor: pointer;
   background: var(--brand-solid); color: #fff;
   font-size: .86rem; font-weight: 700; letter-spacing: .02em;
   box-shadow: 0 8px 22px rgba(176, 43, 37, 0.24);
-  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease, bottom .24s ease;
 }
 .fb-fab.is-open { background: var(--text-3); box-shadow: 0 8px 22px var(--shadow-lg); font-size: 1.2rem; }
 
 .fb-panel {
-  position: fixed; right: 20px; bottom: 76px; z-index: 91;
+  position: fixed; right: 20px; bottom: calc(76px + var(--quote-bar-h, 0px)); z-index: 91;
   width: min(380px, calc(100vw - 32px)); max-height: min(620px, calc(100vh - 110px));
   display: flex; flex-direction: column; overflow: auto;
   background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
@@ -2256,8 +2259,8 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 }
 
 @media (max-width: 520px) {
-  .fb-fab { right: 14px; bottom: 14px; height: 40px; padding: 0 14px; }
-  .fb-panel { right: 12px; left: 12px; bottom: 66px; width: auto; max-height: calc(100vh - 96px); }
+  .fb-fab { right: 14px; bottom: calc(14px + var(--quote-bar-h, 0px)); height: 40px; padding: 0 14px; }
+  .fb-panel { right: 12px; left: 12px; bottom: calc(66px + var(--quote-bar-h, 0px)); width: auto; max-height: calc(100vh - 96px - var(--quote-bar-h, 0px)); }
 }
 
 /* ===== 售后工单列表（/admin/support） ===== */
@@ -3756,5 +3759,245 @@ a.mh-row:hover { background: var(--bg-subtle); }
   .guild-member-since { display: none; }
   .guild-hero { padding: 18px 0 16px; }
   .guild-list-empty { padding: 30px 6px; }
+}
+
+/* ===== 群友语录 /quotes =====
+   版式是摘抄本，不是卡片列表：衬线正文 + 左侧一只装饰引号 + 细线分隔。
+   套卡片的话一屏只放得下三条，而语录要的就是「一眼扫过很多句」。
+   类名统一 quote- 前缀，避免撞上全站的 .empty / .quote（地图页有个 .map-food-quote）。 */
+
+.quote-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px 16px;
+  margin-bottom: 26px;
+}
+.quote-form-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.quote-form-head h2 { font-size: 1rem; font-weight: 700; letter-spacing: .01em; }
+.quote-form-x {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.35rem; line-height: 1;
+  color: var(--text-3); padding: 0 2px;
+}
+.quote-form-x:hover { color: var(--text); }
+
+/* 出处两段式切换：做成下划线 tab，不用 pill —— 全站没有 pill 的先例 */
+.quote-modes { display: flex; gap: 20px; margin-bottom: 14px; border-bottom: 1px solid var(--line-hairline); }
+.quote-mode {
+  position: relative;
+  background: none; border: none; cursor: pointer;
+  padding: 0 0 8px;
+  font-size: .88rem; font-weight: 500; color: var(--text-3);
+  letter-spacing: .02em;
+}
+.quote-mode:hover { color: var(--text-2); }
+.quote-mode.is-on { color: var(--text); }
+.quote-mode.is-on::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--brand-solid);
+}
+
+.quote-picked {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: .92rem; font-weight: 600;
+}
+.quote-picked-avatar { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 4px; }
+.quote-picked-x {
+  margin-left: auto;
+  background: none; border: none; cursor: pointer;
+  font-size: .8rem; color: var(--text-3); text-decoration: underline;
+}
+.quote-picked-x:hover { color: var(--brand); }
+
+.quote-results {
+  list-style: none; margin: 6px 0 0; padding: 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; max-height: 268px; overflow-y: auto;
+}
+.quote-results li + li { border-top: 1px solid var(--line-hairline); }
+.quote-results button {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 12px; background: none; border: none; cursor: pointer;
+  text-align: left; color: var(--text); font-size: .9rem;
+}
+.quote-results button:hover { background: var(--bg-subtle); }
+.quote-result-avatar { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 4px; }
+.quote-result-name { font-weight: 600; }
+.quote-result-id { margin-left: auto; font-family: var(--font-mono); font-size: .72rem; color: var(--text-3); }
+
+.quote-form-error {
+  margin: 10px 0 0; padding: 9px 12px;
+  background: var(--accent-soft); color: var(--brand-on-soft);
+  border-radius: var(--radius-sm); font-size: .85rem;
+}
+.quote-form-notice {
+  margin: 10px 0 0; padding: 9px 12px;
+  background: var(--green-soft); color: var(--ok-on-soft);
+  border-radius: var(--radius-sm); font-size: .85rem;
+}
+.quote-form-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+
+/* 月份：等宽小字 + 宽字距，像书页上的分隔标签 */
+.quote-month { margin-bottom: 8px; }
+.quote-month-label {
+  margin: 30px 0 2px;
+  font-family: var(--font-mono);
+  font-size: .74rem; font-weight: 500;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-3);
+}
+.quote-month:first-child .quote-month-label { margin-top: 0; }
+
+.quote-item {
+  position: relative;
+  padding: 16px 8px 15px 26px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 2px;
+  transition: background .3s ease;
+}
+/* 装饰引号：只放左引号，右引号会把末行文字挤歪 */
+.quote-item::before {
+  content: '「';
+  position: absolute; left: 0; top: 16px;
+  font-family: var(--font-serif);
+  font-size: 1.5rem; line-height: 1;
+  color: var(--brand); opacity: .5;
+  pointer-events: none;
+}
+.quote-item.is-flash { background: var(--brand-soft); }
+
+/* 一句话最长 120 字，不卡宽的话在 1440 上会横跨一整屏，读完要扭头。
+   46em 约 46 个汉字一行，是中文长文本比较舒服的上限。 */
+.quote-text {
+  margin: 0;
+  max-width: 46em;
+  font-family: var(--font-serif);
+  font-size: 1.02rem;
+  line-height: 1.9;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.quote-meta {
+  display: flex; align-items: baseline; flex-wrap: wrap;
+  gap: 4px 12px; margin-top: 7px;
+  font-size: .78rem; color: var(--text-3);
+}
+.quote-from { display: inline-flex; align-items: baseline; gap: 5px; }
+.quote-who { color: var(--text-2); font-weight: 600; font-size: .82rem; text-decoration: none; }
+a.quote-who:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.quote-who.is-text { font-weight: 400; color: var(--text-2); }
+.quote-when { font-family: var(--font-mono); font-size: .74rem; letter-spacing: .02em; }
+.quote-by { color: var(--text-3); }
+.quote-del {
+  background: none; border: none; cursor: pointer;
+  font-size: .76rem; color: var(--text-3); text-decoration: underline;
+  padding: 0;
+}
+.quote-del:hover { color: var(--brand); }
+.quote-del:disabled { opacity: .5; cursor: default; }
+
+.quote-empty { padding: 56px 0; text-align: center; color: var(--text-2); }
+.quote-empty p { margin: 0 0 8px; font-size: .95rem; }
+.quote-empty-hint { font-size: .86rem !important; color: var(--text-3); }
+.quote-more { display: flex; justify-content: center; padding: 26px 0 8px; }
+
+@media (max-width: 640px) {
+  .quote-form { padding: 15px 14px 14px; }
+  .quote-item { padding: 14px 4px 13px 21px; }
+  .quote-item::before { top: 11px; font-size: 1.3rem; }
+  .quote-text { font-size: .97rem; line-height: 1.85; }
+  .quote-form-actions { gap: 10px; }
+}
+
+/* ----- 底部悬浮栏（全站，见 components/QuoteTicker.js） -----
+   高度必须和 JS 里的 BAR_H / BAR_H_MOBILE 对上：反馈浮球靠 --quote-bar-h 让位，
+   两边对不上就会出现浮球压住关闭按钮、或者浮球悬在半空。
+   注意是「多留一段底部空间」而不是盖住内容 —— body 的 padding-bottom 一起吃这个变量，
+   否则滚到页面最底部时页脚版权行会被栏挡住。 */
+body { padding-bottom: var(--quote-bar-h, 0px); }
+
+.quote-ticker {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 92;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  animation: quote-ticker-in .3s ease;
+}
+@keyframes quote-ticker-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+.quote-ticker-inner {
+  display: flex; align-items: center; gap: 14px;
+  height: 48px;
+}
+.quote-ticker-label {
+  flex: 0 0 auto;
+  padding-right: 14px;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: .68rem; letter-spacing: .1em;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.quote-ticker-body {
+  flex: 1 1 auto; min-width: 0;
+  display: block; overflow: hidden;
+  color: inherit; text-decoration: none;
+}
+.quote-ticker-body:hover .quote-ticker-text { color: var(--brand); }
+.quote-ticker-line {
+  display: flex; align-items: baseline; gap: 10px;
+  min-width: 0;
+  animation: quote-line-in .42s ease;
+}
+@keyframes quote-line-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.quote-ticker-text {
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: .92rem;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .16s ease;
+}
+.quote-ticker-from {
+  flex: 0 0 auto;
+  font-size: .78rem; color: var(--text-3);
+  white-space: nowrap;
+}
+.quote-ticker-x {
+  flex: 0 0 auto;
+  background: none; border: none; cursor: pointer;
+  padding: 4px 4px 4px 6px;
+  font-size: 1.15rem; line-height: 1;
+  color: var(--text-3);
+}
+.quote-ticker-x:hover { color: var(--text); }
+.quote-ticker-x:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-ticker, .quote-ticker-line { animation: none; }
+}
+
+@media (max-width: 640px) {
+  /* 52 = JS 里的 BAR_H_MOBILE；安全区另算在 padding 里，不影响让位计算 */
+  .quote-ticker-inner {
+    height: 52px; gap: 10px;
+    padding-bottom: 0;
+  }
+  .quote-ticker { padding-bottom: env(safe-area-inset-bottom); }
+  .quote-ticker-label { display: none; }
+  .quote-ticker-text { font-size: .87rem; }
+  .quote-ticker-from { max-width: 42%; overflow: hidden; text-overflow: ellipsis; }
 }
 
