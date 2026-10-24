@@ -52,13 +52,11 @@ export default function QuoteReviews({ quoteId, ratingAvg = 0, ratingCount = 0, 
     setMsg('');
     if (!loaded) {
       load().then((d) => {
+        // 已有评价就预填旧分；没有就留空（0 分），让用户自己点，不替他默认 5 分
         if (d && d.myReview) setScore(d.myReview.score);
-        else if (score === 0) setScore(5);
       });
     } else if (myReview) {
       setScore(myReview.score);
-    } else if (score === 0) {
-      setScore(5);
     }
   };
 
