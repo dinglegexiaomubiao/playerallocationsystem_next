@@ -1,9 +1,8 @@
-import Head from 'next/head';
-import Link from 'next/link';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Fragment, useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
 import { PARTY_STATUS } from '../../lib/options.mjs';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 const STATUS_KEYS = Object.keys(PARTY_STATUS);
 
@@ -15,31 +14,10 @@ function issuesOf(p) {
   return out;
 }
 
-const TAG_COLOR = {
-  mid: { bg: '#FEF4E6', fg: '#B9770E', bd: '#F8DCB4' },
-  low: { bg: '#F1F2F4', fg: '#6B7280', bd: '#E3E5E8' },
-};
+const TAG_CLASS = { mid: ' is-warn', low: '' };
 
 function Tag({ children, lv = 'mid' }) {
-  const c = TAG_COLOR[lv] || TAG_COLOR.mid;
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '1px 7px',
-        marginRight: 5,
-        borderRadius: 5,
-        fontSize: 11,
-        lineHeight: '18px',
-        background: c.bg,
-        color: c.fg,
-        border: `1px solid ${c.bd}`,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className={'adm-chip' + (TAG_CLASS[lv] ?? TAG_CLASS.mid)}>{children}</span>;
 }
 
 const EDIT_FIELDS = [
@@ -64,6 +42,9 @@ export default function AdminPartyPage({ denied }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [q, setQ] = useState('');
+  // 展开哪一张卡的报名名单（一次只开一张，后台屏幕上同时开多张会看串行）
+  const [openSign, setOpenSign] = useState(null);
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -93,9 +74,20 @@ export default function AdminPartyPage({ denied }) {
   }, [posts]);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return posts;
-    return posts.filter((p) => p.status === filter);
-  }, [posts, filter]);
+    const kw = q.trim().toLowerCase();
+    return posts.filter((p) => {
+      if (filter !== 'all' && p.status !== filter) return false;
+      if (!kw) return true;
+      return (
+        String(p.mode || '').toLowerCase().includes(kw) ||
+        String(p.account_name || '').toLowerCase().includes(kw) ||
+        String(p.creator_nickname || '').toLowerCase().includes(kw) ||
+        String(p.play_time || '').toLowerCase().includes(kw) ||
+        String(p.note || '').toLowerCase().includes(kw) ||
+        (p.signups || []).some((s) => String(s.account_name || '').toLowerCase().includes(kw))
+      );
+    });
+  }, [posts, filter, q]);
 
   const save = async () => {
     if (!editing || busy) return;
@@ -141,23 +133,30 @@ export default function AdminPartyPage({ denied }) {
     }
   };
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
+  /* 踢掉一个报名的人：卡留着，只把人从名单里拿掉 */
+  const kickSignup = async (post, s) => {
+    const who = s.account_name || '这个人';
+    if (!window.confirm(`把「${who}」从这张卡里踢掉？\n\n他要是想再报，可以自己去前台重新点。`)) return;
+    try {
+      await apiDelete('/api/admin/party', { signupId: s.id });
+      setPosts((list) =>
+        list.map((x) =>
+          String(x.id) === String(post.id)
+            ? {
+                ...x,
+                signups: (x.signups || []).filter((y) => String(y.id) !== String(s.id)),
+                signup_count: Math.max(0, (x.signup_count || 0) - 1),
+              }
+            : x
+        )
+      );
+      setMsg({ type: 'ok', text: `已把「${who}」踢掉` });
+    } catch (e) {
+      setMsg({ type: 'err', text: '踢人失败：' + e.message });
+    }
+  };
 
-  // 深色后台页面：白底统计块会亮得刺眼，统一走 .adm-stat（tokens 定义在 layout.css）
-  const statBox = (n, label, color) => (
-    <div key={label} className="adm-stat" style={{ flex: '1 1 130px' }}>
-      <div className="adm-stat-n" style={color ? { color } : undefined}>{n}</div>
-      <div className="adm-stat-l">{label}</div>
-    </div>
-  );
+  if (denied) return <AdminDenied hint="开黑要改要删，得用管理员账号。" />;
 
   const inputStyle = {
     width: '100%',
@@ -168,69 +167,49 @@ export default function AdminPartyPage({ denied }) {
   };
 
   return (
-    <>
-      <Head>
-        <title>开黑管理 · 管理后台</title>
-      </Head>
+    <AdminShell
+      title="开黑"
+      accent="管理"
+      active="party"
+      lead="群里喊着「来两个」的那种卡片。开完了记得关掉，不然会一直挂在招募中。"
+      preview={{ href: '/party', label: '看开黑页' }}
+      metrics={[
+        { n: stats.total, label: '张卡片' },
+        { n: stats.open, label: '还在招' },
+        { n: stats.withSign, label: '有人报名' },
+        { n: stats.closed, label: '已关掉' },
+      ]}
+      actions={
+        <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+          刷新
+        </button>
+      }
+    >
+      <div className="adm-tool">
+        <input
+          className="adm-search"
+          placeholder="搜模式 / 发起人 / 开黑时间 / 备注 / 报名的人"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select className="adm-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">全部（{posts.length}）</option>
+          {STATUS_KEYS.map((k) => (
+            <option key={k} value={k}>
+              {PARTY_STATUS[k].label}（{posts.filter((p) => p.status === k).length}）
+            </option>
+          ))}
+        </select>
+        <span className="adm-tool-note">{filtered.length} 张</span>
+      </div>
 
-      <section className="page-hero">
-        <div className="wrap">
-          <h1>
-            开黑<span className="hl">管理</span>
-          </h1>
-          <p>组队卡片维护 · 状态调整 · 增删改查</p>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-tabs" style={{ marginBottom: 16 }}>
-            <Link className="adm-tab" href="/admin">赛事管理</Link>
-            <Link className="adm-tab" href="/admin/members">群友管理</Link>
-            <Link className="adm-tab" href="/admin/food">美食管理</Link>
-            <Link className="adm-tab" href="/admin/activities">活动管理</Link>
-            <span className="adm-tab active">开黑管理</span>
-            <Link className="adm-tab" href="/main">阵容分配</Link>
-            <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
-            <Link className="adm-tab" href="/admin/support">群友反馈</Link>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {statBox(stats.total, '卡片总数')}
-            {statBox(stats.open, '招募中', '#1E8449')}
-            {statBox(stats.closed, '已关闭', '#888')}
-            {statBox(stats.withSign, '有人报名')}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border-strong, #ddd)' }}
-            >
-              <option value="all">全部（{posts.length}）</option>
-              {STATUS_KEYS.map((k) => (
-                <option key={k} value={k}>
-                  {PARTY_STATUS[k].label}（{posts.filter((p) => p.status === k).length}）
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {msg && (
-            <div
-              className={msg.type === 'err' ? 'adm-error' : ''}
-              style={msg.type === 'err' ? { marginBottom: 12 } : { marginBottom: 12, color: '#1E8449', fontSize: 13 }}
-            >
-              {msg.text}
-            </div>
-          )}
+      {msg && <div className={'adm-flash is-' + (msg.type === 'err' ? 'err' : 'ok')}>{msg.text}</div>}
 
           {loading ? (
             <div className="empty">加载中…</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="adm-table" style={{ width: '100%', fontSize: 13 }}>
+            <div className="adm-scroll">
+              <table className="adm-data">
                 <thead>
                   <tr>
                     <th style={{ width: 42 }}>#</th>
@@ -264,12 +243,15 @@ export default function AdminPartyPage({ denied }) {
                     ]
                       .filter(Boolean)
                       .join(' / ');
+                    const signs = p.signups || [];
+                    const signOpen = String(openSign) === String(p.id);
                     return (
-                      <tr key={p.id}>
+                      <Fragment key={p.id}>
+                      <tr>
                         <td style={{ color: 'var(--text-3, #999)' }}>{i + 1}</td>
                         <td style={{ fontWeight: 600 }}>{p.mode}</td>
                         <td>
-                          {p.account_name || <span style={{ color: '#B9770E' }}>未知</span>}
+                          {p.account_name || <span className="adm-chip is-warn">未知</span>}
                           {p.creator_nickname && (
                             <span style={{ color: 'var(--text-3, #999)', fontSize: 11 }}>
                               {' '}
@@ -284,7 +266,7 @@ export default function AdminPartyPage({ denied }) {
                           {want || <span style={{ color: 'var(--text-3, #aaa)' }}>不限</span>}
                         </td>
                         <td style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.play_time || <span style={{ color: '#B9770E' }}>未填</span>}
+                          {p.play_time || <span className="adm-chip is-warn">未填</span>}
                         </td>
                         <td>
                           <span
@@ -296,10 +278,23 @@ export default function AdminPartyPage({ denied }) {
                             {st.label}
                           </span>
                         </td>
-                        <td style={{ textAlign: 'right' }}>{p.signup_count || 0}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          {signs.length === 0 ? (
+                            <span style={{ color: 'var(--text-3)' }}>0</span>
+                          ) : (
+                            <button
+                              type="button"
+                              className="adm-link-btn"
+                              onClick={() => setOpenSign(signOpen ? null : p.id)}
+                              title="看看是谁报的"
+                            >
+                              {signs.length} {signOpen ? '▴' : '▾'}
+                            </button>
+                          )}
+                        </td>
                         <td>
                           {iss.length === 0 ? (
-                            <span style={{ color: '#1E8449', fontSize: 12 }}>完整</span>
+                            <span className="adm-chip is-ok">完整</span>
                           ) : (
                             iss.map((x) => (
                               <Tag key={x.t} lv={x.lv}>
@@ -314,13 +309,41 @@ export default function AdminPartyPage({ denied }) {
                           </button>
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ color: '#C0392B' }}
+                            style={{ color: 'var(--brand)' }}
                             onClick={() => remove(p)}
                           >
                             删除
                           </button>
                         </td>
                       </tr>
+                      {signOpen && (
+                        <tr className="adm-subrow">
+                          <td colSpan={10}>
+                            <div className="adm-signups">
+                              <span className="adm-signups-label">报名的人</span>
+                              {signs.map((sn) => (
+                                <span className="adm-signups-item" key={sn.id}>
+                                  <span className="adm-signups-name">{sn.account_name || '未登录'}</span>
+                                  {sn.note && <span className="adm-signups-note">{sn.note}</span>}
+                                  {sn.created_at_ts && (
+                                    <span className="adm-signups-time">
+                                      {String(sn.created_at_ts).slice(5, 10)} {String(sn.created_at_ts).slice(11, 16)}
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="adm-link-btn"
+                                    onClick={() => kickSignup(p, sn)}
+                                  >
+                                    踢掉
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     );
                   })}
                 </tbody>
@@ -328,11 +351,9 @@ export default function AdminPartyPage({ denied }) {
             </div>
           )}
 
-          <p style={{ marginTop: 14, fontSize: 12, color: 'var(--text-3, #888)' }}>
-            共 {filtered.length} 条｜这里是管理入口，可改任意字段；前台「我的开黑」仍只有发起人能关自己的卡
-          </p>
-        </div>
-      </section>
+      <p className="adm-tool-note" style={{ marginTop: 12 }}>
+        这里能改任意字段；前台「我的开黑」还是只有发起人能关自己的卡。
+      </p>
 
       {/* ===== 编辑弹窗 ===== */}
       {editing && (
@@ -425,7 +446,7 @@ export default function AdminPartyPage({ denied }) {
           </div>
         </div>
       )}
-    </>
+    </AdminShell>
   );
 }
 

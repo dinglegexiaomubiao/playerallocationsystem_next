@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { getSession, isAdmin } from '../../lib/auth';
-import { apiGet, apiFetch } from '../../lib/api-client.mjs';
+import { apiGet, apiFetch, apiDelete } from '../../lib/api-client.mjs';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 const KIND_LABEL = { error: '自动报错', feedback: '用户反馈' };
 const CATEGORY_LABEL = {
@@ -145,6 +145,28 @@ export default function AdminSupport({ denied }) {
     }
   };
 
+  /* 删一条：报错量太大，光靠「不处理」会越堆越多，得能真删掉 */
+  const delReport = async (r) => {
+    const snippet = String(r.message || '').replace(/\s+/g, ' ').slice(0, 40);
+    const ok = window.confirm(
+      `删掉 #${r.id} 这条${r.kind === 'feedback' ? '反馈' : '报错'}？\n\n「${snippet}${snippet.length >= 40 ? '…' : ''}」\n\n删了找不回来。`
+    );
+    if (!ok) return;
+    setBusyId(r.id);
+    setErr('');
+    try {
+      await apiDelete('/api/support', { id: r.id });
+      setReports((list) => list.filter((x) => String(x.id) !== String(r.id)));
+      setTotal((n) => Math.max(0, n - 1));
+      setMailMsg({ ok: true, text: `已删掉 #${r.id}` });
+      setTimeout(() => setMailMsg(null), 2400);
+    } catch (e) {
+      setErr(e.message || '删除失败');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const testMail = async () => {
     setMailBusy(true);
     setMailMsg(null);
@@ -162,70 +184,36 @@ export default function AdminSupport({ denied }) {
     }
   };
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问管理后台
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>
-          返回首页
-        </Link>
-      </div>
-    );
-  }
+  if (denied) return <AdminDenied hint="反馈只有管理员看得到。" />;
 
   return (
-    <>
-      <Head>
-        <title>群友反馈 · 管理后台</title>
-      </Head>
-
-      <section className="page-hero">
-        <div className="wrap">
-          <Link href="/admin" className="back-link">
-            ← 返回管理后台
-          </Link>
-          <div className="hero-bar">
-            <div className="hero-bar-main">
-              <h1>
-                群友<span className="hl">反馈</span>
-              </h1>
-              <p>
-                共 {total} 条记录 · 群友在右下角「反馈」浮窗写的内容，以及前端自动采集的报错，都在这张表里
-                {notify
-                  ? notify.email
-                    ? ' · 邮件通知已配置'
-                    : ' · 邮件未配置（SUPPORT_SMTP_*）'
-                  : ''}
-              </p>
-            </div>
-            <div className="hero-actions">
-              <button type="button" className="btn btn-ghost" onClick={testMail} disabled={mailBusy}>
-                {mailBusy ? '发送中…' : '测试邮件'}
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={load} disabled={loading}>
-                {loading ? '刷新中…' : '刷新'}
-              </button>
-            </div>
-          </div>
-          {mailMsg && (
-            <div className={'sup-mailmsg' + (mailMsg.ok ? ' ok' : ' bad')}>{mailMsg.text}</div>
-          )}
+    <AdminShell
+      title="群友"
+      accent="反馈"
+      active="support"
+      lead="群友在右下角「反馈」里说的话，加上前端自动记的报错。前者要认真看，后者多半是网络抖。"
+      metrics={[
+        { n: total, label: '条记录' },
+        { n: reports.filter((r) => r.kind === 'feedback').length, label: '条人写的' },
+        { n: reports.length, label: '条在当前筛选' },
+      ]}
+      actions={
+        <>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={testMail} disabled={mailBusy}>
+            {mailBusy ? '发送中…' : '测一下邮件'}
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+            {loading ? '刷新中…' : '刷新'}
+          </button>
+        </>
+      }
+    >
+      {mailMsg && <div className={'adm-flash is-' + (mailMsg.ok ? 'ok' : 'err')}>{mailMsg.text}</div>}
+      {notify && !notify.email && (
+        <div className="adm-flash is-err">
+          邮件没配（SUPPORT_SMTP_*），有新反馈不会主动叫你 —— 只能自己隔段时间来这看一眼。
         </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-tabs" style={{ marginBottom: 16 }}>
-            <Link className="adm-tab" href="/admin">赛事管理</Link>
-            <Link className="adm-tab" href="/admin/members">群友管理</Link>
-            <Link className="adm-tab" href="/admin/food">美食管理</Link>
-            <Link className="adm-tab" href="/admin/party">开黑管理</Link>
-              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
-            <Link className="adm-tab" href="/main">阵容分配</Link>
-            <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
-            <span className="adm-tab active">群友反馈</span>
-          </div>
+      )}
 
           <div className="sup-toolbar">
             <div className="chips">
@@ -281,6 +269,18 @@ export default function AdminSupport({ denied }) {
                   </span>
                   <span className="sup-time">{fmtTime(r.created_at)}</span>
                   <span className="sup-id">#{r.id}</span>
+                  {/* 清垃圾用：自动报错一天能攒几百条，脱敏记录也得能删。
+                      删掉就查不回来了，所以二次确认里带 id 和内容片段。 */}
+                  <button
+                    type="button"
+                    className="adm-link-btn"
+                    style={{ color: 'var(--brand)' }}
+                    onClick={() => delReport(r)}
+                    disabled={busyId !== null}
+                    title="删掉这条记录（不可恢复）"
+                  >
+                    {String(busyId) === String(r.id) ? '删…' : '删掉'}
+                  </button>
                 </div>
 
                 <div className="sup-msg">{r.message || '（无描述）'}</div>
@@ -414,9 +414,7 @@ export default function AdminSupport({ denied }) {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-    </>
+    </AdminShell>
   );
 }
 

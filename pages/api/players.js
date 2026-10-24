@@ -114,12 +114,14 @@ export default async function handler(req, res) {
       try {
         if (denyIfNotAdmin(req, res, '仅管理员可删除选手')) return;
         const { id } = req.body;
-        await deletePlayer(id);
+        // 返回清掉了多少行：后台提示里会写「顺带清掉报名 1 条 / 战绩 6 条」，
+        // 让管理员知道删人不只是从名单里消失
+        const removed = await deletePlayer(id);
         clearListCache();
-        res.status(200).json({ success: true, message: '选手删除成功' });
+        res.status(200).json({ success: true, message: '已删除', removed: removed || {} });
       } catch (error) {
-        console.error('删除选手错误:', error);
-        res.status(500).json({ success: false, error: '删除选手失败' });
+        // 帮主拦截之类的业务错误要原样告诉管理员，不能吞成一句「删除失败」
+        res.status(400).json({ success: false, error: error.message || '删除失败' });
       }
       break;
 

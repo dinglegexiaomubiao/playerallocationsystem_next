@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import useSession from '../../hooks/useSession';
 import { getSession, isAdmin } from '../../lib/auth';
 import { ensureSupportTable, ensureTournamentSchema, listSupportReports, pool } from '../../lib/db';
 import ExcelIO from '../../components/ExcelIO';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 import { apiDelete, apiFetch, apiGet, apiPost, apiPut } from '../../lib/api-client.mjs';
+import { toSerializable } from '../../lib/serialize.mjs';
 import {
   TOURNAMENT_COLUMNS,
   TOURNAMENT_FIELD_ALIASES,
@@ -16,15 +17,18 @@ import {
   statusValue,
 } from '../../lib/excel';
 
-// 7 态状态机
+// 7 态状态机。
+// 颜色只留三档：要盯的（筹办中 / 延期）走金，打完了走绿，其余中性。
+// 原来 7 个状态各配一套十六进制浅底，夜间模式下全变成亮块，
+// 而且 7 种颜色谁都不突出 —— 状态本身有字，颜色只该提示「要不要管它」。
 const STATUS_LIST = [
-  { value: 'planning', label: '筹办中', color: '#6b7280', bg: '#f1f5f9' },
-  { value: 'ongoing', label: '进行中', color: '#185FA5', bg: '#E6F1FB' },
-  { value: 'elimination', label: '淘汰赛', color: '#0F6E56', bg: '#E1F5EE' },
-  { value: 'semifinal', label: '半决赛', color: '#534AB7', bg: '#EEEDFE' },
-  { value: 'final', label: '决赛', color: '#A32D2D', bg: '#FCEBEB' },
-  { value: 'finished', label: '已完赛', color: '#3B6D11', bg: '#EAF3DE' },
-  { value: 'postponed', label: '延期', color: '#854F0B', bg: '#FAEEDA' },
+  { value: 'planning', label: '筹办中', tone: 'warn' },
+  { value: 'ongoing', label: '进行中', tone: '' },
+  { value: 'elimination', label: '淘汰赛', tone: '' },
+  { value: 'semifinal', label: '半决赛', tone: '' },
+  { value: 'final', label: '决赛', tone: '' },
+  { value: 'finished', label: '已完赛', tone: 'ok' },
+  { value: 'postponed', label: '延期', tone: 'warn' },
 ];
 const STATUS_MAP = Object.fromEntries(STATUS_LIST.map((s) => [s.value, s]));
 
@@ -171,7 +175,7 @@ function FeedbackPanel({ data }) {
       <div className="adm-fb-head">
         <span className="adm-fb-title">群友反馈</span>
         <span className="adm-fb-sum">
-          {pending > 0 ? `${pending} 条待处理` : '暂无待处理'}
+          {pending > 0 ? `${pending} 条待处理` : '都处理完了'}
           {total > 0 ? ` · 累计 ${total} 条` : ''}
           {errorNew > 0 ? ` · 另有 ${errorNew} 条自动报错` : ''}
         </span>
@@ -315,12 +319,8 @@ function parseTournamentRow(row) {
 }
 
 function StatusBadge({ status }) {
-  const s = STATUS_MAP[status] || { label: status || '未知', color: '#6b7280', bg: '#f1f5f9' };
-  return (
-    <span className="adm-status" style={{ color: s.color, background: s.bg }}>
-      {s.label}
-    </span>
-  );
+  const s = STATUS_MAP[status] || { label: status || '未知', tone: '' };
+  return <span className={'adm-chip' + (s.tone ? ' is-' + s.tone : '')}>{s.label}</span>;
 }
 
 /**
@@ -469,8 +469,8 @@ function PendingPanel({ pending }) {
               <span className="adm-pending-miss">
                 {r.memberCount}/5 · 缺 {5 - r.memberCount} 人
               </span>
-              <span className="adm-pending-detail" title={r.members || '暂无队员'}>
-                {r.members ? '队员：' + r.members : '暂无队员'}
+              <span className="adm-pending-detail" title={r.members || '还没人'}>
+                {r.members ? '队员：' + r.members : '还没人'}
               </span>
               {detailLink(g, 'teams', r.teamId, '去补人')}
             </div>
@@ -712,191 +712,153 @@ export default function Admin({ denied, todo, pending, feedback }) {
     []
   );
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问管理后台
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
-  if (!ready) {
-    return <div className="empty" style={{ padding: '110px 0' }}>加载中…</div>;
-  }
+  if (denied) return <AdminDenied hint="赛事管理只给管理员开。" />;
+  if (!ready) return <div className="empty" style={{ padding: '110px 0' }}>加载中…</div>;
   if (!me) {
     return (
       <div className="empty" style={{ padding: '110px 0' }}>
-        请先
-        <Link href="/login?from=/admin" style={{ color: 'var(--brand)', fontWeight: 600 }}>登录</Link>
-        后再进入管理后台。
+        得先
+        <Link href="/login?from=/admin" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+          登录
+        </Link>
+        才能进后台。
       </div>
     );
   }
-  if (!isAdmin) {
-    return <div className="empty" style={{ padding: '110px 0' }}>无权访问管理后台</div>;
-  }
+  if (!isAdmin) return <AdminDenied hint="你现在登录的账号不是管理员。" />;
 
   return (
-    <>
-      <Head>
-        <title>管理后台 · 深圳LaRoja Dota2社区</title>
-      </Head>
+    <AdminShell
+      title="赛事"
+      accent="管理"
+      active="tournaments"
+      lead="一届一行。点「管理」进去改报名、队伍、赛程；要批量改就用右上角的表格导入。"
+      metrics={[
+        { n: tournaments.length, label: '届比赛' },
+        { n: (todo && todo.short) || 0, label: '支队伍没凑满 5 人', warn: ((todo && todo.short) || 0) > 0 },
+        { n: (todo && todo.incomplete) || 0, label: '位新群友资料没填全', warn: ((todo && todo.incomplete) || 0) > 0 },
+        { n: (todo && todo.feedback) || 0, label: '条反馈还没看', warn: ((todo && todo.feedback) || 0) > 0 },
+      ]}
+      actions={
+        <>
+          {/* 赛事信息导入 / 导出 / 模板下载：非管理员整块不渲染 */}
+          <ExcelIO
+            columns={TOURNAMENT_COLUMNS}
+            rows={tournaments}
+            filename="赛事信息.xlsx"
+            templateName="赛事信息_导入模板.xlsx"
+            onImport={handleImportTournaments}
+            checkDuplicate={dupTournament}
+            validate={validateTournamentRow}
+            importHint={importHint}
+            canManage={isAdmin}
+          />
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowCreate(true)}>
+            ＋ 新建一届
+          </button>
+        </>
+      }
+      preview={{ href: '/tournaments', label: '看前台' }}
+    >
+      {/* 群友反馈：最新几条待人处理的留言直接摊在首屏，一条一行 */}
+      {feedback && <FeedbackPanel data={feedback} />}
 
-      <section className="page-hero">
-        <div className="wrap">
-          <h1>管理<span className="hl">后台</span></h1>
-          <p>赛事管理 · 报名名单 · 队伍与队长 · 赛程结果</p>
-        </div>
-      </section>
+      {/* 待补录明细：摊到「赛事 → 队伍/选手 → 缺什么」，每条可直达编辑 */}
+      <PendingPanel pending={pending} />
 
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-bar">
-            <div className="adm-tabs">
-              <span className="adm-tab active">赛事管理</span>
-              <Link className="adm-tab" href="/admin/members">群友管理</Link>
-              <Link className="adm-tab" href="/admin/food">美食管理</Link>
-              <Link className="adm-tab" href="/admin/party">开黑管理</Link>
-              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
-              <Link className="adm-tab" href="/main">阵容分配</Link>
-              <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
-              <Link className="adm-tab" href="/admin/support">群友反馈</Link>
+      {showCreate && (
+        <div className="adm-create">
+          <form onSubmit={handleCreate}>
+            <div className="adm-create-head">
+              <span>新建一届</span>
+              <button type="button" className="adm-close" onClick={() => setShowCreate(false)}>×</button>
             </div>
-            <div className="adm-bar-actions">
-              {/* 赛事信息导入 / 导出 / 模板下载：非管理员整块不渲染 */}
-              <ExcelIO
-                columns={TOURNAMENT_COLUMNS}
-                rows={tournaments}
-                filename="赛事信息.xlsx"
-                templateName="赛事信息_导入模板.xlsx"
-                onImport={handleImportTournaments}
-                checkDuplicate={dupTournament}
-                validate={validateTournamentRow}
-                importHint={importHint}
-                canManage={isAdmin}
-              />
-              <Link className="btn btn-ghost" href="/admin/support">
-                反馈与报错
-              </Link>
-              <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-                ＋ 新建赛季
-              </button>
-            </div>
-          </div>
-
-          {/* 「需要你处理」：新群友注册 / 资料缺漏 / 未处理反馈。
-              没有通知渠道（邮件、webhook 未配置）时，这是管理员唯一能立刻看到变化的地方。 */}
-          {todo && (todo.incomplete > 0 || todo.feedback > 0 || todo.short > 0) && (
-            <div className="adm-todo">
-              <span className="adm-todo-title">需要你处理</span>
-              {todo.incomplete > 0 && (
-                <Link className="adm-todo-item" href="/admin/members">
-                  <span className="adm-todo-n">{todo.incomplete}</span>
-                  <span className="adm-todo-label">位新群友资料待补全</span>
-                </Link>
-              )}
-              {todo.short > 0 && (
-                <a className="adm-todo-item" href="#adm-pending" title="下面「赛事待补录」里有具体是哪个赛事、哪支队、缺几个人">
-                  <span className="adm-todo-n">{todo.short}</span>
-                  <span className="adm-todo-label">支队伍不满 5 人</span>
-                </a>
-              )}
-              {todo.feedback > 0 && (
-                <a className="adm-todo-item" href="#adm-feedback" title="下面「群友反馈」里能看到每条留言的完整内容">
-                  <span className="adm-todo-n">{todo.feedback}</span>
-                  <span className="adm-todo-label">条用户反馈待查看</span>
-                </a>
-              )}
-            </div>
-          )}
-
-          {/* 群友反馈：最新几条待人处理的留言直接摊在首屏，一条一行 */}
-          {feedback && <FeedbackPanel data={feedback} />}
-
-          {/* 待补录明细：摊到「赛事 → 队伍/选手 → 缺什么」，每条可直达编辑 */}
-          <PendingPanel pending={pending} />
-
-          {showCreate && (
-            <div className="adm-create">
-              <form onSubmit={handleCreate}>
-                <div className="adm-create-head">
-                  <span>新建赛季</span>
-                  <button type="button" className="adm-close" onClick={() => setShowCreate(false)}>×</button>
-                </div>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>赛季名称</label>
-                    <input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="例如 第十届" />
-                  </div>
-                  <div className="form-field">
-                    <label>开始日期</label>
-                    <input type="date" value={createForm.start_date} onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })} />
-                  </div>
-                  <div className="form-field">
-                    <label>结束日期</label>
-                    <input type="date" value={createForm.end_date} onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })} />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-field">
-                    <label>赞助信息</label>
-                    <input value={createForm.sponsor_info} onChange={(e) => setCreateForm({ ...createForm, sponsor_info: e.target.value })} placeholder="赞助商 / 赞助内容" />
-                  </div>
-                  <div className="form-field">
-                    <label>冠军奖金</label>
-                    <input value={createForm.champion_prize} onChange={(e) => setCreateForm({ ...createForm, champion_prize: e.target.value })} placeholder="例如 ¥500" />
-                  </div>
-                </div>
-                <button type="submit" className="btn btn-primary" disabled={creating}>
-                  {creating ? <><span className="spinner" />创建中…</> : '创建'}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {error && <div className="adm-error">{error}</div>}
-          {loading && <div className="empty">加载中…</div>}
-
-          <div className="adm-table">
-            <div className="adm-row adm-head">
-              <div>赛季</div>
-              <div>状态</div>
-              <div>起止</div>
-              <div>操作</div>
-            </div>
-            {tournaments.map((t) => (
-              <div className="adm-row" key={t.id}>
-                <div className="adm-name">{t.name}</div>
-                <div><StatusBadge status={t.status} /></div>
-                <div className="adm-date">
-                  {dateOnly(t.start_date) || '—'} ~ {dateOnly(t.end_date) || '—'}
-                </div>
-                <div>
-                  <Link className="adm-link" href={'/admin/tournaments/' + t.id}>管理</Link>
-                  <button
-                    type="button"
-                    className="adm-link-btn adm-danger-btn"
-                    onClick={() => handleDelete(t)}
-                    disabled={deletingId !== null}
-                    title="删除赛季（连同报名、队伍、赛程一起删除）"
-                  >
-                    {String(deletingId) === String(t.id) ? (
-                      <><span className="spinner" />删除中…</>
-                    ) : (
-                      '删除'
-                    )}
-                  </button>
-                </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>叫第几届</label>
+                <input value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} placeholder="例如 第十届" />
               </div>
-            ))}
-            {!loading && tournaments.length === 0 && (
-              <div className="empty">暂无赛事，点击右上角新建</div>
-            )}
-          </div>
+              <div className="form-field">
+                <label>哪天开打</label>
+                <input type="date" value={createForm.start_date} onChange={(e) => setCreateForm({ ...createForm, start_date: e.target.value })} />
+              </div>
+              <div className="form-field">
+                <label>哪天收尾</label>
+                <input type="date" value={createForm.end_date} onChange={(e) => setCreateForm({ ...createForm, end_date: e.target.value })} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label>谁赞助的</label>
+                <input value={createForm.sponsor_info} onChange={(e) => setCreateForm({ ...createForm, sponsor_info: e.target.value })} placeholder="赞助商 / 赞助了啥" />
+              </div>
+              <div className="form-field">
+                <label>冠军拿多少</label>
+                <input value={createForm.champion_prize} onChange={(e) => setCreateForm({ ...createForm, champion_prize: e.target.value })} placeholder="例如 ¥500" />
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={creating}>
+              {creating ? <><span className="spinner" />创建中…</> : '创建'}
+            </button>
+          </form>
         </div>
-      </section>
-    </>
+      )}
+
+      {error && <div className="adm-flash is-err">{error}</div>}
+      {loading && <div className="adm-empty">加载中…</div>}
+
+      {!loading && (
+        <div className="adm-scroll">
+          <table className="adm-data">
+            <thead>
+              <tr>
+                <th scope="col">赛季</th>
+                <th scope="col">状态</th>
+                <th scope="col">起止</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tournaments.map((t) => (
+                <tr key={t.id}>
+                  <td className="is-strong">{t.name}</td>
+                  <td>
+                    <StatusBadge status={t.status} />
+                  </td>
+                  <td className="is-weak is-nowrap">
+                    {dateOnly(t.start_date) || '—'} ~ {dateOnly(t.end_date) || '—'}
+                  </td>
+                  <td>
+                    <div className="adm-ops">
+                      <Link className="adm-link-btn" href={'/admin/tournaments/' + t.id}>
+                        管理
+                      </Link>
+                      <button
+                        type="button"
+                        className="adm-link-btn"
+                        onClick={() => handleDelete(t)}
+                        disabled={deletingId !== null}
+                        title="删掉这届（连同报名、队伍、赛程一起删）"
+                      >
+                        {String(deletingId) === String(t.id) ? (
+                          <><span className="spinner" />删除中…</>
+                        ) : (
+                          '删除'
+                        )}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && tournaments.length === 0 && (
+        <div className="adm-empty">还没建过赛季。点右上角「新建一届」开个头。</div>
+      )}
+    </AdminShell>
   );
 }
 
@@ -1002,5 +964,7 @@ export async function getServerSideProps({ req }) {
     loadPending(),
     loadFeedbackPanel(),
   ]);
-  return { props: { denied: false, todo, pending, feedback } };
+  // support_reports.created_at 是 timestamptz（pg 给的是 Date），
+  // 不洗的话本地整页 500、线上却正常 —— 参见 lib/serialize.mjs 顶部的说明。
+  return { props: toSerializable({ denied: false, todo, pending, feedback }) };
 }

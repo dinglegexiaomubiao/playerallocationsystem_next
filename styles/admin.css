@@ -1,0 +1,504 @@
+/* ============================================================
+   管理后台 · 样式层
+   ------------------------------------------------------------
+   后台是「一个人天天用的工具」，不是给群友看的门面。所以：
+
+   1. **信息优先**：一屏里尽量多摆真实数据，不摆等宽统计卡。
+      「4 个一样大的数字方块」是 SaaS 模板的默认开场，这里用一条
+      带发丝线的数据条（.adm-metrics）代替 —— 同样 4 个数，占一半高度。
+   2. **表格就是表格**：`.adm-data` 是真正的 <table>，行高固定、
+      数字右对齐、等宽数字，扫一列比分不用左右找基线。
+   3. **只用令牌**：这里一个十六进制都没有。以前后台写死 #B9770E / #FEF4E6，
+      一到夜间模式就是白底亮块 —— 现在全部走 --gold / --accent-soft 这类。
+   4. **不加新圆角**：全部 4px（--radius-sm），和前台表格同一套。
+
+   命名：`.adm-` 前缀 + 语义块名（shell / nav / metrics / data / chip / tool）。
+   老页面里的 `.adm-table` / `.adm-row`（div + grid）保持原样没动 ——
+   它们是首页赛事表和赛事详情页在用，改了会连带动那些页面。
+   ============================================================ */
+
+/* ---------- 外壳 ---------- */
+.adm-shell {
+  padding: 24px 0 64px;
+}
+
+/* 页头：标题 + 一句说明 + 右侧操作。底部一条实线，和下面的导航分开
+   ⚠ 不能叫 .adm-head —— layout.css 里 .adm-head 是「表格表头那一行」，
+      重名会让所有 .adm-row.adm-head 变成 grid 页头（踩过一次，别改回去） */
+.adm-pagehead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.adm-pagehead-main {
+  min-width: 0;
+}
+.adm-pagehead h1 {
+  font-family: var(--font-serif);
+  font-size: 1.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+.adm-lead {
+  margin: 5px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-3);
+}
+.adm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ---------- 一级导航 ----------
+   分成「赛事 / 社区 / 站务」三组，组间一条竖线。
+   不用圆角按钮：8 个按钮并排会变成一排药丸，和前台的语言不搭；
+   文字 + 当前页下划线更像报纸的版面导航。 */
+.adm-nav {
+  display: flex;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line-hairline);
+}
+.adm-nav::-webkit-scrollbar {
+  display: none;
+}
+.adm-nav-group {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+.adm-nav-group + .adm-nav-group {
+  margin-left: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line-hairline);
+}
+.adm-nav-label {
+  align-self: center;
+  flex: 0 0 auto;
+  padding-right: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+.adm-nav-link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 9px 9px 8px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: 0.86rem;
+  color: var(--text-2);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.14s ease, border-color 0.14s ease;
+}
+.adm-nav-link:hover {
+  color: var(--text);
+}
+.adm-nav-link.is-on {
+  color: var(--brand);
+  border-bottom-color: var(--brand-solid);
+  font-weight: 600;
+}
+/* 有事的入口点一个数（待处理反馈 / 待补资料），没有就不显示 —— 不留空胶囊 */
+.adm-nav-badge {
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--brand-on-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* ---------- 数据条（替代 4 张统计卡） ---------- */
+.adm-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+.adm-metric {
+  flex: 1 1 0;
+  min-width: 116px;
+  padding: 10px 14px;
+  border-left: 1px solid var(--line-hairline);
+}
+.adm-metric:first-child {
+  border-left: 0;
+}
+.adm-metric-n {
+  font-family: var(--font-mono);
+  font-size: 1.14rem;
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.adm-metric-l {
+  margin-top: 2px;
+  font-size: 0.74rem;
+  color: var(--text-3);
+}
+.adm-metric-sub {
+  margin-top: 1px;
+  font-size: 0.7rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.adm-metric.is-warn .adm-metric-n {
+  color: var(--color-warning);
+}
+
+/* ---------- 真表格 ---------- */
+.adm-scroll {
+  overflow-x: auto;
+}
+.adm-data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.adm-data caption {
+  caption-side: top;
+  text-align: left;
+  padding: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+.adm-data th {
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.adm-data td {
+  padding: 8px 10px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--line-hairline);
+}
+.adm-data tbody tr:last-child td {
+  border-bottom: 0;
+}
+.adm-data tbody tr:hover {
+  background: var(--bg-subtle);
+}
+.adm-data .is-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.adm-data .is-weak {
+  color: var(--text-3);
+}
+.adm-data .is-strong {
+  font-weight: 600;
+  color: var(--text);
+}
+.adm-data .is-nowrap {
+  white-space: nowrap;
+}
+/* 操作列：两个按钮之间的竖线，比加间距省宽度 */
+.adm-data .adm-ops {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.adm-data .adm-ops .adm-link-btn + .adm-link-btn {
+  border-left: 1px solid var(--line-hairline);
+}
+
+/* ---------- 标签 ---------- */
+.adm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.adm-chip + .adm-chip {
+  margin-left: 4px;
+}
+.adm-chip.is-warn {
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.adm-chip.is-bad {
+  background: var(--accent-soft);
+  color: var(--brand-on-soft);
+}
+.adm-chip.is-ok {
+  background: var(--green-soft);
+  color: var(--ok-on-soft);
+}
+/* 帮派色块之类的 6px 小方点，跟群友卡片上的徽标同一个意思 */
+.adm-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+/* ---------- 工具条 ---------- */
+.adm-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.adm-search {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 8px 11px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-search:focus {
+  outline: none;
+  border-color: var(--brand-solid);
+}
+.adm-select {
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.86rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-tool-note {
+  font-size: 0.78rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.adm-tool-sep {
+  flex: 1 0 8px;
+}
+
+/* ---------- 面板 ---------- */
+.adm-panel {
+  padding: 13px 16px 14px;
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.adm-panel-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.adm-panel-sub {
+  font-size: 0.78rem;
+  color: var(--text-3);
+}
+
+/* ---------- 表单 ---------- */
+.adm-field {
+  margin-bottom: 11px;
+}
+.adm-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  color: var(--text-3);
+}
+.adm-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.adm-input:focus {
+  outline: none;
+  border-color: var(--brand-solid);
+}
+.adm-input-hint {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+/* ---------- 反馈 ---------- */
+.adm-flash {
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+}
+.adm-flash.is-ok {
+  background: var(--green-soft);
+  color: var(--ok-on-soft);
+}
+.adm-flash.is-err {
+  background: var(--accent-soft);
+  color: var(--brand-on-soft);
+}
+.adm-empty {
+  padding: 30px 0;
+  text-align: center;
+  font-size: 0.86rem;
+  color: var(--text-3);
+}
+
+/* ---------- 表格里的展开行（报名名单之类） ----------
+   缩进一格 + 淡底，一眼能看出「这行属于上面那张卡」而不是另一条记录。 */
+.adm-data .adm-subrow > td {
+  padding: 8px 10px 10px 26px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+.adm-signups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.adm-signups-label {
+  font-size: 0.74rem;
+  color: var(--text-3);
+}
+.adm-signups-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-size: 0.8rem;
+}
+.adm-signups-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.adm-signups-note {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-2);
+  font-size: 0.76rem;
+}
+.adm-signups-time {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+.adm-signups-item .adm-link-btn {
+  padding: 1px 4px;
+  font-size: 0.76rem;
+}
+
+/* ---------- 赛程阶段条 ----------
+   已有阶段排成一行小条：名字 + 几场 + 改名/删掉。
+   不做成表格：阶段一般就 3~5 个，表格会把「赛程编排」这块撑得很高，
+   而它下面是真正要天天看的对阵列表。 */
+.adm-rounds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 9px 0 3px;
+  margin-bottom: 10px;
+  border-top: 1px dashed var(--border);
+}
+.adm-rounds-label {
+  font-size: 0.74rem;
+  color: var(--text-3);
+}
+.adm-rounds-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  font-size: 0.8rem;
+}
+.adm-rounds-name {
+  font-weight: 600;
+  color: var(--text);
+}
+.adm-rounds-count {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+.adm-rounds-item .adm-link-btn {
+  padding: 1px 4px;
+  font-size: 0.76rem;
+}
+
+/* ---------- 窄屏 ----------
+   后台主要在电脑上用，但手机上偶尔要救急（群里说「X 打错了」）。
+   这时页头堆成两行、数据条两列，表格横向滚动。 */
+@media (max-width: 860px) {
+  .adm-pagehead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .adm-actions {
+    justify-content: flex-start;
+  }
+  .adm-metric {
+    flex: 1 1 50%;
+    border-top: 1px solid var(--line-hairline);
+  }
+  .adm-metric:nth-child(-n + 2) {
+    border-top: 0;
+  }
+  .adm-metric:nth-child(odd) {
+    border-left: 0;
+  }
+}

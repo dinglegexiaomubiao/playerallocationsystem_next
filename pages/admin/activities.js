@@ -1,9 +1,8 @@
-import Head from 'next/head';
-import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
 import { ACTIVITY_TYPES, activityTypeLabel } from '../../lib/options.mjs';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 const TYPE_KEYS = ACTIVITY_TYPES.map((t) => t.key);
 const inputStyle = {
@@ -31,6 +30,7 @@ export default function AdminActivitiesPage({ denied }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [q, setQ] = useState('');
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -60,12 +60,26 @@ export default function AdminActivitiesPage({ denied }) {
   }, [posts]);
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return posts;
-    if (filter === 'open') return posts.filter((p) => p.status === 'open' && !p.expired);
-    if (filter === 'closed') return posts.filter((p) => p.status === 'closed');
-    if (filter === 'expired') return posts.filter((p) => p.expired && p.status !== 'closed');
-    return posts;
-  }, [posts, filter]);
+    const byStatus = (p) => {
+      if (filter === 'open') return p.status === 'open' && !p.expired;
+      if (filter === 'closed') return p.status === 'closed';
+      if (filter === 'expired') return p.expired && p.status !== 'closed';
+      return true;
+    };
+    const kw = q.trim().toLowerCase();
+    return posts.filter((p) => {
+      if (!byStatus(p)) return false;
+      if (!kw) return true;
+      return (
+        String(p.title || '').toLowerCase().includes(kw) ||
+        String(p.type || '').toLowerCase().includes(kw) ||
+        String(p.region || '').toLowerCase().includes(kw) ||
+        String(p.location || '').toLowerCase().includes(kw) ||
+        String(p.note || '').toLowerCase().includes(kw) ||
+        String(p.account_name || '').toLowerCase().includes(kw)
+      );
+    });
+  }, [posts, filter, q]);
 
   const save = async () => {
     if (!editing || busy) return;
@@ -123,95 +137,51 @@ export default function AdminActivitiesPage({ denied }) {
     }
   };
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问。
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
+  if (denied) return <AdminDenied hint="活动要关要删，得用管理员账号。" />;
 
-  const statBox = (n, label, color) => (
-    <div
-      style={{
-        background: 'var(--bg-card, #fff)',
-        border: '1px solid var(--border, #e5e5e5)',
-        borderRadius: 10,
-        padding: '10px 18px',
-        minWidth: 110,
-      }}
-    >
-      <div style={{ fontSize: 22, fontWeight: 800, color: color || 'var(--text, #222)' }}>{n}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-3, #888)' }}>{label}</div>
-    </div>
-  );
 
   return (
-    <>
-      <Head>
-        <title>活动招募管理 · 后台 · 深圳LaRoja Dota2社区</title>
-      </Head>
+    <AdminShell
+      title="活动"
+      accent="管理"
+      active="activities"
+      lead="群里约饭、约看比赛、约线下。帖子过期了没人关，就会一直挂在「招募中」。"
+      preview={{ href: '/activities', label: '看活动页' }}
+      metrics={[
+        { n: stats.total, label: '个活动' },
+        { n: stats.open, label: '还在招' },
+        { n: stats.expired, label: '过期没关', warn: stats.expired > 0 },
+        { n: stats.closed, label: '已关掉' },
+      ]}
+      actions={
+        <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+          刷新
+        </button>
+      }
+    >
+      <div className="adm-tool">
+        <input
+          className="adm-search"
+          placeholder="搜标题 / 类型 / 地点 / 备注 / 发起人"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select className="adm-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">全部（{posts.length}）</option>
+          <option value="open">招募中（{stats.open}）</option>
+          <option value="closed">已关闭（{stats.closed}）</option>
+          <option value="expired">已过期未关（{stats.expired}）</option>
+        </select>
+        <span className="adm-tool-note">{filtered.length} 个</span>
+      </div>
 
-      <section className="page-hero">
-        <div className="wrap">
-          <Link href="/admin" className="back-link">← 返回后台首页</Link>
-          <h1 style={{ fontSize: '1.6rem' }}>活动招募管理</h1>
-          <p style={{ marginTop: 14, fontSize: 12, color: 'var(--text-3, #888)' }}>
-            共 {filtered.length} 条｜这里可改任意字段 / 关帖 / 删帖；前台发起人仍只能操作自己的帖
-          </p>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-bar">
-            <div className="adm-tabs">
-              <Link className="adm-tab" href="/admin/members">群友管理</Link>
-              <Link className="adm-tab" href="/admin/food">美食管理</Link>
-              <Link className="adm-tab" href="/admin/party">开黑管理</Link>
-              <span className="adm-tab active">活动管理</span>
-              <Link className="adm-tab" href="/main">阵容分配</Link>
-              <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
-              <Link className="adm-tab" href="/admin/support">群友反馈</Link>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {statBox(stats.total, '活动总数')}
-            {statBox(stats.open, '招募中', '#1E8449')}
-            {statBox(stats.closed, '已关闭', '#888')}
-            {statBox(stats.expired, '已过期(未关)', '#B9770E')}
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border-strong, #ddd)' }}
-            >
-              <option value="all">全部（{posts.length}）</option>
-              <option value="open">招募中（{stats.open}）</option>
-              <option value="closed">已关闭（{stats.closed}）</option>
-              <option value="expired">已过期未关（{stats.expired}）</option>
-            </select>
-          </div>
-
-          {msg && (
-            <div
-              className={msg.type === 'err' ? 'adm-error' : ''}
-              style={{ marginBottom: 12, ...(msg.type !== 'err' ? { color: '#1E8449', fontSize: 13 } : {}) }}
-            >
-              {msg.text}
-            </div>
-          )}
+      {msg && <div className={'adm-flash is-' + (msg.type === 'err' ? 'err' : 'ok')}>{msg.text}</div>}
 
           {loading ? (
             <div className="empty">加载中…</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="adm-table" style={{ width: '100%', fontSize: 13 }}>
+            <div className="adm-scroll">
+              <table className="adm-data">
                 <thead>
                   <tr>
                     <th style={{ width: 42 }}>#</th>
@@ -241,7 +211,7 @@ export default function AdminActivitiesPage({ denied }) {
                       <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.title}>
                         {p.title || '未命名'}
                         {p.expired && p.status === 'open' ? (
-                          <span style={{ marginLeft: 6, fontSize: 11, color: '#B9770E' }}>已过期</span>
+                          <span className="adm-chip is-warn">已过期</span>
                         ) : null}
                       </td>
                       <td>
@@ -272,8 +242,6 @@ export default function AdminActivitiesPage({ denied }) {
               </table>
             </div>
           )}
-        </div>
-      </section>
 
       {/* ===== 编辑弹窗 ===== */}
       {editing && (
@@ -396,7 +364,7 @@ export default function AdminActivitiesPage({ denied }) {
           </div>
         </div>
       )}
-    </>
+    </AdminShell>
   );
 }
 

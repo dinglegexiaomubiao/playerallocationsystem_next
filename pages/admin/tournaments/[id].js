@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import useSession from '../../../hooks/useSession';
 import { getSession, isAdmin } from '../../../lib/auth';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../../lib/api-client.mjs';
 import { dateOnly } from '../../../lib/excel';
+import AdminShell, { AdminDenied } from '../../../components/admin/AdminShell';
 import TournamentPackageIO from '../../../components/TournamentPackageIO';
 import MultiSelectFilter from '../../../components/MultiSelectFilter';
 import { POSITIONS } from '../../../lib/options.mjs';
@@ -883,26 +883,72 @@ export default function AdminTournament({ denied }) {
     }
   };
 
+  /* 阶段改名：只改名字，不动对阵。以前写歪了只能删掉重建，
+     而删阶段会连带删掉它下面的所有对阵 —— 改个错字代价太大。 */
+  const renameRound = async (rd) => {
+    if (roundBusy) return;
+    const next = window.prompt(`「${rd.name}」改成什么？`, rd.name);
+    if (next === null) return;
+    const nm = String(next).trim();
+    if (!nm || nm === rd.name) return;
+
+    setRoundBusy(true);
+    setMsg(null);
+    try {
+      await apiPut('/api/tournaments/' + id + '/matches', { roundId: rd.id, name: nm });
+      const apply = (list) =>
+        list ? list.map((x) => (String(x.id) === String(rd.id) ? { ...x, name: nm } : x)) : list;
+      setBaseline((b) => (b ? { ...b, rounds: apply(b.rounds) } : b));
+      setDraft((d) => (d ? { ...d, rounds: apply(d.rounds) } : d));
+      setMsg({ type: 'ok', text: `阶段名改成「${nm}」了` });
+    } catch (e) {
+      setMsg({ type: 'err', text: '改名失败：' + e.message });
+    } finally {
+      setRoundBusy(false);
+    }
+  };
+
+  /* 删阶段：后端会先删这一轮的对阵再删阶段，所以确认框里必须把场次数说出来 */
+  const removeRound = async (rd, matchCount) => {
+    if (roundBusy) return;
+    const ok = window.confirm(
+      `删掉阶段「${rd.name}」？\n\n` +
+        (matchCount > 0
+          ? `这一轮里的 ${matchCount} 场对阵会一起删掉，比分也没了。\n`
+          : '这一轮现在还没有对阵。\n') +
+        '不可恢复。'
+    );
+    if (!ok) return;
+
+    setRoundBusy(true);
+    setMsg(null);
+    try {
+      await apiDelete('/api/tournaments/' + id + '/matches', { roundId: rd.id });
+      const keep = (list) => (list ? list.filter((x) => String(x.id) !== String(rd.id)) : list);
+      const keepMatches = (list) =>
+        (list || []).filter((m) => String(m.round_id) !== String(rd.id));
+      setBaseline((b) => (b ? { ...b, rounds: keep(b.rounds), matches: keepMatches(b.matches) } : b));
+      setDraft((d) => (d ? { ...d, rounds: keep(d.rounds), matches: keepMatches(d.matches) } : d));
+      setMsg({ type: 'ok', text: `已删掉阶段「${rd.name}」` });
+    } catch (e) {
+      setMsg({ type: 'err', text: '删除失败：' + e.message });
+    } finally {
+      setRoundBusy(false);
+    }
+  };
+
   /* ---------- 权限门 ---------- */
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问管理后台
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
+  if (denied) return <AdminDenied hint="赛事管理只给管理员开。" />;
   if (!ready) return <div className="empty" style={{ padding: '110px 0' }}>加载中…</div>;
   if (!me) {
     return (
       <div className="empty" style={{ padding: '110px 0' }}>
-        请先 <Link href="/login?from=/admin" style={{ color: 'var(--brand)' }}>登录</Link>
+        得先 <Link href="/login?from=/admin" style={{ color: 'var(--brand)' }}>登录</Link>
       </div>
     );
   }
-  if (!isAdmin) return <div className="empty" style={{ padding: '110px 0' }}>无权访问</div>;
+  if (!isAdmin) return <AdminDenied hint="你现在登录的账号不是管理员。" />;
 
   if (loading && !draft) return <div className="empty" style={{ padding: '110px 0' }}>加载中…</div>;
   if (error && !draft) return <div className="empty" style={{ padding: '110px 0' }}>{error}</div>;
@@ -935,520 +981,542 @@ export default function AdminTournament({ denied }) {
   };
 
   return (
-    <>
-      <Head>
-        <title>{info.name || '赛事'} · 管理 · 深圳LaRoja Dota2社区</title>
-      </Head>
+    <AdminShell
+      title={info.name || '未命名赛事'}
+      active="tournaments"
+      lead="这一届的报名、队伍、赛程都在下面。改完点上面的「保存修改」才写进库。"
+      actions={
+        <>
+          {/* 单赛事整包导入 / 导出 / 模板（管理员）：赛事信息 + 报名 + 队伍 + 对阵 */}
+          <TournamentPackageIO
+            tid={id}
+            data={draft}
+            tournamentName={info.name}
+            onImported={load}
+            guard={() => {
+              if (!dirty) return true;
+              return window.confirm(
+                `当前有 ${dirtyCount} 处未保存的修改。\n\n` +
+                  '导入会直接写入服务器并刷新页面，这些未保存的修改会丢失。\n' +
+                  '建议先「保存修改」再导入。仍要继续吗？'
+              );
+            }}
+          />
+        </>
+      }
+      preview={{ href: '/tournaments/' + id, label: '看前台' }}
+    >
+    {/* 未保存提示条：改动全部先落在本地，点这里的按钮才同步云端 */}
+    <div className={'adm-savebar' + (dirty ? ' is-dirty' : '')}>
+      <span className={'adm-dirty-badge' + (dirty ? '' : ' is-clean')}>
+        {dirty ? `未保存修改 ${dirtyCount} 处` : '已全部保存'}
+      </span>
+      <span className="adm-savebar-text">
+        {dirty
+          ? plan.groups.map((g) => `${g.label} ${g.count}`).join(' · ')
+          : '编辑只改本地草稿，不会自动同步'}
+      </span>
+      <div className="adm-savebar-spacer" />
+      <button className="btn btn-ghost" onClick={discard} disabled={!dirty || saving}>
+        放弃修改
+      </button>
+      <button className="btn btn-primary" onClick={saveAll} disabled={!dirty || saving}>
+        {saving ? (
+          <>
+            <span className="spinner" />
+            保存中…{saveProgress ? ` ${saveProgress}` : ''}
+          </>
+        ) : (
+          '保存修改'
+        )}
+      </button>
+    </div>
 
-      <section className="page-hero">
-        <div className="wrap">
-          <Link href="/admin" className="back-link">← 返回赛事列表</Link>
-          <div className="adm-detail-head">
-            <h1 style={{ fontSize: '1.7rem' }}>{info.name || '未命名赛事'}</h1>
-            {/* 单赛事整包导入 / 导出 / 模板（管理员）：赛事信息 + 报名 + 队伍 + 对阵 */}
-            <div className="adm-detail-actions">
-              <TournamentPackageIO
-                tid={id}
-                data={draft}
-                tournamentName={info.name}
-                onImported={load}
-                guard={() => {
-                  if (!dirty) return true;
-                  return window.confirm(
-                    `当前有 ${dirtyCount} 处未保存的修改。\n\n` +
-                      '导入会直接写入服务器并刷新页面，这些未保存的修改会丢失。\n' +
-                      '建议先「保存修改」再导入。仍要继续吗？'
-                  );
-                }}
-              />
-            </div>
-          </div>
+    {msg && <div className={msg.type === 'err' ? 'adm-error' : 'adm-msg'}>{msg.text}</div>}
+    {error && draft && <div className="adm-error">{error}</div>}
+
+    {/* ---------- 赛事信息 ---------- */}
+    <div className="side-card" style={{ marginBottom: 18 }}>
+      <div className="adm-block-title">赛季信息</div>
+      <div className="form-row" style={{ marginBottom: 12 }}>
+        <div className={'form-field' + (String(baseline.info.name ?? '') !== String(info.name ?? '') ? ' adm-dirty-field' : '')}>
+          <label>赛季名称</label>
+          <input value={info.name} onChange={(e) => patchInfo('name', e.target.value)} />
         </div>
-      </section>
+        <div className={'form-field' + (baseline.info.status !== info.status ? ' adm-dirty-field' : '')}>
+          <label>比赛状态</label>
+          <select value={info.status} onChange={(e) => patchInfo('status', e.target.value)}>
+            {STATUS_LIST.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="form-row" style={{ marginBottom: 12 }}>
+        <div className={'form-field' + (baseline.info.start_date !== info.start_date ? ' adm-dirty-field' : '')}>
+          <label>开始日期</label>
+          <input type="date" value={info.start_date} onChange={(e) => patchInfo('start_date', e.target.value)} />
+        </div>
+        <div className={'form-field' + (baseline.info.end_date !== info.end_date ? ' adm-dirty-field' : '')}>
+          <label>结束日期</label>
+          <input type="date" value={info.end_date} onChange={(e) => patchInfo('end_date', e.target.value)} />
+        </div>
+      </div>
+      <div className="form-row" style={{ marginBottom: 12 }}>
+        <div className={'form-field' + (baseline.info.sponsor_info !== info.sponsor_info ? ' adm-dirty-field' : '')}>
+          <label>赞助信息</label>
+          <input value={info.sponsor_info} onChange={(e) => patchInfo('sponsor_info', e.target.value)} />
+        </div>
+        <div className={'form-field' + (baseline.info.champion_prize !== info.champion_prize ? ' adm-dirty-field' : '')}>
+          <label>冠军奖金</label>
+          <input value={info.champion_prize} onChange={(e) => patchInfo('champion_prize', e.target.value)} />
+        </div>
+      </div>
+      <div className="form-row">
+        <div className={'form-field' + (baseline.info.runner_up_prize !== info.runner_up_prize ? ' adm-dirty-field' : '')}>
+          <label>亚军奖金</label>
+          <input value={info.runner_up_prize} onChange={(e) => patchInfo('runner_up_prize', e.target.value)} />
+        </div>
+      </div>
+    </div>
 
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          {/* 未保存提示条：改动全部先落在本地，点这里的按钮才同步云端 */}
-          <div className={'adm-savebar' + (dirty ? ' is-dirty' : '')}>
-            <span className={'adm-dirty-badge' + (dirty ? '' : ' is-clean')}>
-              {dirty ? `未保存修改 ${dirtyCount} 处` : '已全部保存'}
-            </span>
-            <span className="adm-savebar-text">
-              {dirty
-                ? plan.groups.map((g) => `${g.label} ${g.count}`).join(' · ')
-                : '编辑只改本地草稿，不会自动同步'}
-            </span>
-            <div className="adm-savebar-spacer" />
-            <button className="btn btn-ghost" onClick={discard} disabled={!dirty || saving}>
-              放弃修改
-            </button>
-            <button className="btn btn-primary" onClick={saveAll} disabled={!dirty || saving}>
-              {saving ? (
-                <>
-                  <span className="spinner" />
-                  保存中…{saveProgress ? ` ${saveProgress}` : ''}
-                </>
-              ) : (
-                '保存修改'
-              )}
-            </button>
+    {/* ---------- 分区 ---------- */}
+    <div className="adm-tabs" style={{ marginBottom: 14 }}>
+      <button className={`adm-tab ${tab === 'signups' ? 'active' : ''}`} onClick={() => setTab('signups')}>
+        报名名单（{signups.length}）
+      </button>
+      <button className={`adm-tab ${tab === 'teams' ? 'active' : ''}`} onClick={() => setTab('teams')}>
+        队伍与队长（{teams.length}）
+      </button>
+      <button className={`adm-tab ${tab === 'matches' ? 'active' : ''}`} onClick={() => setTab('matches')}>
+        赛程与结果（{matches.length}）
+      </button>
+    </div>
+
+    {/* ---------- 报名名单 ---------- */}
+    {tab === 'signups' && (
+      <div>
+        {/* 缺漏统计 + 过滤 + 一键补全（对齐群友管理的「标注缺失」） */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
+          <span className="adm-hint">
+            报名 {signups.length} 人 · 信息缺漏 <strong style={{ color: issueSignups.length > 0 ? 'var(--accent, #C0392B)' : 'inherit' }}>{issueSignups.length}</strong> 人
+          </span>
+          {issueSignups.length > 0 && (
+            <>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.82rem' }}>
+                <input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} />
+                只看有缺漏
+              </label>
+              <button className="btn btn-ghost" onClick={backfillFromProfile}>
+                从选手档案补全缺漏（{issueSignups.length} 人）
+              </button>
+            </>
+          )}
+        </div>
+        <div className="adm-table">
+          <div className="adm-row adm-row-signup adm-head">
+            <div>选手</div>
+            <div>分数</div>
+            <div>擅长位置</div>
+            <div>地区</div>
+            <div>队长</div>
+            <div>操作</div>
           </div>
-
-          {msg && <div className={msg.type === 'err' ? 'adm-error' : 'adm-msg'}>{msg.text}</div>}
-          {error && draft && <div className="adm-error">{error}</div>}
-
-          {/* ---------- 赛事信息 ---------- */}
-          <div className="side-card" style={{ marginBottom: 18 }}>
-            <div className="adm-block-title">赛季信息</div>
-            <div className="form-row" style={{ marginBottom: 12 }}>
-              <div className={'form-field' + (String(baseline.info.name ?? '') !== String(info.name ?? '') ? ' adm-dirty-field' : '')}>
-                <label>赛季名称</label>
-                <input value={info.name} onChange={(e) => patchInfo('name', e.target.value)} />
-              </div>
-              <div className={'form-field' + (baseline.info.status !== info.status ? ' adm-dirty-field' : '')}>
-                <label>比赛状态</label>
-                <select value={info.status} onChange={(e) => patchInfo('status', e.target.value)}>
-                  {STATUS_LIST.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="form-row" style={{ marginBottom: 12 }}>
-              <div className={'form-field' + (baseline.info.start_date !== info.start_date ? ' adm-dirty-field' : '')}>
-                <label>开始日期</label>
-                <input type="date" value={info.start_date} onChange={(e) => patchInfo('start_date', e.target.value)} />
-              </div>
-              <div className={'form-field' + (baseline.info.end_date !== info.end_date ? ' adm-dirty-field' : '')}>
-                <label>结束日期</label>
-                <input type="date" value={info.end_date} onChange={(e) => patchInfo('end_date', e.target.value)} />
-              </div>
-            </div>
-            <div className="form-row" style={{ marginBottom: 12 }}>
-              <div className={'form-field' + (baseline.info.sponsor_info !== info.sponsor_info ? ' adm-dirty-field' : '')}>
-                <label>赞助信息</label>
-                <input value={info.sponsor_info} onChange={(e) => patchInfo('sponsor_info', e.target.value)} />
-              </div>
-              <div className={'form-field' + (baseline.info.champion_prize !== info.champion_prize ? ' adm-dirty-field' : '')}>
-                <label>冠军奖金</label>
-                <input value={info.champion_prize} onChange={(e) => patchInfo('champion_prize', e.target.value)} />
-              </div>
-            </div>
-            <div className="form-row">
-              <div className={'form-field' + (baseline.info.runner_up_prize !== info.runner_up_prize ? ' adm-dirty-field' : '')}>
-                <label>亚军奖金</label>
-                <input value={info.runner_up_prize} onChange={(e) => patchInfo('runner_up_prize', e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          {/* ---------- 分区 ---------- */}
-          <div className="adm-tabs" style={{ marginBottom: 14 }}>
-            <button className={`adm-tab ${tab === 'signups' ? 'active' : ''}`} onClick={() => setTab('signups')}>
-              报名名单（{signups.length}）
-            </button>
-            <button className={`adm-tab ${tab === 'teams' ? 'active' : ''}`} onClick={() => setTab('teams')}>
-              队伍与队长（{teams.length}）
-            </button>
-            <button className={`adm-tab ${tab === 'matches' ? 'active' : ''}`} onClick={() => setTab('matches')}>
-              赛程与结果（{matches.length}）
-            </button>
-          </div>
-
-          {/* ---------- 报名名单 ---------- */}
-          {tab === 'signups' && (
-            <div>
-              {/* 缺漏统计 + 过滤 + 一键补全（对齐群友管理的「标注缺失」） */}
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
-                <span className="adm-hint">
-                  报名 {signups.length} 人 · 信息缺漏 <strong style={{ color: issueSignups.length > 0 ? 'var(--accent, #C0392B)' : 'inherit' }}>{issueSignups.length}</strong> 人
-                </span>
-                {issueSignups.length > 0 && (
-                  <>
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.82rem' }}>
-                      <input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} />
-                      只看有缺漏
-                    </label>
-                    <button className="btn btn-ghost" onClick={backfillFromProfile}>
-                      从选手档案补全缺漏（{issueSignups.length} 人）
-                    </button>
-                  </>
-                )}
-              </div>
-              <div className="adm-table">
-                <div className="adm-row adm-row-signup adm-head">
-                  <div>选手</div>
-                  <div>分数</div>
-                  <div>擅长位置</div>
-                  <div>地区</div>
-                  <div>队长</div>
-                  <div>操作</div>
+          {shownSignups.map((s) => {
+            const base = baseline.signups.find((x) => x.player_id === s.player_id);
+            const rowDirty =
+              !base ||
+              SIGNUP_EDIT_FIELDS.some((f) => String(base[f] ?? '') !== String(s[f] ?? '')) ||
+              base.is_captain !== s.is_captain;
+            const miss = signupIssues(s);
+            return (
+              <div className={'adm-row adm-row-signup' + (rowDirty ? ' adm-dirty-row' : '')} key={s.player_id} data-focus={s.player_id}>
+                <div className="adm-name">
+                  {s.nickname}
+                  {s._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
+                  {miss.length > 0 && (
+                    <span className="adm-dirty-badge" style={{ marginLeft: 6, color: 'var(--accent, #C0392B)' }}>
+                      缺 {miss.join('/')}
+                    </span>
+                  )}
                 </div>
-                {shownSignups.map((s) => {
-                  const base = baseline.signups.find((x) => x.player_id === s.player_id);
-                  const rowDirty =
-                    !base ||
-                    SIGNUP_EDIT_FIELDS.some((f) => String(base[f] ?? '') !== String(s[f] ?? '')) ||
-                    base.is_captain !== s.is_captain;
-                  const miss = signupIssues(s);
-                  return (
-                    <div className={'adm-row adm-row-signup' + (rowDirty ? ' adm-dirty-row' : '')} key={s.player_id} data-focus={s.player_id}>
-                      <div className="adm-name">
-                        {s.nickname}
-                        {s._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
-                        {miss.length > 0 && (
-                          <span className="adm-dirty-badge" style={{ marginLeft: 6, color: 'var(--accent, #C0392B)' }}>
-                            缺 {miss.join('/')}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <input
-                          className="adm-input adm-input-sm"
-                          type="number"
-                          min="0"
-                          value={s.score}
-                          onChange={(e) => patchSignup(s.player_id, 'score', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        {/* 位置用多选下拉：行内空间有限，平铺 6 个 chip 会撑破列宽 */}
-                        <MultiSelectFilter
-                          label="本届位置"
-                          allLabel="未标注"
-                          unit="人"
-                          options={POSITIONS.map((p) => ({ value: p }))}
-                          value={splitList(s.positions)}
-                          onChange={(next) => patchSignup(s.player_id, 'positions', next.join(','))}
-                        />
-                      </div>
-                      <div>
-                        <input
-                          className="adm-input"
-                          value={s.region}
-                          placeholder="国家 省 市 区"
-                          title="格式：国家 省 市 区，例如「中国 广东省 深圳市 南山区」。点上方「从档案补全缺漏」可直接沿用档案里的值。"
-                          onChange={(e) => patchSignup(s.player_id, 'region', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.82rem' }}>
-                          <input
-                            type="checkbox"
-                            checked={s.is_captain}
-                            onChange={() => toggleCaptain(s.player_id)}
-                          />
-                          队长
-                        </label>
-                      </div>
-                      <div>
-                        <button className="adm-link-btn adm-danger-btn" onClick={() => removeSignup(s.player_id)}>
-                          移出名单
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {signups.length === 0 && <div className="adm-empty-inline" style={{ padding: 16 }}>暂无报名，从下方添加</div>}
-              </div>
-
-              <div className="adm-add-row">
-                <PlayerSearchSelect
-                  value={addPlayerId}
-                  onChange={setAddPlayerId}
-                  options={candidateOptions.map((c) => ({
-                    id: c.id,
-                    label: c.nickname || c.group_nickname || '未命名',
-                    sub: `${c.score || 0} 分${c.game_id ? ` · Steam ${c.game_id}` : ''}${c.group_nickname && c.group_nickname !== (c.nickname || '') ? ` · ${c.group_nickname}` : ''}`,
-                  }))}
-                  placeholder="搜索选手加入名单（昵称 / SteamID）…"
-                  onCreate={(name) => openNewPlayer(name)}
-                />
-                <button className="btn btn-ghost" onClick={addSignup} disabled={!addPlayerId}>
-                  ＋ 加入名单
-                </button>
-                <button className="btn btn-ghost" onClick={() => openNewPlayer('')}>
-                  ＋ 新建选手
-                </button>
-                {missingMembers.length > 0 && (
-                  <button className="btn btn-ghost" onClick={backfillMembers}>
-                    补录队伍成员进名单（{missingMembers.length} 人）
+                <div>
+                  <input
+                    className="adm-input adm-input-sm"
+                    type="number"
+                    min="0"
+                    value={s.score}
+                    onChange={(e) => patchSignup(s.player_id, 'score', e.target.value)}
+                  />
+                </div>
+                <div>
+                  {/* 位置用多选下拉：行内空间有限，平铺 6 个 chip 会撑破列宽 */}
+                  <MultiSelectFilter
+                    label="本届位置"
+                    allLabel="未标注"
+                    unit="人"
+                    options={POSITIONS.map((p) => ({ value: p }))}
+                    value={splitList(s.positions)}
+                    onChange={(next) => patchSignup(s.player_id, 'positions', next.join(','))}
+                  />
+                </div>
+                <div>
+                  <input
+                    className="adm-input"
+                    value={s.region}
+                    placeholder="国家 省 市 区"
+                    title="格式：国家 省 市 区，例如「中国 广东省 深圳市 南山区」。点上方「从档案补全缺漏」可直接沿用档案里的值。"
+                    onChange={(e) => patchSignup(s.player_id, 'region', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '.82rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={s.is_captain}
+                      onChange={() => toggleCaptain(s.player_id)}
+                    />
+                    队长
+                  </label>
+                </div>
+                <div>
+                  <button className="adm-link-btn adm-danger-btn" onClick={() => removeSignup(s.player_id)}>
+                    移出名单
                   </button>
-                )}
-                <span className="adm-hint">
-                  勾选「队长」保存后会自动建队并把人加进去。共 {candidateOptions.length} 名选手可加入。
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* ---------- 队伍与队长 ---------- */}
-          {tab === 'teams' && (
-            <div>
-              <div className="adm-hint" style={{ marginBottom: 10 }}>
-                共 {teams.length} 队
-                {shortTeams.length > 0 ? (
-                  <> · <strong style={{ color: 'var(--accent, #C0392B)' }}>{shortTeams.length}</strong> 队不满 5 人（{shortTeams.map((t) => t.name || '未命名').join('、')}），可从下方名单补人</>
-                ) : (
-                  ' · 全部满员'
-                )}
-              </div>
-              {teams.map((t) => {
-                const base = baseline.teams.find((x) => x.id === t.id);
-                const nameDirty = base ? base.name !== t.name : t._new;
-                const rankDirty = base ? String(base.rank ?? '') !== String(t.rank ?? '') : t._new;
-                const pool = availableForTeam(t.id);
-                return (
-                  <div className="side-card" key={t.id} style={{ marginBottom: 16 }} data-focus={t.id}>
-                    <div className="adm-team-head">
-                      <input
-                        className={'adm-input' + (nameDirty ? ' adm-dirty-field' : '')}
-                        value={t.name}
-                        placeholder="队伍名称"
-                        onChange={(e) => patchTeam(t.id, { name: e.target.value })}
-                      />
-                      {t._new && <span className="adm-dirty-badge">待保存</span>}
-                      <span className="adm-captain-tag">队长 {t.captain_nickname || '—'}</span>
-                      <span
-                        className="adm-captain-tag"
-                        style={t.members.length < 5 ? { color: 'var(--accent, #C0392B)', borderColor: 'var(--accent, #C0392B)' } : undefined}
-                      >
-                        队员 {t.members.length}/5{t.members.length < 5 ? ' · 缺人' : ''}
-                      </span>
-                      <div className="adm-team-rank">
-                        <label>名次</label>
-                        <select
-                          className={rankDirty ? 'adm-dirty-field' : ''}
-                          value={t.rank}
-                          onChange={(e) => patchTeam(t.id, { rank: e.target.value })}
-                        >
-                          <option value="">未定</option>
-                          <option value="1">冠军</option>
-                          <option value="2">亚军</option>
-                          <option value="3">季军</option>
-                          {[4, 5, 6, 7, 8].map((n) => (
-                            <option key={n} value={String(n)}>第 {n} 名</option>
-                          ))}
-                        </select>
-                        <button className="adm-link-btn adm-danger-btn" onClick={() => removeTeam(t.id)}>
-                          删除队伍
-                        </button>
-                      </div>
-                    </div>
-
-                    {t.members.length > 0 ? (
-                      <div className="adm-table" style={{ marginTop: 12 }}>
-                        <div className="adm-row adm-row-member adm-head">
-                          <div>队员</div>
-                          <div>担任位置</div>
-                          <div>选手ID</div>
-                          <div>操作</div>
-                        </div>
-                        {t.members.map((m) => {
-                          const bm = base?.members.find((x) => x.player_id === m.player_id);
-                          const mDirty = !bm || (bm.position || '') !== (m.position || '');
-                          return (
-                            <div className={'adm-row adm-row-member' + (mDirty ? ' adm-dirty-row' : '')} key={m.player_id}>
-                              <div className="adm-name">
-                                {m.nickname}
-                                {m._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>新增</span>}
-                              </div>
-                              <div>
-                                <select value={m.position} onChange={(e) => patchMember(t.id, m.player_id, e.target.value)}>
-                                  <option value="">未标注</option>
-                                  {POSITION_OPTIONS.map((p) => (
-                                    <option key={p} value={p}>{p}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="adm-date">{m.player_id}</div>
-                              <div>
-                                <button className="adm-link-btn adm-danger-btn" onClick={() => removeMember(t.id, m.player_id)}>
-                                  移出队伍
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="adm-empty-inline">暂无队员</div>
-                    )}
-
-                    <div className="adm-add-row">
-                      <PlayerSearchSelect
-                        value={memberPick[t.id] || ''}
-                        onChange={(v) => setMemberPick((p) => ({ ...p, [t.id]: v }))}
-                        options={pool.map((s) => ({
-                          id: s.player_id,
-                          label: s.nickname || s.group_nickname || '未命名',
-                          sub: s.positions || '未标注位置',
-                        }))}
-                        placeholder={
-                          signups.length === 0
-                            ? '报名名单还是空的，先去「报名名单」加人'
-                            : pool.length === 0
-                            ? '报名名单里的人都已经分好队了'
-                            : '搜索报名名单里的队员…'
-                        }
-                        disabled={pool.length === 0}
-                      />
-                      <button className="btn btn-ghost" onClick={() => addMember(t.id)} disabled={!memberPick[t.id]}>
-                        ＋ 添加队员
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              <button className="btn btn-ghost" onClick={addTeam}>＋ 新建队伍</button>
-              {teams.length === 0 && (
-                <div className="adm-hint" style={{ marginTop: 10 }}>
-                  还没有队伍。可以直接新建队伍，也可以在报名名单里勾选「队长」保存，系统会自动建队。
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })}
+          {signups.length === 0 && <div className="adm-empty-inline" style={{ padding: 16 }}>还没人报名，从下面加</div>}
+        </div>
 
-          {/* ---------- 赛程与结果 ---------- */}
-          {tab === 'matches' && (
-            <div>
-              <div className="side-card" style={{ marginBottom: 18 }}>
-                <div className="adm-block-title">赛程编排</div>
-                {teams.length === 0 && <div className="adm-empty-inline">暂无队伍，请先在「队伍与队长」里建队</div>}
-                {teams.length > 0 && (
-                  <>
-                    <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end' }}>
-                      <div className="form-field">
-                        <label>新阶段名</label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <input
-                            value={newRoundName}
-                            onChange={(e) => setNewRoundName(e.target.value)}
-                            placeholder="例如 淘汰赛 / 半决赛 / 决赛"
-                          />
-                          <button className="btn btn-primary" onClick={addRound} disabled={roundBusy || !newRoundName.trim()}>
-                            {roundBusy ? <><span className="spinner" />创建中…</> : '＋ 阶段'}
+        <div className="adm-add-row">
+          <PlayerSearchSelect
+            value={addPlayerId}
+            onChange={setAddPlayerId}
+            options={candidateOptions.map((c) => ({
+              id: c.id,
+              label: c.nickname || c.group_nickname || '未命名',
+              sub: `${c.score || 0} 分${c.game_id ? ` · Steam ${c.game_id}` : ''}${c.group_nickname && c.group_nickname !== (c.nickname || '') ? ` · ${c.group_nickname}` : ''}`,
+            }))}
+            placeholder="搜索选手加入名单（昵称 / SteamID）…"
+            onCreate={(name) => openNewPlayer(name)}
+          />
+          <button className="btn btn-ghost" onClick={addSignup} disabled={!addPlayerId}>
+            ＋ 加入名单
+          </button>
+          <button className="btn btn-ghost" onClick={() => openNewPlayer('')}>
+            ＋ 新建选手
+          </button>
+          {missingMembers.length > 0 && (
+            <button className="btn btn-ghost" onClick={backfillMembers}>
+              补录队伍成员进名单（{missingMembers.length} 人）
+            </button>
+          )}
+          <span className="adm-hint">
+            勾选「队长」保存后会自动建队并把人加进去。共 {candidateOptions.length} 名选手可加入。
+          </span>
+        </div>
+      </div>
+    )}
+
+    {/* ---------- 队伍与队长 ---------- */}
+    {tab === 'teams' && (
+      <div>
+        <div className="adm-hint" style={{ marginBottom: 10 }}>
+          共 {teams.length} 队
+          {shortTeams.length > 0 ? (
+            <> · <strong style={{ color: 'var(--accent, #C0392B)' }}>{shortTeams.length}</strong> 队不满 5 人（{shortTeams.map((t) => t.name || '未命名').join('、')}），可从下方名单补人</>
+          ) : (
+            ' · 全部满员'
+          )}
+        </div>
+        {teams.map((t) => {
+          const base = baseline.teams.find((x) => x.id === t.id);
+          const nameDirty = base ? base.name !== t.name : t._new;
+          const rankDirty = base ? String(base.rank ?? '') !== String(t.rank ?? '') : t._new;
+          const pool = availableForTeam(t.id);
+          return (
+            <div className="side-card" key={t.id} style={{ marginBottom: 16 }} data-focus={t.id}>
+              <div className="adm-team-head">
+                <input
+                  className={'adm-input' + (nameDirty ? ' adm-dirty-field' : '')}
+                  value={t.name}
+                  placeholder="队伍名称"
+                  onChange={(e) => patchTeam(t.id, { name: e.target.value })}
+                />
+                {t._new && <span className="adm-dirty-badge">待保存</span>}
+                <span className="adm-captain-tag">队长 {t.captain_nickname || '—'}</span>
+                <span
+                  className="adm-captain-tag"
+                  style={t.members.length < 5 ? { color: 'var(--accent, #C0392B)', borderColor: 'var(--accent, #C0392B)' } : undefined}
+                >
+                  队员 {t.members.length}/5{t.members.length < 5 ? ' · 缺人' : ''}
+                </span>
+                <div className="adm-team-rank">
+                  <label>名次</label>
+                  <select
+                    className={rankDirty ? 'adm-dirty-field' : ''}
+                    value={t.rank}
+                    onChange={(e) => patchTeam(t.id, { rank: e.target.value })}
+                  >
+                    <option value="">未定</option>
+                    <option value="1">冠军</option>
+                    <option value="2">亚军</option>
+                    <option value="3">季军</option>
+                    {[4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={String(n)}>第 {n} 名</option>
+                    ))}
+                  </select>
+                  <button className="adm-link-btn adm-danger-btn" onClick={() => removeTeam(t.id)}>
+                    删除队伍
+                  </button>
+                </div>
+              </div>
+
+              {t.members.length > 0 ? (
+                <div className="adm-table" style={{ marginTop: 12 }}>
+                  <div className="adm-row adm-row-member adm-head">
+                    <div>队员</div>
+                    <div>担任位置</div>
+                    <div>选手ID</div>
+                    <div>操作</div>
+                  </div>
+                  {t.members.map((m) => {
+                    const bm = base?.members.find((x) => x.player_id === m.player_id);
+                    const mDirty = !bm || (bm.position || '') !== (m.position || '');
+                    return (
+                      <div className={'adm-row adm-row-member' + (mDirty ? ' adm-dirty-row' : '')} key={m.player_id}>
+                        <div className="adm-name">
+                          {m.nickname}
+                          {m._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>新增</span>}
+                        </div>
+                        <div>
+                          <select value={m.position} onChange={(e) => patchMember(t.id, m.player_id, e.target.value)}>
+                            <option value="">未标注</option>
+                            {POSITION_OPTIONS.map((p) => (
+                              <option key={p} value={p}>{p}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="adm-date">{m.player_id}</div>
+                        <div>
+                          <button className="adm-link-btn adm-danger-btn" onClick={() => removeMember(t.id, m.player_id)}>
+                            移出队伍
                           </button>
                         </div>
                       </div>
-                      <div className="form-field">
-                        <label>所属阶段</label>
-                        <select value={newMatch.round_id} onChange={(e) => setNewMatch({ ...newMatch, round_id: e.target.value })}>
-                          <option value="">— 不分组 —</option>
-                          {rounds.map((rd) => (
-                            <option key={rd.id} value={String(rd.id)}>{rd.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="form-row" style={{ marginBottom: 4, alignItems: 'flex-end' }}>
-                      <div className="form-field">
-                        <label>A 队</label>
-                        <select value={newMatch.team_a_id} onChange={(e) => setNewMatch({ ...newMatch, team_a_id: e.target.value })}>
-                          <option value="">选择队伍</option>
-                          {teams.filter((t) => !t._new).map((t) => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-field">
-                        <label>B 队</label>
-                        <select value={newMatch.team_b_id} onChange={(e) => setNewMatch({ ...newMatch, team_b_id: e.target.value })}>
-                          <option value="">选择队伍</option>
-                          {teams.filter((t) => !t._new).map((t) => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="form-field">
-                        {/* alignSelf 防止 .btn 被 .form-field 拉成整行宽 */}
-                        <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={addMatch}>
-                          ＋ 对阵
-                        </button>
-                      </div>
-                    </div>
-                    <div className="adm-hint">
-                      「＋ 阶段」会立即写入云端；「＋ 对阵」只是加入草稿，需点顶部「保存修改」才生效。
-                      未保存的新队伍不会出现在这里。
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="adm-table">
-                <div className="adm-row adm-row-match adm-head">
-                  <div>阶段</div>
-                  <div>对阵</div>
-                  <div>比分</div>
-                  <div>胜者</div>
-                  <div>恩怨</div>
-                  <div>操作</div>
+                    );
+                  })}
                 </div>
-                {matches.map((m) => {
-                  const base = baseline.matches.find((x) => x.id === m.id);
-                  const rd = rounds.find((r) => String(r.id) === String(m.round_id));
-                  const mDirty =
-                    !base ||
-                    String(base.team_a_score ?? '') !== String(m.team_a_score ?? '') ||
-                    String(base.team_b_score ?? '') !== String(m.team_b_score ?? '') ||
-                    String(base.winner_team_id ?? '') !== String(m.winner_team_id ?? '');
-                  const options = [
-                    { id: m.team_a_id, name: m.team_a_name },
-                    { id: m.team_b_id, name: m.team_b_name },
-                  ].filter((o) => o.id);
-                  return (
-                    <div className={'adm-row adm-row-match' + (mDirty ? ' adm-dirty-row' : '')} key={m.id}>
-                      <div className="adm-date">{rd ? rd.name : '—'}</div>
-                      <div className="adm-name">
-                        {m.team_a_name || '?'} vs {m.team_b_name || '?'}
-                        {m._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <input
-                          className="adm-input"
-                          type="number"
-                          min="0"
-                          value={m.team_a_score}
-                          placeholder="—"
-                          style={{ width: 52 }}
-                          onChange={(e) => patchMatch(m.id, { team_a_score: e.target.value })}
-                        />
-                        <span>:</span>
-                        <input
-                          className="adm-input"
-                          type="number"
-                          min="0"
-                          value={m.team_b_score}
-                          placeholder="—"
-                          style={{ width: 52 }}
-                          onChange={(e) => patchMatch(m.id, { team_b_score: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <select value={m.winner_team_id} onChange={(e) => patchMatch(m.id, { winner_team_id: e.target.value })}>
-                          <option value="">—</option>
-                          {options.map((o) => (
-                            <option key={o.id} value={o.id}>{o.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>{m.is_grudge ? <span className="grudge-tag">⚔</span> : '—'}</div>
-                      <div>
-                        <button className="adm-link-btn adm-danger-btn" onClick={() => removeMatch(m.id)}>
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {matches.length === 0 && <div className="adm-empty-inline" style={{ padding: 16 }}>暂无对阵，请在上方编排</div>}
+              ) : (
+                <div className="adm-empty-inline">还没人</div>
+              )}
+
+              <div className="adm-add-row">
+                <PlayerSearchSelect
+                  value={memberPick[t.id] || ''}
+                  onChange={(v) => setMemberPick((p) => ({ ...p, [t.id]: v }))}
+                  options={pool.map((s) => ({
+                    id: s.player_id,
+                    label: s.nickname || s.group_nickname || '未命名',
+                    sub: s.positions || '未标注位置',
+                  }))}
+                  placeholder={
+                    signups.length === 0
+                      ? '报名名单还是空的，先去「报名名单」加人'
+                      : pool.length === 0
+                      ? '报名名单里的人都已经分好队了'
+                      : '搜索报名名单里的队员…'
+                  }
+                  disabled={pool.length === 0}
+                />
+                <button className="btn btn-ghost" onClick={() => addMember(t.id)} disabled={!memberPick[t.id]}>
+                  ＋ 添加队员
+                </button>
               </div>
             </div>
+          );
+        })}
+
+        <button className="btn btn-ghost" onClick={addTeam}>＋ 新建队伍</button>
+        {teams.length === 0 && (
+          <div className="adm-hint" style={{ marginTop: 10 }}>
+            还没有队伍。可以直接新建队伍，也可以在报名名单里勾选「队长」保存，系统会自动建队。
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* ---------- 赛程与结果 ---------- */}
+    {tab === 'matches' && (
+      <div>
+        <div className="side-card" style={{ marginBottom: 18 }}>
+          <div className="adm-block-title">赛程编排</div>
+          {teams.length === 0 && <div className="adm-empty-inline">还没队伍，先去「队伍与队长」建几支</div>}
+          {teams.length > 0 && (
+            <>
+              <div className="form-row" style={{ marginBottom: 12, alignItems: 'flex-end' }}>
+                <div className="form-field">
+                  <label>新阶段名</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      value={newRoundName}
+                      onChange={(e) => setNewRoundName(e.target.value)}
+                      placeholder="例如 淘汰赛 / 半决赛 / 决赛"
+                    />
+                    <button className="btn btn-primary" onClick={addRound} disabled={roundBusy || !newRoundName.trim()}>
+                      {roundBusy ? <><span className="spinner" />创建中…</> : '＋ 阶段'}
+                    </button>
+                  </div>
+                </div>
+                <div className="form-field">
+                  <label>所属阶段</label>
+                  <select value={newMatch.round_id} onChange={(e) => setNewMatch({ ...newMatch, round_id: e.target.value })}>
+                    <option value="">— 不分组 —</option>
+                    {rounds.map((rd) => (
+                      <option key={rd.id} value={String(rd.id)}>{rd.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 已有阶段：改名 / 删掉。以前只能在「新阶段名」里再建一个，
+                  建错了没法收拾 —— 名字写歪了只能连对阵一起删掉重建。 */}
+              {rounds.length > 0 && (
+                <div className="adm-rounds">
+                  <span className="adm-rounds-label">已有阶段</span>
+                  {rounds.map((rd) => {
+                    const n = matches.filter((m) => String(m.round_id) === String(rd.id)).length;
+                    return (
+                      <span className="adm-rounds-item" key={rd.id}>
+                        <span className="adm-rounds-name">{rd.name}</span>
+                        <span className="adm-rounds-count">{n} 场</span>
+                        <button
+                          type="button"
+                          className="adm-link-btn"
+                          onClick={() => renameRound(rd)}
+                          disabled={roundBusy}
+                        >
+                          改名
+                        </button>
+                        <button
+                          type="button"
+                          className="adm-link-btn"
+                          onClick={() => removeRound(rd, n)}
+                          disabled={roundBusy}
+                        >
+                          删掉
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="form-row" style={{ marginBottom: 4, alignItems: 'flex-end' }}>
+                <div className="form-field">
+                  <label>A 队</label>
+                  <select value={newMatch.team_a_id} onChange={(e) => setNewMatch({ ...newMatch, team_a_id: e.target.value })}>
+                    <option value="">选择队伍</option>
+                    {teams.filter((t) => !t._new).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label>B 队</label>
+                  <select value={newMatch.team_b_id} onChange={(e) => setNewMatch({ ...newMatch, team_b_id: e.target.value })}>
+                    <option value="">选择队伍</option>
+                    {teams.filter((t) => !t._new).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  {/* alignSelf 防止 .btn 被 .form-field 拉成整行宽 */}
+                  <button className="btn btn-primary" style={{ alignSelf: 'flex-start' }} onClick={addMatch}>
+                    ＋ 对阵
+                  </button>
+                </div>
+              </div>
+              <div className="adm-hint">
+                「＋ 阶段」会立即写入云端；「＋ 对阵」只是加入草稿，需点顶部「保存修改」才生效。
+                未保存的新队伍不会出现在这里。
+              </div>
+            </>
           )}
         </div>
-      </section>
 
+        <div className="adm-table">
+          <div className="adm-row adm-row-match adm-head">
+            <div>阶段</div>
+            <div>对阵</div>
+            <div>比分</div>
+            <div>胜者</div>
+            <div>恩怨</div>
+            <div>操作</div>
+          </div>
+          {matches.map((m) => {
+            const base = baseline.matches.find((x) => x.id === m.id);
+            const rd = rounds.find((r) => String(r.id) === String(m.round_id));
+            const mDirty =
+              !base ||
+              String(base.team_a_score ?? '') !== String(m.team_a_score ?? '') ||
+              String(base.team_b_score ?? '') !== String(m.team_b_score ?? '') ||
+              String(base.winner_team_id ?? '') !== String(m.winner_team_id ?? '');
+            const options = [
+              { id: m.team_a_id, name: m.team_a_name },
+              { id: m.team_b_id, name: m.team_b_name },
+            ].filter((o) => o.id);
+            return (
+              <div className={'adm-row adm-row-match' + (mDirty ? ' adm-dirty-row' : '')} key={m.id}>
+                <div className="adm-date">{rd ? rd.name : '—'}</div>
+                <div className="adm-name">
+                  {m.team_a_name || '?'} vs {m.team_b_name || '?'}
+                  {m._new && <span className="adm-dirty-badge" style={{ marginLeft: 6 }}>待保存</span>}
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    className="adm-input"
+                    type="number"
+                    min="0"
+                    value={m.team_a_score}
+                    placeholder="—"
+                    style={{ width: 52 }}
+                    onChange={(e) => patchMatch(m.id, { team_a_score: e.target.value })}
+                  />
+                  <span>:</span>
+                  <input
+                    className="adm-input"
+                    type="number"
+                    min="0"
+                    value={m.team_b_score}
+                    placeholder="—"
+                    style={{ width: 52 }}
+                    onChange={(e) => patchMatch(m.id, { team_b_score: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <select value={m.winner_team_id} onChange={(e) => patchMatch(m.id, { winner_team_id: e.target.value })}>
+                    <option value="">—</option>
+                    {options.map((o) => (
+                      <option key={o.id} value={o.id}>{o.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>{m.is_grudge ? <span className="grudge-tag">⚔</span> : '—'}</div>
+                <div>
+                  <button className="adm-link-btn adm-danger-btn" onClick={() => removeMatch(m.id)}>
+                    删除
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {matches.length === 0 && <div className="adm-empty-inline" style={{ padding: 16 }}>还没有对阵，在上面排一场</div>}
+        </div>
+      </div>
+    )}
       {/* ---------- 新建选手弹窗 ---------- */}
       {showNewPlayer && (
         <div className="modal-mask" onClick={(e) => { if (e.target === e.currentTarget && !npSaving) setShowNewPlayer(false); }}>
@@ -1537,7 +1605,7 @@ export default function AdminTournament({ denied }) {
           </div>
         </div>
       )}
-    </>
+    </AdminShell>
   );
 }
 

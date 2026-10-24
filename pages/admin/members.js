@@ -1,4 +1,3 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
@@ -10,6 +9,7 @@ import DuplicatePlayers from '../../components/admin/DuplicatePlayers';
 import IdentityEditor from '../../components/IdentityEditor';
 import RegionPicker from '../../components/RegionPicker';
 import heroIdToName from '../../lib/heroMapping';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 /* 全英雄选项：后台改资料时要能选任意英雄，不能只限已有数据里出现过的 */
 const ALL_HEROES = [...new Set(Object.values(heroIdToName))].sort((a, b) =>
@@ -37,32 +37,31 @@ function issuesOf(p) {
   return out;
 }
 
-const TAG_COLOR = {
-  high: { bg: '#FDECEC', fg: '#C0392B', bd: '#F5C6C2' },
-  mid: { bg: '#FEF4E6', fg: '#B9770E', bd: '#F8DCB4' },
-  low: { bg: '#F1F2F4', fg: '#6B7280', bd: '#E3E5E8' },
+/* 缺漏标签的轻重：high 该马上补（缺 SteamID），mid 该找机会补，low 只是提醒。
+   颜色全部走 .adm-chip 的令牌，不再写死 #FDECEC 这类浅底 —— 夜间模式下那些浅底会变成亮块。 */
+const TAG_CLASS = { high: ' is-bad', mid: ' is-warn', low: '' };
+
+/* 删人时后端会返回每张子表清了多少行，这里翻成人话 */
+const CLEAN_LABEL = {
+  player_steam_accounts: 'SteamID',
+  player_group_nicknames: '群昵称',
+  player_aliases: '别名',
+  user_configs: '个人设置',
+  play_score: '登录账号',
+  team_players: '队伍关系',
+  tournament_players: '赛事报名',
+  player_tournament_participations: '参赛记录',
+  dota_match_players: '对局战绩',
+  guild_members: '帮派身份',
+  guild_invites: '帮派邀请',
+  party_signups: '开黑报名',
+  activity_signups: '活动报名',
+  party_posts: '开黑帖',
+  activity_posts: '活动帖',
 };
 
 function Tag({ children, lv = 'mid' }) {
-  const c = TAG_COLOR[lv] || TAG_COLOR.mid;
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '1px 7px',
-        marginRight: 5,
-        borderRadius: 5,
-        fontSize: 11,
-        lineHeight: '18px',
-        background: c.bg,
-        color: c.fg,
-        border: `1px solid ${c.bd}`,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </span>
-  );
+  return <span className={'adm-chip' + (TAG_CLASS[lv] ?? TAG_CLASS.mid)}>{children}</span>;
 }
 
 export default function AdminMembersPage({ denied }) {
@@ -77,6 +76,10 @@ export default function AdminMembersPage({ denied }) {
   /* 改用户名（登录账号）：open 展开输入行，done 装结果提示 */
   const [renameState, setRenameState] = useState({ open: false, value: '', busy: false, done: null });
   const [msg, setMsg] = useState(null);
+  /* 新建群友：群里直接报个到的人，不用等他自己注册 */
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newForm, setNewForm] = useState({ nickname: '', group_nickname: '', game_id: '', score: '', positions: [], region: '' });
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -254,131 +257,119 @@ export default function AdminMembersPage({ denied }) {
     }
   };
 
-  const remove = async (p) => {    const ok = window.confirm(
-      `确认删除选手「${p.nickname}」？\n\n这会同时移除他与所有赛事队伍的关系，不可恢复。\n如果只是想修正信息，请用「编辑」。`
+  const remove = async (p) => {
+    const ok = window.confirm(
+      `确认删掉「${p.nickname}」？\n\n` +
+        '他会从群友列表、报名名单、队伍、帮派、开黑/活动报名和战绩里一起消失，' +
+        '绑过的 SteamID 和登录名也一并释放（那个登录名以后可以重新注册）。\n' +
+        '这一步不可撤销。只想改资料的话用「编辑」。'
     );
     if (!ok) return;
     try {
-      await apiDelete('/api/players', { id: p.id });
-      setMsg({ type: 'ok', text: `已删除「${p.nickname}」` });
+      const r = await apiDelete('/api/players', { id: p.id });
+      // 把「顺带清掉了什么」说出来：删人不只是从这张表消失
+      const gone = Object.entries((r && r.removed) || {})
+        .filter(([, n]) => n > 0)
+        .map(([t, n]) => `${CLEAN_LABEL[t] || t} ${n} 条`);
+      setMsg({
+        type: 'ok',
+        text: `已删掉「${p.nickname}」` + (gone.length ? `，顺带清掉：${gone.join('、')}` : ''),
+      });
       await load();
     } catch (e) {
       setMsg({ type: 'err', text: '删除失败：' + e.message });
     }
   };
 
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
+  const submitCreate = async () => {
+    const nickname = newForm.nickname.trim();
+    if (!nickname) {
+      setMsg({ type: 'err', text: '昵称至少填一个，其它可以以后补' });
+      return;
+    }
+    const gid = newForm.game_id.trim();
+    if (gid && !/^\d+$/.test(gid)) {
+      setMsg({ type: 'err', text: 'SteamID 只能是数字（就是 Steam 个人资料页地址里那串）' });
+      return;
+    }
+    setCreating(true);
+    setMsg(null);
+    try {
+      const r = await apiPost('/api/players', {
+        nickname,
+        group_nickname: newForm.group_nickname.trim() || null,
+        game_id: gid || null,
+        score: newForm.score === '' ? 0 : Number(newForm.score),
+        positions: (newForm.positions || []).join(','),
+        region: newForm.region || null,
+      });
+      setMsg({ type: 'ok', text: `已把「${nickname}」加进群友列表${r && r.player && r.player.id ? '' : ''}` });
+      setCreateOpen(false);
+      setNewForm({ nickname: '', group_nickname: '', game_id: '', score: '', positions: [], region: '' });
+      await load();
+    } catch (e) {
+      setMsg({ type: 'err', text: '新建失败：' + e.message });
+    } finally {
+      setCreating(false);
+    }
+  };
 
-  const statBox = (n, label, color) => (
-    <div
-      key={label}
-      style={{
-        flex: '1 1 140px',
-        // 深色页面：不能再用白底（原来写死 #fff，四个白块很刺眼）
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: 10,
-        padding: '14px 16px',
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 700, color: color || 'inherit' }}>{n}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-3, #888)', marginTop: 2 }}>{label}</div>
-    </div>
-  );
+  if (denied) return <AdminDenied hint="群友资料要改要删，得用管理员账号。" />;
+
 
   return (
-    <>
-      <Head>
-        <title>群友管理 · 管理后台</title>
-      </Head>
-
-      <section className="page-hero">
-        <div className="wrap">
-          <h1>
-            群友<span className="hl">管理</span>
-          </h1>
-          <p>补全资料 · 标注缺失 · 增删改查</p>
-        </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-tabs" style={{ marginBottom: 16 }}>
-            <Link className="adm-tab" href="/admin">赛事管理</Link>
-            <span className="adm-tab active">群友管理</span>
-            <Link className="adm-tab" href="/admin/food">美食管理</Link>
-            <Link className="adm-tab" href="/admin/party">开黑管理</Link>
-              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
-            <Link className="adm-tab" href="/main">阵容分配</Link>
-            <Link className="adm-tab" href="/admin/analytics">访问统计</Link>
-            <Link className="adm-tab" href="/admin/support">群友反馈</Link>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-            {statBox(stats.total, '选手总数')}
-            {statBox(stats.noSteam, '缺 SteamID', '#C0392B')}
-            {statBox(stats.unbound, '未绑账号', '#B9770E')}
-            {statBox(stats.hasIssue, '存在缺漏', '#B9770E')}
-          </div>
-
+    <AdminShell
+      title="群友"
+      accent="管理"
+      active="members"
+      lead="群里的人。资料缺的补上，账号绑错了的改掉，重复的两条合成一条。"
+      preview={{ href: '/members', label: '看群友列表' }}
+      metrics={[
+        { n: stats.total, label: '位群友' },
+        { n: stats.noSteam, label: '缺 SteamID', warn: stats.noSteam > 0 },
+        { n: stats.unbound, label: '没绑登录账号', warn: stats.unbound > 0 },
+        { n: stats.hasIssue, label: '资料有缺漏', warn: stats.hasIssue > 0 },
+      ]}
+      actions={
+        <>
+          <button className="btn btn-primary btn-sm" onClick={() => setCreateOpen(true)}>
+            ＋ 加个人
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+            刷新
+          </button>
+        </>
+      }
+    >
           {/* 打了比赛但没绑定群友的账号：补录后赛程里的裸账号立刻变成昵称 */}
           <UnregisteredAccounts onChanged={load} />
 
           {/* 同一个人留下两条（导入 + 补录各一条）：合并后报名/入队/场次并到一处 */}
           <DuplicatePlayers onChanged={load} />
 
-          <div className="adm-bar" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-            <input
-              className="search-box"
-              style={{
-                flex: '1 1 240px',
-                padding: '9px 12px',
-                border: '1px solid var(--border-strong, #ddd)',
-                borderRadius: 9,
-                fontSize: 14,
-              }}
-              placeholder="搜索昵称 / 群昵称 / SteamID / 账号"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              style={{ padding: '9px 12px', borderRadius: 9, border: '1px solid var(--border-strong, #ddd)' }}
-            >
-              <option value="all">全部（{players.length}）</option>
-              <option value="issues">有缺漏（{stats.hasIssue}）</option>
-              <option value="nosteam">缺 SteamID（{stats.noSteam}）</option>
-              <option value="unbound">未绑账号（{stats.unbound}）</option>
-            </select>
-          </div>
+      <div className="adm-tool">
+        <input
+          className="adm-search"
+          placeholder="搜昵称 / 群昵称 / SteamID / 账号"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select className="adm-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">全部（{players.length}）</option>
+          <option value="issues">有缺漏（{stats.hasIssue}）</option>
+          <option value="nosteam">缺 SteamID（{stats.noSteam}）</option>
+          <option value="unbound">没绑账号（{stats.unbound}）</option>
+        </select>
+        <span className="adm-tool-note">{filtered.length} / {players.length}</span>
+      </div>
 
-          {msg && (
-            <div
-              className={msg.type === 'err' ? 'adm-error' : ''}
-              style={
-                msg.type === 'err'
-                  ? { marginBottom: 12 }
-                  : { marginBottom: 12, color: '#1E8449', fontSize: 13 }
-              }
-            >
-              {msg.text}
-            </div>
-          )}
+      {msg && <div className={'adm-flash is-' + (msg.type === 'err' ? 'err' : 'ok')}>{msg.text}</div>}
 
           {loading ? (
             <div className="empty">加载中…</div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="adm-table" style={{ width: '100%', fontSize: 13 }}>
+            <div className="adm-scroll">
+              <table className="adm-data">
                 <thead>
                   <tr>
                     <th style={{ width: 46 }}>#</th>
@@ -405,20 +396,20 @@ export default function AdminMembersPage({ denied }) {
                     return (
                       <tr key={p.id}>
                         <td style={{ color: 'var(--text-3, #999)' }}>{i + 1}</td>
-                        <td style={{ fontWeight: 600 }}>{p.nickname || <span style={{ color: '#C0392B' }}>未命名</span>}</td>
-                        <td style={{ color: p.group_nickname ? 'inherit' : '#C0392B' }}>
+                        <td style={{ fontWeight: 600 }}>{p.nickname || <span className="adm-chip is-bad">未命名</span>}</td>
+                        <td style={{ color: p.group_nickname ? 'inherit' : 'var(--brand)' }}>
                           {p.group_nickname || '—'}
                         </td>
                         <td
                           style={{
                             fontFamily: 'ui-monospace, monospace',
                             fontSize: 12,
-                            color: p.game_id ? 'inherit' : '#C0392B',
+                            color: p.game_id ? 'inherit' : 'var(--brand)',
                           }}
                         >
                           {p.game_id || '未填写'}
                         </td>
-                        <td style={{ textAlign: 'right', color: p.score ? 'inherit' : '#B9770E' }}>
+                        <td style={{ textAlign: 'right', color: p.score ? 'inherit' : 'var(--gold)' }}>
                           {p.score || 0}
                         </td>
                         <td style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -433,12 +424,12 @@ export default function AdminMembersPage({ denied }) {
                               )}
                             </span>
                           ) : (
-                            <span style={{ color: '#B9770E' }}>未绑定</span>
+                            <span className="adm-chip is-warn">未绑定</span>
                           )}
                         </td>
                         <td>
                           {iss.length === 0 ? (
-                            <span style={{ color: '#1E8449', fontSize: 12 }}>完整</span>
+                            <span className="adm-chip is-ok">完整</span>
                           ) : (
                             iss.map((x) => (
                               <Tag key={x.t} lv={x.lv}>
@@ -477,7 +468,7 @@ export default function AdminMembersPage({ denied }) {
                           </button>
                           <button
                             className="btn btn-ghost btn-sm"
-                            style={{ color: '#C0392B' }}
+                            style={{ color: 'var(--brand)' }}
                             onClick={() => remove(p)}
                           >
                             删除
@@ -491,13 +482,9 @@ export default function AdminMembersPage({ denied }) {
             </div>
           )}
 
-          <p style={{ marginTop: 14, fontSize: 12, color: 'var(--text-3, #888)' }}>
-            共 {filtered.length} 条
-            {filter !== 'all' || q ? `（已筛选，总计 ${players.length}）` : ''}
-            ｜「分数为0」多见于历史迁移的选手，补 SteamID 后可重新同步资料
-          </p>
-        </div>
-      </section>
+      <p className="adm-tool-note" style={{ marginTop: 12 }}>
+        「分数 0」多半是历史迁移进来的选手，补上 SteamID 后可以重新同步资料。
+      </p>
 
       {/* ===== 编辑弹窗 ===== */}
       {editing && (
@@ -744,7 +731,83 @@ export default function AdminMembersPage({ denied }) {
           </div>
         </div>
       )}
-    </>
+
+      {/* ===== 新建群友 =====
+          只留「先能进列表」的字段：昵称 + 群昵称 + SteamID。
+          分数、位置、地区以后在编辑弹窗里补 —— 群里刚来的人常常一问三不知，
+          卡着必填只会让人随便乱填。 */}
+      {createOpen && (
+        <div
+          className="modal-mask"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !creating) setCreateOpen(false);
+          }}
+        >
+          <div className="modal-card" style={{ maxWidth: 520 }}>
+            <div className="modal-head">
+              <h3>加个人</h3>
+              <button className="modal-close" onClick={() => !creating && setCreateOpen(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '4px 2px 8px' }}>
+              <p className="adm-tool-note" style={{ marginTop: 0 }}>
+                只有昵称是必填的。SteamID 填了才能认出他的头像和天梯分。
+              </p>
+
+              {[
+                { k: 'nickname', label: '昵称', ph: '群里怎么叫他', required: true },
+                { k: 'group_nickname', label: '群昵称', ph: '微信群名片，留空就跟昵称一样' },
+                { k: 'game_id', label: 'SteamID', ph: '一串数字，可留空', inputMode: 'numeric' },
+                { k: 'score', label: '天梯分', ph: '不知道就留空', type: 'number' },
+              ].map((f) => (
+                <div key={f.k} className="adm-field">
+                  <label className="adm-label" htmlFor={'np-' + f.k}>
+                    {f.label}
+                    {f.required ? '（必填）' : ''}
+                  </label>
+                  <input
+                    id={'np-' + f.k}
+                    className="adm-input"
+                    type={f.type || 'text'}
+                    inputMode={f.inputMode}
+                    value={newForm[f.k]}
+                    placeholder={f.ph}
+                    onChange={(e) => setNewForm((s) => ({ ...s, [f.k]: e.target.value }))}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && f.k === 'score') submitCreate();
+                    }}
+                  />
+                </div>
+              ))}
+
+              <div className="adm-field">
+                <span className="adm-label">擅长位置</span>
+                <PositionPicker
+                  value={newForm.positions}
+                  onChange={(next) => setNewForm((s) => ({ ...s, positions: next }))}
+                  hint="可多选，第 1 位算主位置。"
+                />
+              </div>
+
+              <div className="adm-field">
+                <span className="adm-label">地区</span>
+                <RegionPicker
+                  value={newForm.region}
+                  onChange={(next) => setNewForm((s) => ({ ...s, region: next }))}
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={() => setCreateOpen(false)} disabled={creating}>
+                算了
+              </button>
+              <button className="btn btn-primary" onClick={submitCreate} disabled={creating}>
+                {creating ? '加进去中…' : '加进去'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminShell>
   );
 }
 

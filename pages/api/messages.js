@@ -1,4 +1,5 @@
 import { pool } from '../../lib/db';
+import { isAdmin } from '../../lib/auth';
 
 // 简单的内存 Rate Limiting：IP -> { count, resetTime }
 const rateLimitMap = new Map();
@@ -127,8 +128,39 @@ export default async function handler(req, res) {
         break;
       }
         
+      // 删除：只有管理员。留言一直是「谁都能发、谁都不能删」，
+      // 被刷屏时只能进库处理 —— 这条补的就是那个缺口。
+      // 支持 id 单条、ids 批量，返回实际删掉的行数（并发下别人已经删掉的就不算）。
+      case 'DELETE': {
+        if (!isAdmin(req)) {
+          res.status(403).json({ error: '只有管理员能删留言' });
+          return;
+        }
+
+        const raw = req.body && (req.body.ids || req.body.id);
+        const ids = (Array.isArray(raw) ? raw : [raw])
+          .map((v) => Number(v))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        if (ids.length === 0) {
+          res.status(400).json({ error: '要删哪条？给个 id' });
+          return;
+        }
+
+        const del = await client.query(
+          'DELETE FROM public.messages WHERE id = ANY($1::int[]) RETURNING id',
+          [ids]
+        );
+        res.status(200).json({
+          success: true,
+          deleted: del.rowCount,
+          ids: del.rows.map((r) => r.id),
+          missing: ids.filter((id) => !del.rows.some((r) => Number(r.id) === id)),
+        });
+        break;
+      }
+
       default:
-        res.setHeader('Allow', ['GET', 'POST', 'PUT']);
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (error) {

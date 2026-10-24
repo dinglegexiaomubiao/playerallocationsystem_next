@@ -148,7 +148,21 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'PUT') {
-      const { matchId, team_a_score, team_b_score, winner_team_id, status, round_id, order_no, note } = req.body;
+      const { matchId, roundId, name, team_a_score, team_b_score, winner_team_id, status, round_id, order_no, note } = req.body;
+
+      // 轮次改名：赛程编排建完「淘汰赛」之后发现该叫「八强赛」，
+      // 以前只能删掉重建（连带把该轮所有对阵删掉），这里给一条只改名的路。
+      if (roundId && name !== undefined) {
+        const nm = String(name).trim();
+        if (!nm) return res.status(400).json({ success: false, error: '阶段名不能为空' });
+        const r = await client.query(
+          `UPDATE public.tournament_rounds SET name = $1 WHERE id = $2 AND tournament_id = $3 RETURNING *`,
+          [nm, roundId, id]
+        );
+        if (r.rowCount === 0) return res.status(404).json({ success: false, error: '这个阶段不存在' });
+        return res.status(200).json({ success: true, round: r.rows[0] });
+      }
+
       if (!matchId) return res.status(400).json({ success: false, error: '缺少 matchId' });
 
       const fields = [];

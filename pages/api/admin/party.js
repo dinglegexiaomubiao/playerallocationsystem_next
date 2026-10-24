@@ -55,7 +55,28 @@ export default async function handler(req, res) {
           LEFT JOIN public.players pl ON pl.id = p.player_id
          ORDER BY p.created_at DESC
       `);
-      return res.status(200).json({ ok: true, posts: r.rows });
+
+      // 报名的都有谁：后台要能看出「这张卡是不是被同名小号占了位」、
+      // 也能把报错/乱填的人踢掉。只有 5 张卡时就几条查询，不值得做批量拼装。
+      let signs = [];
+      if (r.rows.length > 0) {
+        const s = await client.query(
+          `SELECT id, post_id, account_name, player_id, note,
+                  (created_at AT TIME ZONE current_setting('TimeZone')) AS created_at_ts
+             FROM public.party_signups
+            WHERE post_id = ANY($1::bigint[])
+            ORDER BY created_at ASC`,
+          [r.rows.map((p) => p.id)]
+        );
+        signs = s.rows;
+      }
+
+      const posts = r.rows.map((p) => ({
+        ...p,
+        signups: signs.filter((x) => String(x.post_id) === String(p.id)),
+      }));
+
+      return res.status(200).json({ ok: true, posts });
     }
 
     /* ---------------- 修改 ---------------- */
@@ -97,7 +118,18 @@ export default async function handler(req, res) {
 
     /* ---------------- 删除 ---------------- */
     if (req.method === 'DELETE') {
-      const id = String((req.body || {}).id || '');
+      const body = req.body || {};
+
+      // 只踢一个报名的人：卡还在，把人从名单里拿掉（报错/乱填/小号占位）
+      if (body.signupId) {
+        const sid = String(body.signupId);
+        if (!/^\d+$/.test(sid)) return res.status(400).json({ ok: false, error: '缺少有效的 signupId' });
+        const d = await client.query('DELETE FROM public.party_signups WHERE id = $1 RETURNING id', [sid]);
+        if (d.rowCount === 0) return res.status(404).json({ ok: false, error: '这条报名已经不在了' });
+        return res.status(200).json({ ok: true });
+      }
+
+      const id = String(body.id || '');
       if (!/^\d+$/.test(id)) return res.status(400).json({ ok: false, error: '缺少有效的 id' });
       await client.query('DELETE FROM public.party_signups WHERE post_id = $1', [id]);
       const del = await client.query('DELETE FROM public.party_posts WHERE id = $1 RETURNING id', [id]);

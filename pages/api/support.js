@@ -5,6 +5,7 @@ import {
   listSupportReports,
   listMySupportReports,
   updateSupportReport,
+  deleteSupportReports,
   ensureSupportTable,
 } from '../../lib/db';
 import { getSession, isAdminName, denyIfNotAdmin } from '../../lib/auth';
@@ -273,6 +274,32 @@ export default async function handler(req, res) {
     return res.status(ok ? 200 : 404).json({ success: ok });
   }
 
-  res.setHeader('Allow', ['POST', 'GET', 'PATCH']);
+  // ---------- 删（管理员） ----------
+  // 只用于清垃圾：自动报错一天能攒几百条，脱敏/测试留下的记录也得能删。
+  // 群友自己提交的反馈建议用「不处理」而不是删，删了他「我的反馈」里也看不到了。
+  if (req.method === 'DELETE') {
+    if (denyIfNotAdmin(req, res, '仅管理员可删除记录')) return;
+    const b = req.body || {};
+    const one = b.id ?? (req.query && req.query.id);
+    const many = Array.isArray(b.ids) ? b.ids : [];
+    const ids = (many.length ? many : one ? [one] : []).map((x) => Number(x)).filter((x) => Number.isFinite(x));
+
+    if (ids.length === 0) {
+      return res.status(400).json({ success: false, error: '没给要删的 id' });
+    }
+    if (ids.length > 500) {
+      return res.status(400).json({ success: false, error: '一次最多删 500 条，分几次来' });
+    }
+
+    try {
+      const deleted = await deleteSupportReports(ids);
+      return res.status(200).json({ success: true, deleted, ids });
+    } catch (e) {
+      console.error('删除反馈失败:', e.message);
+      return res.status(500).json({ success: false, error: '删除失败' });
+    }
+  }
+
+  res.setHeader('Allow', ['POST', 'GET', 'PATCH', 'DELETE']);
   return res.status(405).json({ success: false, error: `方法 ${req.method} 不被允许` });
 }

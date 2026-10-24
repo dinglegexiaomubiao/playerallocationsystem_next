@@ -1,7 +1,8 @@
-import Head from 'next/head';
 import Link from 'next/link';
 import { getSession, isAdmin } from '../../lib/auth';
 import { ensurePageViewTable, pool } from '../../lib/db';
+import { toSerializable } from '../../lib/serialize.mjs';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 const fmtTime = (v) => {
   if (!v) return '—';
@@ -39,24 +40,27 @@ const missingOf = (p) => {
   return miss;
 };
 
-/* 纯 CSS 柱状图（不引图表库）：bars = [{label, value, sub}] */
-function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
+/* 纯 CSS 柱状图（不引图表库）：bars = [{label, value, sub}]
+   柱子宽度设上限：只有 5 天数据时，70% 会变成一根 120px 的大红块，
+   看着像「数据爆了」。压到 34px 之后 5 根和 24 根是同一套观感。 */
+function BarChart({ bars, color = 'var(--brand)', height = 120 }) {
   const max = Math.max(1, ...bars.map((b) => b.value));
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height, paddingTop: 6 }}>
       {bars.map((b, i) => (
         <div key={i} style={{ flex: 1, minWidth: 8, textAlign: 'center' }} title={`${b.label}：${b.value}${b.sub ? ' · ' + b.sub : ''}`}>
-          <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 2 }}>{b.value || ''}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 2 }}>{b.value || ''}</div>
           <div
             style={{
               height: `${Math.max(2, (b.value / max) * (height - 34))}px`,
-              background: b.value > 0 ? color : 'var(--border, #ddd)',
-              borderRadius: 3,
+              background: b.value > 0 ? color : 'var(--border)',
+              borderRadius: 2,
               margin: '0 auto',
-              width: '70%',
+              width: '100%',
+              maxWidth: 34,
             }}
           />
-          <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.label}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden' }}>{b.label}</div>
         </div>
       ))}
     </div>
@@ -64,20 +68,7 @@ function BarChart({ bars, color = 'var(--brand, #2563eb)', height = 120 }) {
 }
 
 export default function AnalyticsPage({ denied, overview, trend, topUsers, topPaths, recent, hourly, newPlayers }) {
-  if (denied) {
-    return (
-      <div className="empty" style={{ padding: '110px 0' }}>
-        无权访问
-        <br />
-        <Link href="/" style={{ color: 'var(--brand)', fontWeight: 600 }}>返回首页</Link>
-      </div>
-    );
-  }
-
-  // 卡片统一用 .adm-card（layout.css，深色令牌）。
-  // 原来写的是 var(--bg-2, #fff)，而 --bg-2 这个变量根本不存在 → 回退成白底，
-  // 夜间模式下七块白卡特别刺眼。顺带加了 grid，宽屏一行排 7 个。
-  const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 };
+  if (denied) return <AdminDenied hint="访问数据只有管理员看得到。" />;
 
   // 环比：今日 vs 昨日
   const dPv = overview.pv || 0;
@@ -86,222 +77,249 @@ export default function AnalyticsPage({ denied, overview, trend, topUsers, topPa
   const diffPct = yPv > 0 ? Math.round((diff / yPv) * 100) : null;
   const weekPv = trend.reduce((s, r) => s + (r.pv || 0), 0);
 
+  const yNote = `昨天 ${yPv}` + (diffPct === null ? '' : diff >= 0 ? ` · 多 ${diffPct}%` : ` · 少 ${Math.abs(diffPct)}%`);
+  const badNew = newPlayers.filter((p) => missingOf(p).length > 0).length;
+
   return (
-    <>
-      <Head>
-        <title>访问统计 · 管理后台</title>
-      </Head>
-
-      <section className="page-hero">
-        <div className="wrap">
-          <h1>访问<span className="hl">统计</span></h1>
-          <p>页面浏览埋点 · 活跃用户 · 热门路径 · 新注册</p>
+    <AdminShell
+      title="访问"
+      accent="统计"
+      active="analytics"
+      lead="谁看了哪个页面。应用层自己埋的点，和 Nginx 那套日志互相对得上。"
+      metrics={[
+        { n: dPv, label: '今日浏览', sub: yNote },
+        { n: overview.uv ?? 0, label: '今日来的人' },
+        { n: overview.users ?? 0, label: '其中登录的' },
+        { n: weekPv, label: '近 7 日浏览', sub: `每天 ${Math.round(weekPv / 7)} 次` },
+      ]}
+      actions={
+        <span className="adm-tool-note">
+          30 天活跃 {overview.active_users ?? '—'} 人 · 匿名占 {overview.anon_pct == null ? '—' : overview.anon_pct + '%'} · 库里有{' '}
+          {overview.total ?? 0} 条
+        </span>
+      }
+    >
+      <div className="adm-panel">
+        <div className="adm-panel-head">
+          <span className="adm-panel-title">最近 7 天</span>
+          <span className="adm-panel-sub">柱子是浏览数，鼠标停一下能看到当天来了几个 IP</span>
         </div>
-      </section>
-
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="wrap">
-          <div className="adm-tabs" style={{ marginBottom: 16 }}>
-            <Link className="adm-tab" href="/admin">赛事管理</Link>
-            <Link className="adm-tab" href="/admin/members">群友管理</Link>
-            <Link className="adm-tab" href="/admin/food">美食管理</Link>
-            <Link className="adm-tab" href="/admin/party">开黑管理</Link>
-              <Link className="adm-tab" href="/admin/activities">活动管理</Link>
-            <Link className="adm-tab" href="/main">阵容分配</Link>
-            <span className="adm-tab active">访问统计</span>
-            <Link className="adm-tab" href="/admin/support">群友反馈</Link>
-          </div>
-
-          {/* 概览卡片：今日 + 环比 + 周期汇总。
-              每项都兜底成 '—'：某天统计表还没写入时是 undefined，
-              直接渲染会出现「只有标签、没有数字」的空卡片。 */}
-          <div style={grid}>
-            {[
-              { n: dPv ?? 0, l: '今日浏览 (PV)', sub: `昨日 ${yPv}${diffPct === null ? '' : diff >= 0 ? ` · ↑${diffPct}%` : ` · ↓${Math.abs(diffPct)}%`}` },
-              { n: overview.uv ?? 0, l: '今日访客 (IP)' },
-              { n: overview.users ?? 0, l: '今日登录用户' },
-              { n: weekPv ?? 0, l: '近 7 日 PV', sub: `日均 ${Math.round(weekPv / 7)}` },
-              { n: overview.active_users ?? '—', l: '30 日活跃用户' },
-              { n: `${overview.anon_pct == null ? '—' : overview.anon_pct + '%'}`, l: '30 日匿名占比' },
-              { n: overview.total ?? 0, l: '累计记录' },
-            ].map((s) => (
-              <div className="adm-card" key={s.l}>
-                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--brand)', fontVariantNumeric: 'tabular-nums' }}>{s.n}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>{s.l}</div>
-                {s.sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{s.sub}</div>}
-              </div>
-            ))}
-          </div>
-
-          {/* 7 天趋势柱状图 + 表 */}
-          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近 7 天趋势</h3>
-          <div className="adm-card">
-            {trend.length === 0 ? (
-              <div style={{ color: 'var(--text-3)', padding: 20, textAlign: 'center' }}>暂无数据</div>
-            ) : (
-              <BarChart bars={[...trend].reverse().map((r) => ({ label: String(r.d).slice(5), value: r.pv, sub: `${r.uv} 个 IP` }))} />
-            )}
-            <div style={{ overflowX: 'auto', marginTop: 12 }}>
-              <table className="adm-table" style={{ width: '100%' }}>
+        {trend.length === 0 ? (
+          <div className="adm-empty">这 7 天还没有记录</div>
+        ) : (
+          <>
+            <BarChart bars={[...trend].reverse().map((r) => ({ label: String(r.d).slice(5), value: r.pv, sub: `${r.uv} 个 IP` }))} />
+            <div className="adm-scroll" style={{ marginTop: 12 }}>
+              <table className="adm-data">
                 <thead>
-                  <tr><th>日期</th><th>浏览</th><th>访客(IP)</th><th>登录用户</th></tr>
+                  <tr>
+                    <th scope="col">日期</th>
+                    <th scope="col" className="is-num">浏览</th>
+                    <th scope="col" className="is-num">访客</th>
+                    <th scope="col" className="is-num">登录</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {trend.map((r) => (
                     <tr key={r.d}>
-                      <td>{String(r.d).slice(0, 10)}</td>
-                      <td>{r.pv}</td>
-                      <td>{r.uv}</td>
-                      <td>{r.users}</td>
+                      <td className="is-nowrap">{String(r.d).slice(0, 10)}</td>
+                      <td className="is-num">{r.pv}</td>
+                      <td className="is-num">{r.uv}</td>
+                      <td className="is-num">{r.users}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </>
+        )}
+      </div>
 
-          {/* 时段分布 */}
-          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>时段分布（近 30 天，按小时）</h3>
-          <div className="adm-card">
-            {hourly.some((h) => h.pv > 0) ? (
-              <BarChart bars={hourly.map((h) => ({ label: `${h.h}时`, value: h.pv }))} color="var(--ok)" height={100} />
-            ) : (
-              // 全 0 时柱状图是一排看不见的 2px 细线，不如直接说没数据
-              <div style={{ color: 'var(--text-3)', padding: 20, textAlign: 'center' }}>暂无数据</div>
-            )}
-          </div>
+      <div className="adm-panel">
+        <div className="adm-panel-head">
+          <span className="adm-panel-title">一天里什么时候有人在</span>
+          <span className="adm-panel-sub">近 30 天，按小时。晚上那一坨就是群里开黑的时间</span>
+        </div>
+        {hourly.some((h) => h.pv > 0) ? (
+          <BarChart bars={hourly.map((h) => ({ label: `${h.h}`, value: h.pv }))} color="var(--gold)" height={100} />
+        ) : (
+          // 全 0 时柱状图是一排看不见的 2px 细线，不如直接说没数据
+          <div className="adm-empty">这段时间还没有记录</div>
+        )}
+      </div>
 
-          {/* 最近注册：谁刚加入（匿名访客注册后第一时间在这里可见） */}
-          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近注册</h3>
-          {(() => {
-            const bad = newPlayers.filter((p) => missingOf(p).length > 0).length;
-            if (newPlayers.length === 0 || bad === 0) return null;
-            return (
-              <p style={{ margin: '0 0 10px', fontSize: 13, color: 'var(--text-2)' }}>
-                这 {newPlayers.length} 位里有 <strong style={{ color: 'var(--accent, #c23c2a)' }}>{bad}</strong> 位资料不全，
-                <Link href="/admin/members" style={{ color: 'var(--brand)', marginLeft: 4 }}>去群友管理补录 →</Link>
-              </p>
-            );
-          })()}
-          <div style={{ overflowX: 'auto' }}>
-            <table className="adm-table" style={{ width: '100%' }}>
+      <div className="adm-panel">
+        <div className="adm-panel-head">
+          <span className="adm-panel-title">最近注册</span>
+          <span className="adm-panel-sub">
+            最近 8 个
+            {badNew > 0 ? (
+              <>
+                {' · '}
+                <strong style={{ color: 'var(--color-warning)' }}>{badNew}</strong> 位资料没填全，
+                <Link href="/admin/members" style={{ color: 'var(--brand)' }}>
+                  去群友页补 →
+                </Link>
+              </>
+            ) : null}
+          </span>
+        </div>
+        <div className="adm-scroll">
+          <table className="adm-data">
+            <thead>
+              <tr>
+                <th scope="col">群昵称</th>
+                <th scope="col">SteamID</th>
+                <th scope="col">绑定账号</th>
+                <th scope="col">资料</th>
+                <th scope="col">注册</th>
+              </tr>
+            </thead>
+            <tbody>
+              {newPlayers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="is-weak" style={{ textAlign: 'center' }}>
+                    还没有人注册
+                  </td>
+                </tr>
+              )}
+              {newPlayers.map((p) => {
+                const miss = missingOf(p);
+                return (
+                  <tr key={p.id}>
+                    <td className="is-strong">{p.group_nickname || p.nickname || '没起名'}</td>
+                    <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>{p.game_id || '—'}</td>
+                    <td>{p.account || <span className="is-weak">没绑</span>}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {miss.length === 0 ? (
+                        <span className="adm-chip is-ok">齐了</span>
+                      ) : (
+                        <span className="adm-chip is-warn">缺 {miss.join('、')}</span>
+                      )}
+                    </td>
+                    <td className="is-nowrap is-weak">{fmtDate(p.created_at)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 两列：活跃用户 + 热门页面。minmax(0,1fr) + 子项 min-width:0，
+          否则长路径会把右边那列挤成一条 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <div className="adm-panel" style={{ margin: 0, minWidth: 0 }}>
+          <div className="adm-panel-head">
+            <span className="adm-panel-title">谁来得最勤</span>
+            <span className="adm-panel-sub">近 30 天</span>
+          </div>
+          <div className="adm-scroll">
+            <table className="adm-data">
               <thead>
-                <tr><th>群昵称</th><th>SteamID</th><th>绑定账号</th><th>资料</th><th>注册时间</th></tr>
+                <tr>
+                  <th scope="col">账号</th>
+                  <th scope="col" className="is-num">浏览</th>
+                  <th scope="col">最后来的</th>
+                </tr>
               </thead>
               <tbody>
-                {newPlayers.length === 0 && (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无注册记录</td></tr>
+                {topUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="is-weak" style={{ textAlign: 'center' }}>
+                      还没有
+                    </td>
+                  </tr>
                 )}
-                {newPlayers.map((p) => {
-                  const miss = missingOf(p);
-                  return (
-                    <tr key={p.id}>
-                      <td style={{ fontWeight: 600 }}>{p.group_nickname || p.nickname || '未命名'}</td>
-                      <td style={{ fontFamily: 'monospace' }}>{p.game_id || '—'}</td>
-                      <td>{p.account || <span style={{ color: 'var(--text-3)' }}>未绑定</span>}</td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        {miss.length === 0 ? (
-                          <span style={{ color: 'var(--ok, #16a34a)', fontSize: 12 }}>齐全</span>
-                        ) : (
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              padding: '1px 8px',
-                              borderRadius: 999,
-                              fontSize: 12,
-                              background: 'var(--accent-soft, #fdecea)',
-                              color: 'var(--accent, #c23c2a)',
-                            }}
-                          >
-                            缺 {miss.join('、')}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtDate(p.created_at)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 两列：活跃用户 + 热门页面 */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginTop: 28 }}>
-            <div>
-              <h3 style={{ marginBottom: 10, fontSize: 16 }}>活跃用户（近 30 天）</h3>
-              <table className="adm-table" style={{ width: '100%' }}>
-                <thead>
-                  <tr><th>账号</th><th>浏览</th><th>最后访问</th></tr>
-                </thead>
-                <tbody>
-                  {topUsers.length === 0 && (
-                    <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
-                  )}
-                  {topUsers.map((r) => (
-                    <tr key={r.account_name}>
-                      <td>{r.account_name}</td>
-                      <td>{r.pv}</td>
-                      <td>{fmtTime(r.last)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div>
-              <h3 style={{ marginBottom: 10, fontSize: 16 }}>热门页面（近 30 天）</h3>
-              <table className="adm-table" style={{ width: '100%' }}>
-                <thead>
-                  <tr><th>路径</th><th>浏览</th><th>访客</th></tr>
-                </thead>
-                <tbody>
-                  {topPaths.length === 0 && (
-                    <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
-                  )}
-                  {topPaths.map((r) => (
-                    <tr key={r.path}>
-                      <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</td>
-                      <td>{r.pv}</td>
-                      <td>{r.uv}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* 最近明细 */}
-          <h3 style={{ margin: '28px 0 10px', fontSize: 16 }}>最近访问</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table className="adm-table" style={{ width: '100%' }}>
-              <thead>
-                <tr><th>时间</th><th>账号</th><th>页面</th><th>平台</th><th>IP</th></tr>
-              </thead>
-              <tbody>
-                {recent.length === 0 && (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-3)' }}>暂无数据</td></tr>
-                )}
-                {recent.map((r, i) => (
-                  <tr key={i}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{fmtTime(r.created_at)}</td>
-                    <td>{r.account_name || <span style={{ color: 'var(--text-3)' }}>匿名</span>}</td>
-                    <td style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</td>
-                    <td style={{ color: 'var(--text-3)' }}>{uaPlatform(r.ua)}</td>
-                    <td style={{ color: 'var(--text-3)' }}>{r.ip || '—'}</td>
+                {topUsers.map((r) => (
+                  <tr key={r.account_name}>
+                    <td>{r.account_name}</td>
+                    <td className="is-num">{r.pv}</td>
+                    <td className="is-nowrap is-weak">{fmtTime(r.last)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-
-          <p style={{ marginTop: 18, fontSize: 12, color: 'var(--text-3)' }}>
-            说明：这里是应用层埋点（谁看了什么），与 Nginx 日志统计互补。
-            未登录的访问记为「匿名」，注册登录后的访问会自动带上账号；新注册的群友在「最近注册」里可见。
-            Nginx 全量流量报表见 <code>/stats/</code>（需密码）。
-          </p>
         </div>
-      </section>
-    </>
+
+        <div className="adm-panel" style={{ margin: 0, minWidth: 0 }}>
+          <div className="adm-panel-head">
+            <span className="adm-panel-title">大家在看什么</span>
+            <span className="adm-panel-sub">近 30 天</span>
+          </div>
+          <div className="adm-scroll">
+            <table className="adm-data">
+              <thead>
+                <tr>
+                  <th scope="col">页面</th>
+                  <th scope="col" className="is-num">浏览</th>
+                  <th scope="col" className="is-num">访客</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPaths.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="is-weak" style={{ textAlign: 'center' }}>
+                      还没有
+                    </td>
+                  </tr>
+                )}
+                {topPaths.map((r) => (
+                  <tr key={r.path}>
+                    <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</td>
+                    <td className="is-num">{r.pv}</td>
+                    <td className="is-num">{r.uv}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="adm-panel">
+        <div className="adm-panel-head">
+          <span className="adm-panel-title">最近 50 次访问</span>
+          <span className="adm-panel-sub">按时间倒着排</span>
+        </div>
+        <div className="adm-scroll">
+          <table className="adm-data">
+            <thead>
+              <tr>
+                <th scope="col">时间</th>
+                <th scope="col">账号</th>
+                <th scope="col">页面</th>
+                <th scope="col">平台</th>
+                <th scope="col">IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recent.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="is-weak" style={{ textAlign: 'center' }}>
+                    还没有
+                  </td>
+                </tr>
+              )}
+              {recent.map((r, i) => (
+                <tr key={i}>
+                  <td className="is-nowrap">{fmtTime(r.created_at)}</td>
+                  <td>{r.account_name || <span className="is-weak">没登录</span>}</td>
+                  <td style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.path}</td>
+                  <td className="is-weak">{uaPlatform(r.ua)}</td>
+                  <td className="is-weak">{r.ip || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p className="adm-tool-note" style={{ margin: 0 }}>
+        这里记的是「谁看了什么」，Nginx 那套是全量流量，两者互补。想看原始请求日志去 <code>/stats/</code>（要密码）。
+      </p>
+    </AdminShell>
   );
 }
 
@@ -381,16 +399,16 @@ export async function getServerSideProps({ req }) {
     const hourly = Array.from({ length: 24 }, (_, h) => ({ h, pv: hourMap.get(h) || 0 }));
 
     return {
-      props: {
+      props: toSerializable({
         denied: false,
         overview: ov.rows[0],
         trend: tr.rows,
         topUsers: us.rows,
         topPaths: pa.rows,
-        recent: rc.rows.map((r) => ({ ...r, created_at: r.created_at ? r.created_at.toISOString() : null })),
+        recent: rc.rows,
         hourly,
         newPlayers: np.rows.map((r) => ({ ...r, id: String(r.id) })),
-      },
+      }),
     };
   } catch (error) {
     console.error('统计页查询失败:', error.message);

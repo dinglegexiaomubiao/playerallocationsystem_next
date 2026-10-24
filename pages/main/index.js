@@ -1,4 +1,3 @@
-import Head from 'next/head';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import PlayerCard from '../../components/PlayerCard';
 import TeamCard from '../../components/TeamCard';
@@ -10,6 +9,7 @@ import { usePlayerManagement } from '../../hooks/usePlayerManagement';
 import { useTeamManagement } from '../../hooks/useTeamManagement';
 import heroesList from '../../lib/heroesData';
 import { getSession, isAdmin } from '../../lib/auth';
+import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 function MainTool() {
   const importFileRef = useRef(null);
@@ -286,13 +286,31 @@ function MainTool() {
   const isLoading = loadingState.teams === 'loading' || loadingState.players === 'loading';
 
   return (
-    <div className="container">
-      <Head>
-        <title>Dom的活动记录</title>
-        <meta name="description" content="比赛选手人员分配系统" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
+    <AdminShell
+      title="阵容"
+      accent="分配"
+      active="roster"
+      lead="点选手卡片上的「入队」把人塞进队伍，队伍满 5 人就能开打。改完即时生效，没有保存按钮。"
+      metrics={[
+        { n: isLoading ? '…' : totalPlayerCount, label: '本届报名' },
+        { n: isLoading ? '…' : unassignedPlayers.length, label: '还没进队', warn: unassignedPlayers.length > 0 },
+        { n: isLoading ? '…' : teams.length, label: '支队伍' },
+        { n: currentTournament ? currentTournament.name : '没选', label: '当前赛季' },
+      ]}
+      actions={
+        <>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowTournamentSelector(true)}>
+            {currentTournament ? currentTournament.name : '选赛季'} ▾
+          </button>
+          {currentTournament && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowEditTournamentResults(true)}>
+              改成绩
+            </button>
+          )}
+        </>
+      }
+      preview={{ href: '/tournaments', label: '看前台' }}
+    >
       {isSwitchingTournament && (
         <div className="loading-overlay">
           <div className="loading-content">
@@ -312,76 +330,6 @@ function MainTool() {
           </div>
         </div>
       )}
-
-      <header className="header">
-        <h1>深圳LaRoja Dota2社区 · 阵容分配</h1>
-        <div className="instructions">
-          <p>点击选手卡片上的「➕ 入队」按钮进行分配 | 点击队伍中的「+ 添加选手」选择选手 | 支持搜索和筛选功能</p>
-        </div>
-
-        <div className="stats-cards">
-          <div className="stat-card total-players">
-            <div className="stat-icon">🎮</div>
-            <div className="stat-info">
-              <div className="stat-title">本次参加人数</div>
-              <div className="stat-value">
-                {isLoading ? '...' : totalPlayerCount}
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card unassigned-players">
-            <div className="stat-icon">⏳</div>
-            <div className="stat-info">
-              <div className="stat-title">未进队人数</div>
-              <div className="stat-value">
-                {isLoading ? '...' : unassignedPlayers.length}
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card teams">
-            <div className="stat-icon">👥</div>
-            <div className="stat-info">
-              <div className="stat-title">参与队伍数</div>
-              <div className="stat-value">
-                {isLoading ? '...' : teams.length}
-              </div>
-            </div>
-          </div>
-
-          <div className="stat-card user-info">
-            <div className="stat-icon">🏆</div>
-            <div className="stat-info">
-              <div className="stat-title">
-                {currentTournament ? `第${currentTournament.id}届:${currentTournament.name}` : '赛季信息'}
-              </div>
-              <div className="stat-value">
-                {currentTournament?.champion_team_id
-                  ? `冠军队伍:${currentTournament.champion_team_id}`
-                  : '暂无冠军信息'}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="tournament-controls">
-          <button
-            className="tournament-button"
-            onClick={() => setShowTournamentSelector(true)}
-          >
-            {currentTournament ? currentTournament.name : '选择赛季'} ▼
-          </button>
-          {currentTournament && (
-            <button
-              className="edit-results-button"
-              onClick={() => setShowEditTournamentResults(true)}
-            >
-              编辑结果
-            </button>
-          )}
-        </div>
-      </header>
 
       <main className="main-content">
         <section className="teams-section">
@@ -965,35 +913,13 @@ function MainTool() {
           </div>
         </div>
       )}
-    </div>
+    </AdminShell>
   );
 }
 
 // 已登录但不是管理员时展示（不重定向，避免「登录 → 被踢回登录页」的死循环）
 function DeniedNotice() {
-  return (
-    <>
-      <Head>
-        <title>无权访问 · 深圳LaRoja Dota2社区</title>
-      </Head>
-      <section className="page-hero">
-        <div className="wrap">
-          <h1>
-            无权<span className="hl">访问</span>
-          </h1>
-          <p>阵容分配工具仅对管理员开放，当前账号没有管理权限。</p>
-          <div style={{ marginTop: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <a className="btn btn-primary" href="/">
-              返回首页
-            </a>
-            <a className="btn btn-ghost" href="/food">
-              去看看群友美食
-            </a>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+  return <AdminDenied hint="阵容分配只给管理员用。" />;
 }
 
 export default function MainPage({ denied }) {
