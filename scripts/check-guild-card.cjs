@@ -115,9 +115,16 @@ async function run() {
   ok(created.success === true, '建了一个测试帮派', created.error || GUILD_NAME);
   const guildId = created.id;
 
-  // 找出这个帮派挂在谁身上（徽标要对上人）
-  const who = await fetch(BASE + '/api/players').then((r) => r.json());
-  const member = (who.players || []).find((p) => p.guild && p.guild.name === GUILD_NAME);
+  // 找出这个帮派挂在谁身上（徽标要对上人）。
+  // /api/players 有 45s 列表缓存，建帮后清缓存这件事在 dev 下不一定立刻生效
+  // （page 与 api 路由各持一份模块实例），所以这里短轮询几次，别一次查不到就判死。
+  let member = null;
+  for (let i = 0; i < 8; i++) {
+    const who = await fetch(BASE + '/api/players').then((r) => r.json());
+    member = (who.players || []).find((p) => p.guild && p.guild.name === GUILD_NAME);
+    if (member) break;
+    await new Promise((r) => setTimeout(r, 2500));
+  }
   ok(!!member, '列表接口里有人带上了帮派', member ? `${member.nickname} / ${member.guild.colorKey}` : '没找到');
   if (!member) return;
 
@@ -132,8 +139,13 @@ async function run() {
   }
   const p = await ctx.newPage();
   const errors = [];
+  const notFound = [];
   p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  // 记下 404 的具体 URL：只说「Failed to load resource」等于没说
+  p.on('response', (r) => {
+    if (r.status() === 404) notFound.push(r.url());
+  });
 
   await p.goto(BASE + '/members', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.waitForSelector('.p-card', { timeout: 30000 });
@@ -230,6 +242,26 @@ async function run() {
   const heroName = ((await p.locator('.guild-hero-title').textContent()) || '').trim();
   ok(heroName.includes(GUILD_NAME), '点帮派名落到帮派主页', heroName.slice(0, 24));
 
+  // 帮派主页上的两处「从 id 生成的东西」，都踩过坑：
+  //   1) 成员链接：player_id 是 17 位雪花号，被 Number() 截一位就 404，而且不报错
+  //   2) 头像：直接塞 steamstatic 外链会被 CSP 的 img-src 拦掉，全退成首字母色块
+  const memberHref = await p.locator('.guild-member-link').first().getAttribute('href');
+  ok(memberHref === '/members/' + member.id, '成员链接用的是真实 id（雪花号没被截断）', memberHref);
+
+  // 直接访问一次，确认 SSR 的状态码是 200 ——
+  // 客户端 Link 跳转时 dev server 会为数据请求回一次 404 再整页加载（HMR 环境噪声），
+  // 只看 console 会把这条噪声当成「帮派主页 404」。状态码才是事实。
+  const direct = await p.goto(BASE + '/guild/' + guildId, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  ok(direct && direct.status() === 200, '帮派主页直接访问返回 200', direct && direct.status());
+  const avatarImg = p.locator('.guild-member-avatar img').first();
+  if (await avatarImg.count()) {
+    const avatarSrc = await avatarImg.getAttribute('src');
+    ok(/^\/api\/avatar\/\d+$/.test(String(avatarSrc)), '成员头像走站内代理', avatarSrc);
+  } else {
+    // 帮主自己没同步到头像时 Avatar 回退成首字母色块，这是正常态，不算失败
+    ok(true, '帮主没同步到头像，回退首字母色块（代理断言跳过）');
+  }
+
   // ---- 4. 手机端：色线和徽标不能把卡片撑破 ----
   const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2 });
   const mp = await mctx.newPage();
@@ -268,8 +300,12 @@ async function run() {
   const clean = await waitUntilClean();
   ok(clean, '解散后没有群友还挂着这个帮派（缓存清干净）', clean ? '已清空' : '60 秒内仍是脏的');
 
-  console.log('\nconsole 错误:', errors.length, errors.slice(0, 3));
-  ok(errors.filter((e) => !/ws:\/\/|WebSocket/.test(e)).length === 0, '无 console 报错（忽略 dev 的 HMR 断连）');
+  // dev server 的 HMR WebSocket 在这套环境里必然握手失败，与代码无关
+  const realErrors = errors.filter((e) => !/ws:\/\/|WebSocket/.test(e));
+  console.log('\nconsole 错误:', errors.length, '（真实错误', realErrors.length, '）');
+  if (realErrors.length) console.log(realErrors.slice(0, 5));
+  if (notFound.length) console.log('404 的 URL：', [...new Set(notFound)].slice(0, 6));
+  ok(realErrors.length === 0, '无 console 报错（忽略 dev 的 HMR 断连）', realErrors.slice(0, 2).join(' | '));
 }
 
 /** 解散之后轮询接口，直到没有任何人挂着这个测试帮派 */

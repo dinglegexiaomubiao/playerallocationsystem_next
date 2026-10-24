@@ -14,8 +14,9 @@ export default async function handler(req, res) {
   await ensureGuildTables();
   try {
     const playerId = await playerIdOfAccount(session.name);
-    const target = Number(req.body && req.body.playerId);
-    if (!Number.isInteger(target) || target <= 0) {
+    // 同样不能 Number()：雪花号会被截成另一个 id，转让就找不到人
+    const target = String((req.body && req.body.playerId) || '');
+    if (!/^\d+$/.test(target)) {
       return res.status(400).json({ success: false, error: '请选择要转让给谁' });
     }
     await transferLeader({ playerId, targetPlayerId: target });

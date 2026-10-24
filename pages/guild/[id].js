@@ -39,7 +39,8 @@ export async function getServerSideProps(ctx) {
 
     const session = getSession(ctx.req);
     const viewerId = session && session.name ? await playerIdOfAccount(session.name) : null;
-    const me = viewerId ? guild.members.find((m) => m.playerId === Number(viewerId)) : null;
+    // 两边都转字符串比：playerId 是 17 位雪花号，Number() 会截掉末位
+    const me = viewerId ? guild.members.find((m) => String(m.playerId) === String(viewerId)) : null;
 
     // 日期在服务端就格式化成字符串：
     // 放到客户端算会因时区不同导致 SSR 与 hydration 的文本对不上（React 报 mismatch），

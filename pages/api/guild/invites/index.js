@@ -27,8 +27,10 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const body = req.body || {};
-      const target = Number(body.playerId);
-      if (!Number.isInteger(target) || target <= 0) {
+      // 群友 id 是 17 位雪花号，Number() 会把它截成另一个数字，
+      // 邀请就发到「不存在的人」身上（接口只会说找不到）
+      const target = String(body.playerId || '');
+      if (!/^\d+$/.test(target)) {
         return res.status(400).json({ success: false, error: '请选择要邀请的群友' });
       }
 

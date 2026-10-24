@@ -17,8 +17,10 @@ export default async function handler(req, res) {
   await ensureGuildTables();
   try {
     const playerId = await playerIdOfAccount(session.name);
-    const target = Number(req.query.playerId);
-    if (!Number.isInteger(target) || target <= 0) {
+    // 17 位雪花号不能过 Number()：会变成 ...184，DELETE 匹配到 0 行，
+    // 帮主看到「这个人不在你的帮派里」却完全不知道为什么
+    const target = String(req.query.playerId || '');
+    if (!/^\d+$/.test(target)) {
       return res.status(400).json({ success: false, error: '参数不正确' });
     }
     await removeGuildMember({ playerId, targetPlayerId: target });
