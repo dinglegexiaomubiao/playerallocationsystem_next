@@ -37,10 +37,22 @@ const cookie = () => {
 
 let pass = 0;
 let fail = 0;
+let skipped = 0;
 const ok = (cond, label, detail = '') => {
   if (cond) pass += 1;
   else fail += 1;
   console.log((cond ? '  ok   ' : '  FAIL ') + label + (detail ? '  (' + detail + ')' : ''));
+};
+
+/**
+ * 跳过 ≠ 通过。库里一句语录都没有的时候（新站点、或刚清库），
+ * 「SSR 里就有条目」「按月分组」「衬线正文」「悬浮栏出现」这几条必然不成立 ——
+ * 那不是 bug，是没数据。打线上只读时尤其常见，所以标成 -- 而不是 FAIL，
+ * 否则每次空库都红 6 条，真出问题反而看不出来。
+ */
+const skip = (label, detail = '') => {
+  skipped += 1;
+  console.log('  --   ' + label + (detail ? '  (' + detail + ')' : ''));
 };
 
 /** 只取 cookie 串里的会话值 —— 直接 replace 前缀的话，带多个 cookie 时会连别的键一起塞进去 */
@@ -89,6 +101,13 @@ const del = (id) =>
   };
 
   try {
+    // 先探一次库里有没有语录 —— 后面好几条断言成不成立，取决于这个
+    const probe = await fetch(BASE + '/api/quotes')
+      .then((r) => r.json())
+      .catch(() => ({}));
+    const EMPTY = !probe.total;
+    console.log('\n[库状态]  ' + (EMPTY ? '空（只有空态可验）' : probe.total + ' 句 / ' + probe.people + ' 位群友'));
+
     // ---------- 1. 接口 ----------
     console.log('\n[接口 · /api/quotes]');
     const anon = await post({ content: '匿名能提吗', saidAt: today(), sourceText: '路人' }, false);
@@ -131,21 +150,27 @@ const del = (id) =>
     watch(pa);
     const resp = await pa.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
     ok(resp.status() === 200, '页面 200', String(resp.status()));
-    await pa.waitForSelector('.quote-item', { timeout: 40000 }).catch(() => {});
+    await pa.waitForSelector(EMPTY ? '.quote-empty' : '.quote-item', { timeout: 40000 }).catch(() => {});
     const items = await pa.locator('.quote-item').count();
-    ok(items > 0, 'SSR 里就有语录条目', items + ' 条');
-    ok((await pa.locator('.quote-month-label').count()) > 0, '按月分组标签存在');
+    const emptyBox = await pa.locator('.quote-empty').count();
     ok((await pa.locator('.quote-form').count()) === 0, '匿名看不到提交表单');
     ok((await pa.locator('.site-nav').count()) === 1, '页面只有一个 header（没有重复套 Layout）');
     ok((await pa.locator('.site-footer').count()) === 1, '页面只有一个 footer');
-    // 有语录时不该出现空状态
-    ok((await pa.locator('.quote-empty').count()) === 0, '有内容时不显示空态');
-
-    const serif = await pa.evaluate(() => {
-      const t = document.querySelector('.quote-text');
-      return t ? getComputedStyle(t).fontFamily : '';
-    });
-    ok(/serif|Songti|SimSun|Georgia/i.test(serif), '正文用的是衬线字体', serif.slice(0, 40));
+    if (EMPTY) {
+      ok(items === 0, '空库时不出条目', items + ' 条');
+      ok(emptyBox === 1, '空库时显示空态');
+      skip('按月分组标签存在', '库是空的');
+      skip('正文用的是衬线字体', '库是空的，没有正文');
+    } else {
+      ok(items > 0, 'SSR 里就有语录条目', items + ' 条');
+      ok((await pa.locator('.quote-month-label').count()) > 0, '按月分组标签存在');
+      ok(emptyBox === 0, '有内容时不显示空态');
+      const serif = await pa.evaluate(() => {
+        const t = document.querySelector('.quote-text');
+        return t ? getComputedStyle(t).fontFamily : '';
+      });
+      ok(/serif|Songti|SimSun|Georgia/i.test(serif), '正文用的是衬线字体', serif.slice(0, 40));
+    }
 
     const navOn = await pa.locator('header.site-nav .nav-links a.active').textContent().catch(() => '');
     ok((navOn || '').includes('群友语录'), '导航高亮「群友语录」', (navOn || '').trim());
@@ -209,9 +234,11 @@ const del = (id) =>
     const pc = await ctxC.newPage();
     watch(pc);
     await pc.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await pc.waitForSelector('.quote-ticker', { timeout: 25000 }).catch(() => {});
+    // 少于 3 条本来就不显示 —— 空库时只等一小会儿，确认它确实没冒出来
+    await pc.waitForSelector('.quote-ticker', { timeout: EMPTY ? 3500 : 25000 }).catch(() => {});
     const hasBar = await pc.locator('.quote-ticker').count();
-    ok(hasBar === 1, '首页出现底部语录栏', hasBar + ' 个');
+    if (EMPTY) ok(hasBar === 0, '语录不足 3 条时不出现悬浮栏', hasBar + ' 个');
+    else ok(hasBar === 1, '首页出现底部语录栏', hasBar + ' 个');
 
     if (hasBar) {
       const first = ((await pc.locator('.quote-ticker-text').textContent()) || '').trim();
@@ -260,12 +287,15 @@ const del = (id) =>
     const pd = await ctxD.newPage();
     watch(pd);
     await pd.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await pd.waitForSelector('.quote-item', { timeout: 40000 });
+    await pd.waitForSelector(EMPTY ? '.quote-empty' : '.quote-item', { timeout: 40000 }).catch(() => {});
     await pd.waitForTimeout(900);
     const darkOk = await pd.evaluate(() => {
-      const t = document.querySelector('.quote-text');
+      const t = document.querySelector('.quote-text') || document.querySelector('.quote-empty p');
       const bg = document.body;
-      return { color: getComputedStyle(t).color, attr: document.documentElement.getAttribute('data-theme') };
+      return {
+        color: t ? getComputedStyle(t).color : '',
+        attr: document.documentElement.getAttribute('data-theme'),
+      };
     });
     ok(darkOk.attr === null, '夜间主题确实生效（没有 data-theme）', String(darkOk.attr));
     await pd.screenshot({ path: path.join(OUT, 'quotes-dark.png') });
@@ -279,22 +309,26 @@ const del = (id) =>
     const pm = await ctxM.newPage();
     watch(pm);
     await pm.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await pm.waitForSelector('.quote-item', { timeout: 40000 });
+    await pm.waitForSelector(EMPTY ? '.quote-empty' : '.quote-item', { timeout: 40000 }).catch(() => {});
     await pm.waitForTimeout(700);
     const mOver = await pm.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth
     );
     ok(mOver <= 1, '手机端语录页无横向溢出', mOver + 'px');
-    const metaOver = await pm.evaluate(() => {
-      const m = document.querySelector('.quote-meta');
-      return m ? m.scrollWidth - m.clientWidth : 0;
-    });
-    ok(metaOver <= 1, '手机端元信息行不溢出', metaOver + 'px');
+    if ((await pm.locator('.quote-meta').count()) === 0) {
+      skip('手机端元信息行不溢出', '没有条目');
+    } else {
+      const metaOver = await pm.evaluate(() => {
+        const m = document.querySelector('.quote-meta');
+        return m ? m.scrollWidth - m.clientWidth : 0;
+      });
+      ok(metaOver <= 1, '手机端元信息行不溢出', metaOver + 'px');
+    }
     await pm.screenshot({ path: path.join(OUT, 'quotes-mobile.png') });
 
     const mHome = await ctxM.newPage();
     await mHome.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await mHome.waitForSelector('.quote-ticker', { timeout: 25000 }).catch(() => {});
+    await mHome.waitForSelector('.quote-ticker', { timeout: EMPTY ? 3500 : 25000 }).catch(() => {});
     await mHome.waitForTimeout(900);
     const mBar = await mHome.evaluate(() => {
       const t = document.querySelector('.quote-ticker');
@@ -302,9 +336,13 @@ const del = (id) =>
       const f = document.querySelector('.fb-fab').getBoundingClientRect();
       return { h: Math.round(t.getBoundingClientRect().height), gap: Math.round(t.getBoundingClientRect().top - f.bottom) };
     });
-    ok(!!mBar, '手机端悬浮栏出现');
-    ok(mBar && mBar.h >= 50 && mBar.h <= 56, '手机端栏高在 50~56', mBar && mBar.h + 'px');
-    ok(mBar && mBar.gap > 0, '手机上浮球也没被压住', mBar && 'gap=' + mBar.gap + 'px');
+    if (EMPTY) {
+      ok(!mBar, '手机端也不出现悬浮栏（不足 3 条）');
+    } else {
+      ok(!!mBar, '手机端悬浮栏出现');
+      ok(mBar && mBar.h >= 50 && mBar.h <= 56, '手机端栏高在 50~56', mBar && mBar.h + 'px');
+      ok(mBar && mBar.gap > 0, '手机上浮球也没被压住', mBar && 'gap=' + mBar.gap + 'px');
+    }
     await mHome.screenshot({ path: path.join(OUT, 'ticker-mobile.png') });
 
     // ---------- 6. 后台 ----------
@@ -318,7 +356,9 @@ const del = (id) =>
     const ar = await pe.goto(BASE + '/admin/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
     ok(ar.status() === 200, '后台页 200', String(ar.status()));
     await pe.waitForSelector('.adm-data tbody tr', { timeout: 40000 }).catch(() => {});
-    ok((await pe.locator('.adm-data tbody tr').count()) > 0, '后台表格有行');
+    const rows = await pe.locator('.adm-data tbody tr').count();
+    if (EMPTY) skip('后台表格有行', '库是空的（空表可能渲染空态行或 0 行）');
+    else ok(rows > 0, '后台表格有行', rows + ' 行');
     const onNav = await pe.locator('.adm-nav-link.is-on').textContent().catch(() => '');
     ok((onNav || '').includes('语录'), '后台导航高亮「语录」', (onNav || '').trim());
     await pe.screenshot({ path: path.join(OUT, 'admin-quotes.png') });
@@ -335,7 +375,9 @@ const del = (id) =>
     }
     if (created.length) console.log(`\n清理了 ${created.length} 条测试语录`);
     console.log('\nconsole 错误:', errs.length ? errs.slice(0, 4) : '无');
-    console.log(`\n结果：${pass} 通过 / ${fail} 失败${ALLOW_WRITE ? '' : '（只读模式）'}`);
+    console.log(`\n结果：${pass} 通过 / ${fail} 失败${skipped ? ` / ${skipped} 跳过` : ''}${
+      ALLOW_WRITE ? '' : '（只读模式）'
+    }`);
     await browser.close();
     process.exitCode = fail ? 1 : 0;
   }
