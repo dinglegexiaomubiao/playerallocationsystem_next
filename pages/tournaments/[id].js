@@ -327,7 +327,7 @@ export default function TournamentDetail() {
                   </button>
                 </div>
                 {sortedTeams.length === 0 ? (
-                  <div className="t-tr-muted">暂无队伍</div>
+                  <div className="t-tr-muted">还没排队伍</div>
                 ) : (
                   <div className="t-team-list">
                     {sortedTeams.map((tm) => {
@@ -420,7 +420,7 @@ export default function TournamentDetail() {
         {tab === 'matches' && (
           <div style={{ marginTop: 22 }}>
             {matches.length === 0 ? (
-              <div className="t-empty">暂无赛程数据</div>
+              <div className="t-empty">赛程还没排，等组织者发出来</div>
             ) : (
               <>
                 <div className="t-viewbar">

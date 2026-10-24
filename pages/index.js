@@ -236,7 +236,7 @@ export default function Home() {
                   {loaded
                     ? rooms > 0
                       ? '社区活跃中'
-                      : '暂无开黑房间'
+                      : '还没人开局'
                     : '加载中'}
                 </span>
               </div>

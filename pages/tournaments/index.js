@@ -291,7 +291,7 @@ export default function TournamentsPage() {
                 </div>
               ) : !mineBound ? (
                 <div className="empty" style={{ padding: '24px 0' }}>
-                  你的账号还未绑定选手资料，请先
+                  账号还没绑选手资料，先
                   <Link href="/profile" style={{ color: 'var(--brand)', fontWeight: 600 }}>
                     补填选手资料
                   </Link>
@@ -299,7 +299,7 @@ export default function TournamentsPage() {
                 </div>
               ) : mine.length === 0 ? (
                 <div className="empty" style={{ padding: '30px 0' }}>
-                  还没有报名任何赛事。
+                  你还没报过名。下一届开赛前群里会喊，记得蹲。
                   <br />
                   <button type="button" className="tf-clear" onClick={() => changeTab('all')}>
                     去看看全部赛事

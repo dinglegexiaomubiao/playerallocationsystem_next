@@ -109,7 +109,7 @@ export default function ActivitiesPage() {
                 活动<span className="hl">招募</span>
               </h1>
               <p>
-                共 {openCount} 个招募中的活动 · 约饭、爬山、打球、钓鱼，发个局组上队友人
+                共 {openCount} 个招募中的活动 · 约饭、爬山、打球、钓鱼，发个局把人凑起来
               </p>
             </div>
             <div className="hero-actions">

@@ -493,7 +493,7 @@ export default function FoodPage() {
             <h1>
               群友<span className="hl">美食</span>
             </h1>
-            <p>共 {foods.length} 家店 · 店名 / 菜系 / 区位 / 人均 / 饭后评价全记录</p>
+            <p>共 {foods.length} 家店 · 谁推荐的、吃下来多少钱、什么评价，都记着</p>
           </div>
           <div className="hero-actions">
             <ExcelIO

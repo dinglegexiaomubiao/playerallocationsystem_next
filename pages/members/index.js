@@ -201,7 +201,7 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
             <h1>
               群友<span className="hl">信息</span>
             </h1>
-            <p>共 {players.length} 位群友 · 天梯分、擅长位置与英雄池一览</p>
+            <p>共 {players.length} 位群友 · 天梯分、擅长什么位置、爱玩哪些英雄，组队前先摸个底</p>
           </div>
           <div className="hero-actions">
             <AvatarSync isAdmin={isAdmin} onDone={reload} />

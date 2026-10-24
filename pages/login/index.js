@@ -96,7 +96,7 @@ export default function Login() {
         <div className="login-card">
           <div className="login-header">
             <h1>深圳LaRoja Dota2社区</h1>
-            <p>请输入您的用户名和密码</p>
+            <p>用群里那个账号进来。忘了密码找管理员重置。</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -107,7 +107,7 @@ export default function Login() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="请输入您的用户名"
+                placeholder="群里那个账号名"
                 className="form-input"
                 disabled={loading}
               />
@@ -120,7 +120,7 @@ export default function Login() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="请输入密码"
+                placeholder="密码"
                 className="form-input"
                 disabled={loading}
               />
@@ -143,7 +143,7 @@ export default function Login() {
               className="login-button"
               disabled={loading}
             >
-              {loading ? '登录中...' : '登录'}
+              {loading ? '正在进…' : '进去'}
             </button>
 
             <div className="login-register-link">
