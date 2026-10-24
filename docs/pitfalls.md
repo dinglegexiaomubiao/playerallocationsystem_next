@@ -368,3 +368,55 @@ dev 的 Turbopack 下页面路由与 API 路由各有一份 `lib/list-cache`。
 - timestamp 那种存的是「服务器本地墙钟」，不套 AT TIME ZONE 就会差 8 小时；
   timestamptz 存的是绝对时刻，套了等于把它当成墙钟再转一次。
 - 症状都一样：时间显示偏 8 小时 / 排序反了。**别靠症状猜，去 `\d` 一下。**
+
+## 15. 后台：三个「看着改了、其实没生效」的地方（2026-10-24）
+
+### 15.1 这张库**没有任何外键**指向 `players`
+
+```sql
+SELECT conrelid::regclass FROM pg_constraint WHERE confrelid='public.players'::regclass;
+-- 0 行
+```
+
+有 15 张表存着 `player_id`，但一条外键都没有。所以 `DELETE FROM players` 不会级联，
+也不会报错 —— 人会从列表消失，名字继续飘在报名/战绩/帮派/开黑里，登录名还占着。
+`deletePlayer()` 现在一次事务清这 15 张（`lib/db.js`），返回每张表删了几行给后台提示。
+
+- 帮主身份先拦（`guilds.leader_player_id`），返回「先去帮派页换人或解散」，不能直接删
+- 表不存在（`42P01`）跳过；**列是 int4 而 id 是 17 位雪花报 `22003` 时，把列强转
+  bigint 再删一次**（见 15.2）
+
+### 15.2 `user_configs.player_id` 曾经是 int4
+
+新群友的 id 是 17 位雪花号（如 `17928101128741867`），塞进 int4 直接
+`value out of range for type integer`。已 `ALTER ... TYPE bigint`，
+但换个环境从旧备份恢复会变回去，所以删子表的循环里留了 22003 兜底。
+
+顺手记：`players.id` 以及所有 `*_id` 都是 **bigint**，只有这一列原来是 int，别按惯例假设。
+
+### 15.3 名次有两张表，改一张等于没改
+
+前台判名的权威是 `tournament_placements`（一行一个名次，天然支持并列冠军），
+`teams.rank` 只是「placements 为空时」的回退层。
+`updateTeamRank()` 以前只写 `teams.rank` —— 已经有 placements 的赛事，
+后台把冠军改成第 5 名，前台照旧显示冠军。**两处必须一起写。**
+
+### 15.4 `.adm-head` 这个类名有主了
+
+`layout.css` 里 `.adm-head` 是**表格表头那一行**（`.adm-row.adm-head`），
+新加的后台页头一度也叫 `.adm-head`，结果所有后台表格的表头变成 grid 页头。
+页头现在叫 `.adm-pagehead`。**给后台加类名前先 grep 一遍 `layout.css`。**
+
+### 15.5 拍夜间截图要写 `localStorage`，不是删属性
+
+主题入口是 `lib/theme.js`：日间 = `<html data-theme="light">`，夜间 = 没有这个属性。
+但 `_app` 挂载时会按 `localStorage['laroja-theme']` 重新贴一遍属性，
+所以 playwright 里 `removeAttribute('data-theme')` 会被立刻改回去（截出来还是日间）。
+正确做法：`addInitScript(() => localStorage.setItem('laroja-theme','dark'))`。
+
+### 15.6 后台自检脚本
+
+`node scripts/shoot-admin.cjs`（默认 `localhost:3006`，可用 `BASE=` 覆盖）。
+自己用 `.env.local` 的 `AUTH_SECRET` + `ADMIN_NAMES` 签管理员 cookie，
+逐页跑完客户端渲染，检查导航高亮 / 标题 / 数据条 / 表格行数 / JS 报错，
+并出 `shots/admin/` 下的整页、夜间、手机截图。**后台改动后先跑它，再上线。**
