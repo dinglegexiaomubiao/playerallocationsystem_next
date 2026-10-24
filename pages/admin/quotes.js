@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
 import { apiGet, apiPut, apiDelete } from '../../lib/api-client.mjs';
 import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
+import StarRating from '../../components/StarRating';
 import { LIMITS } from '../../lib/moderation.mjs';
 
 /**
@@ -26,6 +27,46 @@ export default function AdminQuotesPage({ denied }) {
   const [editing, setEditing] = useState(null);
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(null);
+
+  // 评价管理页签
+  const [tab, setTab] = useState('quotes');
+  const [reviews, setReviews] = useState([]);
+  const [reviewsTotal, setReviewsTotal] = useState(0);
+  const [revLoading, setRevLoading] = useState(false);
+
+  const loadReviews = useCallback(async () => {
+    setRevLoading(true);
+    try {
+      const d = await apiGet('/api/admin/quotes-reviews');
+      if (d && d.ok) {
+        setReviews(d.reviews || []);
+        setReviewsTotal(d.total || 0);
+      }
+    } catch (e) {
+      setFlash({ type: 'err', text: '评价没读出来：' + e.message });
+    } finally {
+      setRevLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!denied && tab === 'reviews') loadReviews();
+  }, [denied, tab, loadReviews]);
+
+  const delReview = async (rv) => {
+    const tail = rv.comment ? '：' + rv.comment : '';
+    if (!window.confirm(`删掉这条评价？\n\n「${rv.quoteContent}」\n${rv.reviewer.nickname} 打了 ${rv.score} 分${tail}`)) return;
+    setBusy(true);
+    try {
+      await apiDelete('/api/admin/quotes-reviews', { id: rv.id });
+      await loadReviews();
+      setFlash({ type: 'ok', text: '删了' });
+    } catch (e) {
+      setFlash({ type: 'err', text: e.message });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,80 +179,155 @@ export default function AdminQuotesPage({ denied }) {
         <div className={'adm-flash is-' + (flash.type === 'ok' ? 'ok' : 'err')}>{flash.text}</div>
       )}
 
-      <div className="adm-tool">
-        <input
-          className="adm-search"
-          placeholder="搜内容 / 出处 / 收录人"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        <span className="adm-tool-note">
-          {list.length} / {rows.length}
-          {total > rows.length ? `（只显示最近 ${rows.length} 条）` : ''}
-        </span>
+      <div className="adm-tabs">
+        <button
+          type="button"
+          className={'adm-tab' + (tab === 'quotes' ? ' is-on' : '')}
+          onClick={() => setTab('quotes')}
+        >
+          语录
+        </button>
+        <button
+          type="button"
+          className={'adm-tab' + (tab === 'reviews' ? ' is-on' : '')}
+          onClick={() => setTab('reviews')}
+        >
+          评价管理{reviewsTotal ? ` (${reviewsTotal})` : ''}
+        </button>
       </div>
 
-      {loading ? (
-        <div className="adm-empty">读着呢…</div>
-      ) : list.length === 0 ? (
-        <div className="adm-empty">{rows.length === 0 ? '还一句都没有。' : '没有符合的语录。'}</div>
-      ) : (
-        <div className="adm-scroll">
-          <table className="adm-data">
-            <thead>
-              <tr>
-                <th>说了什么</th>
-                <th style={{ width: 130 }}>谁说的</th>
-                <th style={{ width: 100 }}>说的日期</th>
-                <th style={{ width: 100 }}>收录时间</th>
-                <th style={{ width: 92 }}>收录人</th>
-                <th style={{ width: 76 }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((r) => {
-                const src = r.source.type === 'player' ? r.source.nickname : r.source.text;
-                return (
-                  <tr key={r.id}>
-                    <td style={{ maxWidth: 420 }}>
-                      <span title={r.content}>{r.content}</span>
+      {tab === 'quotes' && (
+        <>
+          <div className="adm-tool">
+            <input
+              className="adm-search"
+              placeholder="搜内容 / 出处 / 收录人"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <span className="adm-tool-note">
+              {list.length} / {rows.length}
+              {total > rows.length ? `（只显示最近 ${rows.length} 条）` : ''}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="adm-empty">读着呢…</div>
+          ) : list.length === 0 ? (
+            <div className="adm-empty">{rows.length === 0 ? '还一句都没有。' : '没有符合的语录。'}</div>
+          ) : (
+            <div className="adm-scroll">
+              <table className="adm-data">
+                <thead>
+                  <tr>
+                    <th>说了什么</th>
+                    <th style={{ width: 130 }}>谁说的</th>
+                    <th style={{ width: 100 }}>说的日期</th>
+                    <th style={{ width: 100 }}>收录时间</th>
+                    <th style={{ width: 92 }}>收录人</th>
+                    <th style={{ width: 76 }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((r) => {
+                    const src = r.source.type === 'player' ? r.source.nickname : r.source.text;
+                    return (
+                      <tr key={r.id}>
+                        <td style={{ maxWidth: 420 }}>
+                          <span title={r.content}>{r.content}</span>
+                        </td>
+                        <td className={r.source.type === 'player' ? 'is-strong' : 'is-weak'}>
+                          {src}
+                        </td>
+                        <td className="is-weak is-nowrap">{r.saidAt}</td>
+                        <td className="is-weak is-nowrap">{String(r.createdAt || '').slice(0, 10)}</td>
+                        <td className="is-weak">{r.submittedBy?.nickname || '—'}</td>
+                        <td>
+                          <div className="adm-ops">
+                            <button
+                              className="adm-link-btn"
+                              onClick={() =>
+                                setEditing({
+                                  ...r,
+                                  sourceText: r.source.type === 'text' ? r.source.text : '',
+                                })
+                              }
+                            >
+                              改
+                            </button>
+                            <button
+                              className="adm-link-btn"
+                              style={{ color: 'var(--accent)' }}
+                              onClick={() => del(r)}
+                              disabled={busy}
+                            >
+                              删
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === 'reviews' &&
+        (revLoading ? (
+          <div className="adm-empty">读着呢…</div>
+        ) : reviews.length === 0 ? (
+          <div className="adm-empty">还没有人评价过任何语录。</div>
+        ) : (
+          <div className="adm-scroll">
+            <table className="adm-data">
+              <thead>
+                <tr>
+                  <th>语录</th>
+                  <th style={{ width: 110 }}>评分人</th>
+                  <th style={{ width: 120 }}>评分</th>
+                  <th>评价</th>
+                  <th style={{ width: 100 }}>时间</th>
+                  <th style={{ width: 64 }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.map((rv) => (
+                  <tr key={rv.id}>
+                    <td style={{ maxWidth: 360 }}>
+                      <span title={rv.quoteContent}>
+                        「{rv.quoteContent}」— {rv.quoteSource}
+                      </span>
                     </td>
-                    <td className={r.source.type === 'player' ? 'is-strong' : 'is-weak'}>
-                      {src}
-                    </td>
-                    <td className="is-weak is-nowrap">{r.saidAt}</td>
-                    <td className="is-weak is-nowrap">{String(r.createdAt || '').slice(0, 10)}</td>
-                    <td className="is-weak">{r.submittedBy?.nickname || '—'}</td>
+                    <td className="is-weak">{rv.reviewer.nickname}</td>
                     <td>
-                      <div className="adm-ops">
-                        <button
-                          className="adm-link-btn"
-                          onClick={() =>
-                            setEditing({
-                              ...r,
-                              sourceText: r.source.type === 'text' ? r.source.text : '',
-                            })
-                          }
-                        >
-                          改
-                        </button>
-                        <button
-                          className="adm-link-btn"
-                          style={{ color: 'var(--accent)' }}
-                          onClick={() => del(r)}
-                          disabled={busy}
-                        >
-                          删
-                        </button>
-                      </div>
+                      <span className="adm-review-score">
+                        <StarRating value={rv.score} readOnly size="xs" />
+                        <span className="adm-review-score-num">
+                          {rv.score != null ? Number(rv.score).toFixed(1) : '0.0'}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="is-weak">{rv.comment || '（只打分）'}</td>
+                    <td className="is-weak is-nowrap">{String(rv.createdAt || '').slice(0, 10)}</td>
+                    <td>
+                      <button
+                        className="adm-link-btn"
+                        style={{ color: 'var(--accent)' }}
+                        onClick={() => delReview(rv)}
+                        disabled={busy}
+                      >
+                        删
+                      </button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
       {editing && (
         <div

@@ -245,6 +245,109 @@ const del = (id) =>
       await ctxB.close();
     }
 
+    // ---------- 3.5 评价接口（登录） ----------
+    if (ALLOW_WRITE) {
+      console.log('\n[评价接口 · /api/quotes/:id/reviews]');
+      const rq = await post({ content: `评价测试语录 ${Date.now()}`, saidAt: today(), sourceText: '游戏内路人' });
+      ok(rq.status === 201 && rq.d.quote, '评价测试语录建好', String(rq.status));
+      const qid = rq.d.quote ? rq.d.quote.id : null;
+      if (qid) created.push(qid);
+
+      const anonRev = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score: 4, comment: '匿名不行' }),
+      });
+      ok(anonRev.status === 401, '未登录评价被拒', String(anonRev.status));
+
+      const rev = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookie() },
+        body: JSON.stringify({ score: 4.5, comment: '这条有意思' }),
+      });
+      const revD = await rev.json().catch(() => ({}));
+      ok(rev.status === 201 && revD.review && revD.review.score === 4.5, '半星评价提交成功', String(rev.status));
+      ok(
+        revD.ratingCount === 1 && Math.abs((revD.ratingAvg || 0) - 4.5) < 0.01,
+        '平均分/人数已更新',
+        `avg=${revD.ratingAvg} n=${revD.ratingCount}`
+      );
+
+      const bad1 = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookie() },
+        body: JSON.stringify({ score: 6 }),
+      });
+      ok(bad1.status === 400, '超过 5 分被拦', String(bad1.status));
+      const bad2 = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookie() },
+        body: JSON.stringify({ score: 2.3 }),
+      });
+      ok(bad2.status === 400, '非 0.5 步进被拦', String(bad2.status));
+
+      // 一人一评：重复提交走 upsert，人数不涨
+      const rev2 = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', cookie: cookie() },
+        body: JSON.stringify({ score: 3, comment: '改主意了' }),
+      });
+      const rev2D = await rev2.json().catch(() => ({}));
+      ok(
+        rev2.status === 201 && rev2D.review && rev2D.review.score === 3 && rev2D.ratingCount === 1,
+        '改评覆盖旧评价（人数不涨）',
+        `score=${rev2D.review && rev2D.review.score} n=${rev2D.ratingCount}`
+      );
+
+      const listR = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        headers: { cookie: cookie() },
+      }).then((r) => r.json());
+      ok(
+        (listR.reviews || []).length === 1 && listR.myReview && listR.myReview.score === 3,
+        '列表返回 1 条且「我的评价」正确',
+        (listR.reviews || []).length + ' 条'
+      );
+
+      // 后台评价管理：能列出来、能删
+      const admList = await fetch(BASE + '/api/admin/quotes-reviews', {
+        headers: { cookie: cookie() },
+      }).then((r) => r.json());
+      ok(
+        admList.ok && (admList.reviews || []).some((x) => x.id === (rev2D.review && rev2D.review.id)),
+        '后台能列出这条评价',
+        'ok=' + admList.ok
+      );
+      const delR = await fetch(BASE + '/api/admin/quotes-reviews', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', cookie: cookie() },
+        body: JSON.stringify({ id: rev2D.review.id }),
+      });
+      const delD = await delR.json().catch(() => ({}));
+      ok(delR.status === 200 && delD.ok, '后台能删这条评价', String(delR.status));
+
+      const afterDel = await fetch(BASE + '/api/quotes/' + qid + '/reviews', {
+        headers: { cookie: cookie() },
+      }).then((r) => r.json());
+      ok(afterDel.ratingCount === 0, '删评价后平均分人数归零', 'n=' + afterDel.ratingCount);
+
+      // 页面侧：每条语录都渲染了评价区
+      const ctxR = await browser.newContext({
+        viewport: { width: 1440, height: 1000 },
+        deviceScaleFactor: 2,
+      });
+      await ctxR.addCookies([
+        { name: 'dd_session', value: sessionValue(), domain: new URL(BASE).hostname, path: '/' },
+      ]);
+      const pr = await ctxR.newPage();
+      watch(pr);
+      await pr.goto(BASE + '/quotes', { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await pr.waitForSelector('.quote-reviews', { timeout: 40000 }).catch(() => {});
+      const rvCount = await pr.locator('.quote-reviews').count();
+      ok(rvCount > 0, '语录页每条都渲染评价区', rvCount + ' 个');
+      await pr.screenshot({ path: path.join(OUT, 'quotes-reviews.png') });
+      await ctxR.close();
+    }
+
     // ---------- 4. 悬浮栏 ----------
     // 门槛是「至少 3 条」，不是「空 / 非空」—— 得重新探，不能沿用页面段的状态
     console.log('\n[底部悬浮栏]');

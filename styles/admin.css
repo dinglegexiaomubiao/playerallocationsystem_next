@@ -314,6 +314,10 @@
   flex: 1 0 8px;
 }
 
+/* 后台评价管理：星 + 分数并排 */
+.adm-review-score { display: inline-flex; align-items: center; gap: 6px; }
+.adm-review-score-num { font-family: var(--font-mono); font-size: .78rem; color: var(--text-2); }
+
 /* ---------- 面板 ---------- */
 .adm-panel {
   padding: 13px 16px 14px;

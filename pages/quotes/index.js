@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import QuoteForm from '../../components/QuoteForm';
+import QuoteReviews from '../../components/QuoteReviews';
 import useSession from '../../hooks/useSession';
 import { groupByMonth, dateLabel } from '../../lib/quotes-view.mjs';
 
@@ -201,6 +202,13 @@ export default function QuotesPage({ initial, myPlayerId, loadError }) {
                           </button>
                         )}
                       </footer>
+                      <QuoteReviews
+                        quoteId={q.id}
+                        ratingAvg={q.ratingAvg}
+                        ratingCount={q.ratingCount}
+                        myPlayerId={myPlayerId}
+                        isAdmin={!!(me && me.isAdmin)}
+                      />
                     </article>
                   ))}
                 </div>

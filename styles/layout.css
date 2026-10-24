@@ -3907,12 +3907,84 @@ a.quote-who:hover { color: var(--brand); text-decoration: underline; text-underl
 .quote-empty-hint { font-size: .86rem !important; color: var(--text-3); }
 .quote-more { display: flex; justify-content: center; padding: 26px 0 8px; }
 
+/* 半星评分控件：底色星 + 按百分比裁切的金色星叠出来，半星自然呈现。
+   .star-hit 是盖在每颗星左右两半的透明按钮，左半 = x.5、右半 = x。 */
+.star-rating { display: inline-flex; align-items: center; gap: 2px; line-height: 1; }
+.star-rating.is-sm { font-size: 1rem; }
+.star-rating.is-xs { font-size: .8rem; }
+.star-rating.is-md { font-size: 1.5rem; }
+.star { position: relative; display: inline-block; line-height: 1; }
+.star-empty { color: var(--text-3); }
+.star-fill {
+  position: absolute; left: 0; top: 0; color: var(--brand);
+  overflow: hidden; white-space: nowrap; pointer-events: none;
+}
+.star-rating.is-interactive .star { cursor: pointer; }
+.star-hit {
+  position: absolute; top: 0; height: 100%; width: 50%;
+  border: none; background: transparent; padding: 0; margin: 0; cursor: pointer;
+}
+.star-hit.left { left: 0; }
+.star-hit.right { right: 0; }
+
+/* 语录评价区（1.12.0）：摘要行 + 内联表单 + 可折叠评论列表 */
+.quote-reviews { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-hairline); }
+.quote-rating-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: .8rem; color: var(--text-3);
+}
+.quote-rating-num { font-family: var(--font-mono); color: var(--text-2); font-weight: 600; }
+.quote-rating-count { color: var(--text-3); }
+.quote-review-btn {
+  margin-left: auto; background: none; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); padding: 3px 10px; font-size: .76rem;
+  color: var(--text-2); cursor: pointer;
+}
+.quote-review-btn:hover { border-color: var(--brand); color: var(--brand); }
+.quote-review-link {
+  background: none; border: none; padding: 0; font-size: .76rem; color: var(--brand);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.quote-review-form { margin-top: 10px; }
+.quote-review-score { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.quote-review-score-num { font-family: var(--font-mono); font-size: .85rem; color: var(--text-2); }
+.quote-review-text {
+  width: 100%; max-width: 46em; box-sizing: border-box; resize: vertical;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  padding: 7px 10px; font-family: inherit; font-size: .85rem;
+  background: var(--bg-card); color: var(--text);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.quote-review-text:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.quote-review-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.quote-review-del {
+  background: none; border: none; padding: 0; font-size: .76rem; color: var(--text-3);
+  text-decoration: underline; cursor: pointer;
+}
+.quote-review-del:hover { color: var(--brand); }
+.quote-review-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.quote-review-item { display: flex; align-items: flex-start; gap: 9px; }
+.quote-review-avatar { width: 26px; height: 26px; min-width: 26px; font-size: .8rem; border-radius: 50%; overflow: hidden; }
+.quote-review-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.quote-review-body { flex: 1; min-width: 0; }
+.quote-review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quote-review-name { font-size: .82rem; font-weight: 600; color: var(--text-2); }
+.quote-review-time { font-family: var(--font-mono); font-size: .7rem; color: var(--text-3); margin-left: auto; }
+.quote-review-comment { margin: 3px 0 0; font-size: .85rem; color: var(--text); line-height: 1.6; overflow-wrap: anywhere; }
+.quote-review-del-item {
+  background: none; border: none; padding: 0; font-size: .72rem; color: var(--text-3);
+  text-decoration: underline; cursor: pointer; flex-shrink: 0;
+}
+.quote-review-del-item:hover { color: var(--brand); }
+
 @media (max-width: 640px) {
   .quote-form { padding: 15px 14px 14px; }
   .quote-item { padding: 14px 4px 13px 21px; }
   .quote-item::before { top: 11px; font-size: 1.3rem; }
   .quote-text { font-size: .97rem; line-height: 1.85; }
   .quote-form-actions { gap: 10px; }
+  .quote-reviews { margin-top: 8px; padding-top: 8px; }
+  .quote-review-time { margin-left: 0; }
 }
 
 /* ----- 底部悬浮栏（全站，见 components/QuoteTicker.js） -----
