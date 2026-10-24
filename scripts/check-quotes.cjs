@@ -101,12 +101,21 @@ const del = (id) =>
   };
 
   try {
-    // 先探一次库里有没有语录 —— 后面好几条断言成不成立，取决于这个
-    const probe = await fetch(BASE + '/api/quotes')
-      .then((r) => r.json())
-      .catch(() => ({}));
-    const EMPTY = !probe.total;
-    console.log('\n[库状态]  ' + (EMPTY ? '空（只有空态可验）' : probe.total + ' 句 / ' + probe.people + ' 位群友'));
+    // 先探一次库里有没有语录 —— 后面好几条断言成不成立，取决于这个。
+    // ⚠ 这是**快照**，写库段会真的往里塞一条，所以写完之后必须重探（见下面 if (ALLOW_WRITE) 之后）。
+    const probe = async () => {
+      const p = await fetch(BASE + '/api/quotes')
+        .then((r) => r.json())
+        .catch(() => ({}));
+      return { empty: !p.total, total: p.total || 0, people: p.people || 0 };
+    };
+    let st = await probe();
+    let EMPTY = st.empty;
+    const showState = (tag = '库状态') =>
+      console.log(
+        '\n[' + tag + ']  ' + (st.empty ? '空（只有空态可验）' : st.total + ' 句 / ' + st.people + ' 位群友')
+      );
+    showState();
 
     // ---------- 1. 接口 ----------
     console.log('\n[接口 · /api/quotes]');
@@ -141,6 +150,14 @@ const del = (id) =>
       ok(r6.status === 400, '出处为空被拦', r6.d.error);
     } else {
       console.log('  --   跳过写库断言（远端且未设 ALLOW_REMOTE=1）');
+    }
+
+    // 写库模式刚往库里塞了一条（要等 finally 才删），前面那份空状态已经过期。
+    // 不重探的话，下面页面段会拿「库是空的」去断言有内容的页面 —— 必红。
+    if (ALLOW_WRITE) {
+      st = await probe();
+      EMPTY = st.empty;
+      showState('库状态 · 写入后重探');
     }
 
     // ---------- 2. 语录页（匿名） ----------
@@ -229,16 +246,20 @@ const del = (id) =>
     }
 
     // ---------- 4. 悬浮栏 ----------
+    // 门槛是「至少 3 条」，不是「空 / 非空」—— 得重新探，不能沿用页面段的状态
     console.log('\n[底部悬浮栏]');
+    st = await probe();
+    const ENOUGH = st.total >= 3;
+    if (!ENOUGH) console.log('  （库里 ' + st.total + ' 条，不足 3 条，验的是「不该出现」）');
     const ctxC = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
     const pc = await ctxC.newPage();
     watch(pc);
     await pc.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    // 少于 3 条本来就不显示 —— 空库时只等一小会儿，确认它确实没冒出来
-    await pc.waitForSelector('.quote-ticker', { timeout: EMPTY ? 3500 : 25000 }).catch(() => {});
+    // 少于 3 条本来就不显示 —— 这时只等一小会儿，确认它确实没冒出来
+    await pc.waitForSelector('.quote-ticker', { timeout: ENOUGH ? 25000 : 3500 }).catch(() => {});
     const hasBar = await pc.locator('.quote-ticker').count();
-    if (EMPTY) ok(hasBar === 0, '语录不足 3 条时不出现悬浮栏', hasBar + ' 个');
-    else ok(hasBar === 1, '首页出现底部语录栏', hasBar + ' 个');
+    if (ENOUGH) ok(hasBar === 1, '首页出现底部语录栏', hasBar + ' 个');
+    else ok(hasBar === 0, '语录不足 3 条时不出现悬浮栏', hasBar + ' 个');
 
     if (hasBar) {
       const first = ((await pc.locator('.quote-ticker-text').textContent()) || '').trim();
@@ -328,7 +349,7 @@ const del = (id) =>
 
     const mHome = await ctxM.newPage();
     await mHome.goto(BASE + '/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-    await mHome.waitForSelector('.quote-ticker', { timeout: EMPTY ? 3500 : 25000 }).catch(() => {});
+    await mHome.waitForSelector('.quote-ticker', { timeout: ENOUGH ? 25000 : 3500 }).catch(() => {});
     await mHome.waitForTimeout(900);
     const mBar = await mHome.evaluate(() => {
       const t = document.querySelector('.quote-ticker');
@@ -336,7 +357,7 @@ const del = (id) =>
       const f = document.querySelector('.fb-fab').getBoundingClientRect();
       return { h: Math.round(t.getBoundingClientRect().height), gap: Math.round(t.getBoundingClientRect().top - f.bottom) };
     });
-    if (EMPTY) {
+    if (!ENOUGH) {
       ok(!mBar, '手机端也不出现悬浮栏（不足 3 条）');
     } else {
       ok(!!mBar, '手机端悬浮栏出现');
