@@ -257,16 +257,29 @@ export default function MemberDetail() {
                   <span className="k">擅长位置</span>
                   <span className="v">{(player.positions || []).join(' / ') || '未填写'}</span>
                 </div>
-                {/* 所属帮派：/api/players 已经带上 guild（id/name/colorKey），这里不必再请求。
-                    没有帮派就整行不出现 —— 写个「未加入」只会让侧栏变长。 */}
+                {/* 所属帮派：/api/players 已经带上 guild（id/name/slogan/colorKey），这里不必再请求。
+                    没有帮派就整行不出现 —— 写个「未加入」只会让侧栏变长。
+                    帮名本身是链接（P4 之前链出去是 404，所以那时只敢做展示），
+                    口号放副行：侧栏里最顺手的「顺藤摸瓜」入口就是这一行。 */}
                 {player.guild && (
-                  <div className="kv">
+                  <div className="kv kv-guild">
                     <span className="k">所属帮派</span>
                     <span className="v">
-                      <span className="detail-guild" style={{ '--guild-solid': guildColor(player.guild.colorKey)?.solid }}>
+                      <Link
+                        href={'/guild/' + player.guild.id}
+                        className="detail-guild"
+                        style={{ '--guild-solid': guildColor(player.guild.colorKey)?.solid }}
+                        title={`看看「${player.guild.name}」的成员和自我介绍`}
+                      >
                         <span className="detail-guild-dot" aria-hidden="true" />
-                        {player.guild.name}
-                      </span>
+                        <span className="detail-guild-name">{player.guild.name}</span>
+                        <span className="detail-guild-go" aria-hidden="true">
+                          →
+                        </span>
+                      </Link>
+                      {player.guild.slogan ? (
+                        <span className="detail-guild-slogan">「{player.guild.slogan}」</span>
+                      ) : null}
                     </span>
                   </div>
                 )}

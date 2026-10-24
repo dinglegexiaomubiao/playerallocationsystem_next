@@ -44,6 +44,7 @@ const token = payload + '.' + crypto.createHmac('sha256', SECRET).update(payload
 const COOKIE = 'dd_session=' + token;
 
 const GUILD_NAME = '卡片配色小队';
+const GUILD_SLOGAN = '青碧一伙，专治不服';
 const COLOR_KEY = 'teal';
 const COLOR_SOLID = '#2f7d78'; // lib/guild-colors.mjs 里的青碧
 
@@ -82,13 +83,21 @@ const ok = (c, label, detail = '') => {
  * 建帮之后 `createGuild` 会清缓存，但 dev 下页面与 API 路由各自持有一份模块实例，
  * 未必清得到对方那份 —— 所以这里按时间轮询，最多等 60 秒。
  * （线上是单进程单实例，清一次就够，不存在这个问题。）
+ *
+ * 注意等的是**我们这个测试帮派**的卡片，不是「随便一张有帮派的卡」：
+ * 库里本来就有真实帮派（阴暗组），按后者等会立刻命中别家那张，配色断言全错。
  */
+function testCard(p) {
+  return p
+    .locator('.p-card.has-guild')
+    .filter({ has: p.locator('.p-guild-name', { hasText: new RegExp('^' + GUILD_NAME + '$') }) });
+}
+
 async function waitForTinted(p, maxSec = 60) {
   const deadline = Date.now() + maxSec * 1000;
   for (;;) {
-    const n = await p.locator('.p-card.has-guild').count();
-    if (n > 0) return n;
-    if (Date.now() > deadline) return n;
+    if ((await testCard(p).count()) > 0) return true;
+    if (Date.now() > deadline) return false;
     await p.waitForTimeout(6000);
     await p.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
     await p.waitForSelector('.p-card', { timeout: 30000 });
@@ -101,9 +110,10 @@ async function run() {
   const created = await fetch(BASE + '/api/guild', {
     method: 'POST',
     headers: { cookie: COOKIE, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: GUILD_NAME, colorKey: COLOR_KEY, slogan: '' }),
+    body: JSON.stringify({ name: GUILD_NAME, colorKey: COLOR_KEY, slogan: GUILD_SLOGAN }),
   }).then((r) => r.json());
   ok(created.success === true, '建了一个测试帮派', created.error || GUILD_NAME);
+  const guildId = created.id;
 
   // 找出这个帮派挂在谁身上（徽标要对上人）
   const who = await fetch(BASE + '/api/players').then((r) => r.json());
@@ -129,14 +139,16 @@ async function run() {
   await p.waitForSelector('.p-card', { timeout: 30000 });
   await p.waitForTimeout(500);
 
-  // ---- 1. 只有一个人有帮派，别的卡片不该被染色 ----
+  // ---- 1. 测试帮派那张卡被染色，没帮派的人保持原样 ----
+  // 库里已有真实帮派，所以不能断言「全站只有一张染色卡」——
+  // 只能断言「我们这张染了」「没帮派的没染」。
   const tinted = await waitForTinted(p);
-  ok(tinted === 1, '只有一个群友卡片带帮派配色', tinted + ' 张');
+  ok(tinted, '测试帮派的卡片带上了配色', GUILD_NAME);
+  if (!tinted) return;
   const plain = await p.locator('.p-card:not(.has-guild)').count();
-  ok(plain > 0, '其它卡片保持原样', plain + ' 张');
-  if (tinted === 0) return;
+  ok(plain > 0, '没帮派的卡片保持原样', plain + ' 张');
 
-  const card = p.locator('.p-card.has-guild').first();
+  const card = testCard(p).first();
   const styleAttr = (await card.getAttribute('style')) || '';
   ok(/--guild-a:\s*rgba\(47,\s*125,\s*120,\s*0\.12\)/.test(styleAttr), '渐变起点是青碧 0.12', styleAttr.slice(0, 60));
   ok(/--guild-solid:\s*#2f7d78/.test(styleAttr), '实色是青碧', styleAttr);
@@ -153,12 +165,12 @@ async function run() {
   ok(/47,\s*125,\s*120/.test(line.bg), '色线用的是帮派实色', line.bg);
 
   // 边框：带帮派的卡片和普通卡片不该一样，否则渐变的边缘会显得「浮」
-  const borders = await p.evaluate(() => {
-    const g = document.querySelector('.p-card.has-guild');
-    const n = document.querySelector('.p-card:not(.has-guild)');
-    return [getComputedStyle(g).borderTopColor, getComputedStyle(n).borderTopColor];
-  });
-  ok(borders[0] !== borders[1], '边框跟着帮派色走', borders.join(' vs '));
+  const guildBorder = await card.evaluate((el) => getComputedStyle(el).borderTopColor);
+  const plainBorder = await p
+    .locator('.p-card:not(.has-guild)')
+    .first()
+    .evaluate((el) => getComputedStyle(el).borderTopColor);
+  ok(guildBorder !== plainBorder, '边框跟着帮派色走', [guildBorder, plainBorder].join(' vs '));
 
   // ---- 2. 帮派徽标 ----
   const badge = card.locator('.p-guild');
@@ -173,23 +185,50 @@ async function run() {
     .evaluate((el) => el.scrollWidth - el.clientWidth);
   ok(overflowName <= 1, '帮派名没有被挤到溢出', overflowName + 'px');
 
+  // 徽标是链接，但整卡盖着一个绝对定位的 .p-card-hit —— 没抬 z-index 就点不到。
+  // 用 click({trial}) 而不是 elementFromPoint：它会先滚动到可见，再做命中测试；
+  // 被覆盖层挡住时直接抛 "intercepts pointer events"，正好是我们要断言的东西。
+  const badgeHref = await badge.getAttribute('href');
+  ok(badgeHref === '/guild/' + guildId, '徽标链到帮派主页', badgeHref);
+  let badgeHittable = true;
+  try {
+    await badge.click({ trial: true, timeout: 5000 });
+  } catch (e) {
+    badgeHittable = false;
+  }
+  ok(badgeHittable, '徽标浮在整卡覆盖层之上（点得到）');
+
   await card.screenshot({ path: 'shots/guild-card-' + THEME + '.png' });
 
-  // ---- 3. 详情页「所属帮派」 ----
+  // ---- 3. 详情页「所属帮派」：名字是链接、口号在下面一行 ----
   await p.goto(BASE + '/members/' + member.id, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await p.waitForSelector('.kv', { timeout: 30000 });
   await p.waitForTimeout(400);
   const kvVals = await p.locator('.kv').evaluateAll((els) =>
-    els.map((el) => [
-      (el.querySelector('.k') || {}).textContent || '',
-      (el.querySelector('.v') || {}).textContent || '',
-    ])
+    els.map((el) => (el.querySelector('.k') || {}).textContent || '')
   );
-  const guildRow = kvVals.find(([k]) => k.trim() === '所属帮派');
-  ok(!!guildRow, '详情页基本信息里有「所属帮派」');
-  ok(!!guildRow && guildRow[1].trim() === GUILD_NAME, '详情页显示帮派名', guildRow ? guildRow[1].trim() : '');
+  ok(kvVals.some((k) => k.trim() === '所属帮派'), '详情页基本信息里有「所属帮派」');
+
+  const guildLink = p.locator('.kv-guild .detail-guild');
+  ok((await guildLink.count()) === 1, '详情页帮派名是链接');
+  const linkName = ((await guildLink.locator('.detail-guild-name').textContent()) || '').trim();
+  ok(linkName === GUILD_NAME, '详情页显示帮派名', linkName);
+  const detailHref = await guildLink.getAttribute('href');
+  ok(detailHref === '/guild/' + guildId, '帮派名指到帮派主页', detailHref);
+  const sloganText = ((await p.locator('.kv-guild .detail-guild-slogan').textContent()) || '').trim();
+  ok(sloganText.includes(GUILD_SLOGAN), '详情页显示帮派口号', sloganText);
   ok((await p.locator('.detail-guild-dot').count()) === 1, '详情页有帮派色点');
-  await p.locator('.side-card').first().screenshot({ path: 'shots/guild-detail-' + THEME + '.png' });
+  // 截图目标要精确到「基本信息」那张卡：页面里 .side-card 不止一个
+  const infoCard = p.locator('.side-card').filter({ has: p.locator('.kv-guild') });
+  await infoCard.screenshot({ path: 'shots/guild-detail-' + THEME + '.png' });
+  await p.screenshot({ path: 'shots/member-detail-' + THEME + '.png', fullPage: false });
+
+  // 点一下真的能走过去（用户要的「点帮派能看帮派信息」）
+  await guildLink.click();
+  await p.waitForURL('**/guild/' + guildId, { timeout: 30000 });
+  await p.waitForSelector('.guild-hero', { timeout: 30000 });
+  const heroName = ((await p.locator('.guild-hero-title').textContent()) || '').trim();
+  ok(heroName.includes(GUILD_NAME), '点帮派名落到帮派主页', heroName.slice(0, 24));
 
   // ---- 4. 手机端：色线和徽标不能把卡片撑破 ----
   const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, deviceScaleFactor: 2 });
@@ -201,12 +240,25 @@ async function run() {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth
   );
   ok(mOverflow <= 1, '手机端整页无横向溢出', mOverflow + 'px');
-  const cardOverflow = await mp.evaluate(() => {
-    const el = document.querySelector('.p-card.has-guild');
-    return el.scrollWidth - el.clientWidth;
-  });
-  ok(cardOverflow <= 1, '手机端帮派卡片内部不溢出', cardOverflow + 'px');
-  await mp.locator('.p-card.has-guild').first().screenshot({ path: 'shots/guild-card-mobile.png' });
+  const mCard = testCard(mp).first();
+  const cardOverflow = (await mCard.count())
+    ? await mCard.evaluate((el) => el.scrollWidth - el.clientWidth)
+    : -1;
+  ok(cardOverflow >= 0 && cardOverflow <= 1, '手机端帮派卡片内部不溢出', cardOverflow + 'px');
+  await mCard.screenshot({ path: 'shots/guild-card-mobile.png' });
+
+  // 详情页在手机上是单列，帮派名 + 口号两行也不能把页面顶宽
+  await mp.goto(BASE + '/members/' + member.id, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await mp.waitForSelector('.kv-guild', { timeout: 30000 });
+  await mp.waitForTimeout(400);
+  const mDetailOverflow = await mp.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+  );
+  ok(mDetailOverflow <= 1, '手机端详情页无横向溢出（帮派两行不顶宽）', mDetailOverflow + 'px');
+  await mp
+    .locator('.side-card')
+    .filter({ has: mp.locator('.kv-guild') })
+    .screenshot({ path: 'shots/guild-detail-mobile.png' });
 
   // ---- 5. 解散后必须回到「干净」状态 ----
   const del = await fetch(BASE + '/api/guild', { method: 'DELETE', headers: { cookie: COOKIE } }).then((r) => r.json());

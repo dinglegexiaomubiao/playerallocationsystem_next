@@ -291,13 +291,21 @@ export default function MembersPage({ initialPlayers = [], initialError = null }
                         </span>
                         <span className="p-region-val">{regionShort(p.region) || '未填写地区'}</span>
                       </div>
-                      {/* 帮派徽标：色点 + 名字。先只做展示，等 P4 有了 /guild/[id]
-                          再把它包成链接 —— 现在链出去是 404，不如不给。 */}
+                      {/* 帮派徽标：色点 + 名字，点进帮派主页。
+                          整卡有覆盖层链接（.p-card-hit），这里必须浮到它上面才能点（见 .p-guild 的 z-index）。 */}
                       {p.guild && (
-                        <div className="p-guild" title={`所属帮派：${p.guild.name}`}>
+                        <Link
+                          href={'/guild/' + p.guild.id}
+                          className="p-guild"
+                          title={
+                            p.guild.slogan
+                              ? `${p.guild.name} ——「${p.guild.slogan}」`
+                              : `去「${p.guild.name}」主页看看`
+                          }
+                        >
                           <span className="p-guild-dot" aria-hidden="true" />
                           <span className="p-guild-name">{p.guild.name}</span>
-                        </div>
+                        </Link>
                       )}
                     </div>
                     <div className={`p-score ${t.cls}`} title={t.label}>
