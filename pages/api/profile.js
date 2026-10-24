@@ -1,7 +1,7 @@
 // 个人信息接口（登录后可用）
 // GET：返回当前用户的选手资料 + 比赛履历（名次/担任位置）+ 可选地区列表
 // PUT：更新当前用户的选手资料（地区/分数/位置/英雄/评价/默契队友/仇人）
-import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions, ensurePlayerTextColumns, ensureTournamentSchema } from '../../lib/db';
+import { pool, updatePlayer, getPlayerTournaments, getDistinctRegions, ensurePlayerTextColumns, ensureTournamentSchema, ensureRecordSortColumn } from '../../lib/db';
 import {
   ensureIdentityTables,
   listIdentities,
@@ -38,8 +38,9 @@ export default async function handler(req, res) {
   const session = getSession(req);
   const client = await pool.connect();
 
-  // 确保名次表 / 历史最高分列存在（旧库可能缺），本接口读 peak_score
+  // 确保名次表 / 历史最高分列 / 排序偏好列存在（旧库可能缺）
   await ensureTournamentSchema();
+  await ensureRecordSortColumn();
 
   try {
     // 找到账号绑定的选手
@@ -188,6 +189,11 @@ export default async function handler(req, res) {
       });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
+      // 赛事记录排序偏好（time / rank），只收这两个合法值，其余归一到 'time'
+      if (body.record_sort !== undefined) {
+        body.record_sort = String(body.record_sort) === 'rank' ? 'rank' : 'time';
+      }
+
       const updated = await updatePlayer(playerId, {
         nickname: cur.nickname,
         game_id: cur.game_id,
@@ -204,6 +210,7 @@ export default async function handler(req, res) {
         region: body.region !== undefined ? body.region : cur.region,
         self_intro: body.self_intro !== undefined ? body.self_intro : cur.self_intro,
         enemies: body.enemies !== undefined ? body.enemies : cur.enemies,
+        record_sort: body.record_sort !== undefined ? body.record_sort : cur.record_sort,
         updated_at: new Date().toISOString(),
       });
       // 群友列表带了头像/分数/身份，改完要立刻失效，否则公开页最多 45 秒看不到新号

@@ -14,7 +14,7 @@ import IdentityEditor from '../components/IdentityEditor';
 import HeroPicker from '../components/HeroPicker';
 import RegionPicker from '../components/RegionPicker';
 import GuildPanel from '../components/GuildPanel';
-import { mergeMyTournaments } from '../lib/tournament-format.mjs';
+import { mergeMyTournaments, sortTournamentsBy } from '../lib/tournament-format.mjs';
 import { regionFull } from '../lib/regions';
 import { checkText, LIMITS } from '../lib/moderation.mjs';
 
@@ -25,6 +25,7 @@ export default function Profile() {
   const [bound, setBound] = useState(true);
   const [profile, setProfile] = useState(null);
   const [tournaments, setTournaments] = useState([]);
+  const [sortMode, setSortMode] = useState('time'); // 赛事记录排序：time=按比赛时间 / rank=按名次
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,7 +58,10 @@ export default function Profile() {
         if (d.success) {
           setBound(d.bound !== false);
           setProfile(d.profile || null);
-          setTournaments(mergeMyTournaments(d.tournaments || [], mine.tournaments || []));
+          setSortMode(d.profile?.record_sort || 'time');
+          setTournaments(
+            mergeMyTournaments(d.tournaments || [], mine.tournaments || [], d.profile?.record_sort || 'time')
+          );
           if (d.profile) {
             setForm({
               group_nickname: d.profile.group_nickname || '',
@@ -113,6 +117,30 @@ export default function Profile() {
   const cancelEdit = () => {
     setEditing(false);
     load();
+  };
+
+  // 赛事记录排序切换：按时间 / 按名次。立即重排，并写回本人偏好（record_sort）。
+  const changeSort = async (mode) => {
+    if (mode !== 'time' && mode !== 'rank') return;
+    if (mode === sortMode) return;
+    const prevMode = sortMode;
+    setSortMode(mode);
+    setTournaments((prev) => sortTournamentsBy(prev, mode));
+    try {
+      const r = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ record_sort: mode }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || '排序偏好保存失败');
+      setProfile((p) => (p ? { ...p, record_sort: mode } : p));
+    } catch (e) {
+      // 保存失败回滚到原排序
+      setSortMode(prevMode);
+      setTournaments((prev) => sortTournamentsBy(prev, prevMode));
+      setMsg(e.message || '排序偏好保存失败');
+    }
   };
 
   const save = async () => {
@@ -429,7 +457,38 @@ export default function Profile() {
             </div>
           </div>
 
-          <h2 className="sec-title">我的赛事（{tournaments.length}）</h2>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              flexWrap: 'wrap',
+              marginBottom: 4,
+            }}
+          >
+            <h2 className="sec-title" style={{ margin: 0 }}>
+              我的赛事（{tournaments.length}）
+            </h2>
+            {profile && (
+              <div className="sort-toggle" role="group" aria-label="赛事记录排序方式">
+                <button
+                  type="button"
+                  className={sortMode === 'time' ? 'active' : ''}
+                  onClick={() => changeSort('time')}
+                >
+                  按时间
+                </button>
+                <button
+                  type="button"
+                  className={sortMode === 'rank' ? 'active' : ''}
+                  onClick={() => changeSort('rank')}
+                >
+                  按名次
+                </button>
+              </div>
+            )}
+          </div>
           <MyTournamentTable items={tournaments} />
         </div>
       </section>

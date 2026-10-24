@@ -1415,6 +1415,8 @@ a { text-decoration: none; color: inherit; }
 
 /* --- 「我的赛事」表：6 列 --- */
 .adm-row-6 { grid-template-columns: 1.5fr .85fr .85fr 1.15fr .8fr .85fr; }
+/* --- 「我的赛事」表：7 列（加了「时间」列）--- */
+.adm-row-7 { grid-template-columns: 1.5fr .8fr .95fr 1.1fr 1.1fr .8fr .8fr; }
 .my-signup-note {
   display: inline-block; margin-left: 6px; font-size: .74rem; color: var(--text-3); white-space: nowrap;
 }
@@ -1623,7 +1625,25 @@ a.pg-signup-name:hover { color: var(--brand); text-decoration: underline; }
 /* 「我的赛事」6 列表在窄屏需要更宽的滚动区，否则每格只能塞两个字 */
 @media (max-width: 720px) {
   .adm-row-6 { min-width: 680px; }
+  .adm-row-7 { min-width: 760px; }
 }
+
+/* --- 我的赛事排序开关（按时间 / 按名次）--- */
+.sort-toggle {
+  display: inline-flex; align-items: center; gap: 0; margin: 0 0 12px auto;
+  background: var(--card-2); border: 1px solid var(--line-hairline); border-radius: 8px; padding: 3px;
+}
+.sort-toggle button {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: .82rem; color: var(--text-2);
+  padding: 5px 14px; border-radius: 6px; transition: background .15s, color .15s;
+}
+.sort-toggle button:hover { color: var(--text-1); }
+.sort-toggle button.active {
+  background: var(--brand-solid); color: #fff; font-weight: 600;
+}
+.sort-toggle-hint { margin-left: 10px; font-size: .78rem; color: var(--text-3); }
+.sec-title + .sort-toggle { margin-top: -6px; }
 
 /* ============================================================
    有序标签（擅长位置 / 擅长英雄的排序编辑）

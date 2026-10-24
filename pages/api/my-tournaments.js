@@ -64,6 +64,7 @@ export default async function handler(req, res) {
           is_captain: false,
           signup_status: null,
           signed_at: null,
+          start_date: null,
           teams: [],
         });
       }
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
       it.tournament_status = s.tournament_status;
       it.signup_status = s.signup_status;
       it.signed_at = s.signed_at;
+      if (s.start_date) it.start_date = s.start_date;
       if (s.is_captain === true) it.is_captain = true;
     }
 
@@ -84,6 +86,7 @@ export default async function handler(req, res) {
       if (!it.tournament_name) it.tournament_name = t.tournament_name;
       if (!it.tournament_status) it.tournament_status = t.tournament_status;
       if (t.i_am_captain === true) it.is_captain = true;
+      if (t.start_date) it.start_date = it.start_date || t.start_date;
       if (!it.teams.some((x) => String(x.id) === String(t.id))) {
         it.teams.push({ id: t.id, name: t.name, tournament_id: t.tournament_id });
       }
