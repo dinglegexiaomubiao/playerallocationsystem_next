@@ -15,14 +15,17 @@
 
 | 板块 | 路由 | 做什么 |
 |---|---|---|
-| 首页 | `/` | 四个统计数字、本周焦点赛事、板块入口、天梯榜 |
-| 开黑组队 | `/party` | 发招募卡片（模式/段位要求/时间/语音），别人报名；替代群里刷屏 |
+| 首页 | `/` | 四个统计数字、本周焦点赛事、板块入口、天梯榜、最近动态（含新建帮派） |
+| 开黑组队 | `/party` | 发招募卡片（模式/段位要求/时间/语音），别人报名；过期自动折叠、可按日期筛选 |
+| 活动招募 | `/activities` | 与开黑并列的活动招募：地区筛选、过期折叠、「只看招募中」、日历日期筛选 |
 | 赛事信息 | `/tournaments` | 历届赛事、赛程对阵、比分、名次、报名选手与队伍 |
-| 群友信息 | `/members` | 档案卡片、六维筛选、比赛履历、AI 战力分析 |
-| 群友美食 | `/food` | 106 家店、菜系/区位/人均筛选、饭后评价 |
-| 个人信息 | `/profile` | 改自己资料（含默契队友 / 仇人标注）、汇总我的赛事 |
+| 群友信息 | `/members` | 档案卡片、六维筛选、比赛履历、AI 战力分析、深圳分布图 `/map` |
+| 群友美食 | `/food` | 美食店、菜系/区位/人均筛选、饭后评价 |
+| 群友语录 | `/quotes` | 群友名言摘抄，登录后可提交；可打分（0–5 半星）与评价 |
+| 公会/帮派 | `/guilds` | 群友自发组织的帮派，含成员、邀请、口号、帮派主页 `/guild/[id]` |
+| 个人信息 | `/profile` | 改自己资料（含默契队友 / 仇人标注）、汇总我的赛事、最近比赛（可折叠）+ AI 分析 |
 | 阵容分配 | `/main` | 群内比赛的分队工具，管理员专用 |
-| 管理后台 | `/admin` | 赛事 CRUD、报名名单、队伍与队长、赛程结果、整包 Excel 导入 |
+| 管理后台 | `/admin` | 赛事 / 开黑 / 活动招募 / 选手 / 美食 / 公会 / 语录 / 评价 / 比赛 / 消息 / 工单 / 数据分析 的全套增删改查 |
 | 售后工单 | `/admin/support` | 群友反馈 + 前端自动报错，统一处理 |
 
 ---
@@ -34,6 +37,7 @@
 - **@anthropic-ai/sdk**：AI 分析，当前指向 DeepSeek 兼容端点（须 `thinking:{type:'disabled'}`）
 - **xlsx**：Excel 批量导入导出
 - **nodemailer**：新工单邮件提醒（可选）
+- **内容安全**：`lib/moderation.mjs`（本地违禁词 / 外链白名单初筛）+ `lib/ai-moderate.mjs`（DeepSeek 语义复审，超时 / 无 key 自动放行，fail-open）
 - 没有 TypeScript、没有 Tailwind、没有组件库
 
 > 端到端的架构 / 请求 / 鉴权 / 数据 / 部署 / 自愈 / 兼容七条链路见 **`docs/项目链路.md`**。
@@ -43,27 +47,35 @@
 ## 目录结构
 
 ```
-├── pages/                     页面路由
-│   ├── api/                   45 个接口（鉴权见下方「权限模型」）
-│   ├── admin/                 管理后台（index / support / tournaments/[id]）
-│   ├── members/               群友列表、详情、阵容分配（重定向到 /main）
-│   ├── tournaments/           赛事列表、详情
-│   ├── party/                 开黑组队
-│   └── food/                  群友美食
-├── components/                29 个展示组件
-├── hooks/                     6 个状态钩子
-│   └── useSession.js          统一登录态（window 事件广播，跨组件同步）
-├── lib/                       33 个工具与数据层模块（关键几个）
+├── pages/                     页面路由（前端页面与 api 同仓）
+│   ├── api/                   60+ 个接口（鉴权见下方「权限模型」）
+│   ├── admin/                 管理后台全套：index / activities / analytics / food / guilds / members / matches / messages / party / quotes / reviews / support / tournaments/[id]
+│   ├── guild/ guilds/         帮派主页 / 帮派列表 Tab
+│   ├── quotes/                群友语录独立页
+│   ├── activities/            活动招募
+│   ├── members/ tournaments/ party/ food/   群友 / 赛事 / 开黑 / 美食
+│   ├── map.js                 深圳群友分布图
+│   ├── profile.js             个人信息
+│   ├── my-tournaments.js      我的赛事
+│   ├── changelog.js           更新日志页
+│   └── main.js                阵容分配（管理员专用）
+├── components/                展示组件（含 member/ 比赛履历、QuoteForm、ActivityCard 等）
+├── hooks/                     状态钩子（useSession 统一登录态）
+├── lib/                       数据层与工具模块（关键几个）
 │   ├── db.js                  建表 + 查询 + 幂等迁移（约 1000 行）
 │   ├── auth.js                会话与四档鉴权守卫
 │   ├── password.js            加盐 SHA256
 │   ├── player-identity.js     账号 / 群昵称 / Steam 账号身份解析
 │   ├── regions.js             地区路径解析（唯一解析层）
+│   ├── quotes.mjs / guild.mjs 语录 / 公会数据与建表
+│   ├── moderation.mjs         内容合规初筛（违禁词 + 外链白名单）
+│   ├── ai-moderate.mjs        DeepSeek 语义复审（超时 / 无 key 自动放行，fail-open）
 │   ├── image-cache.js         图片三层缓存（内存/磁盘/回源）
 │   ├── list-cache.js          列表接口的进程内 TTL 缓存
 │   ├── rate-limit.js          登录失败限流
 │   ├── excel.js               Excel 列定义与解析
 │   └── notify.js              SMTP / Webhook 通知
+├── miniprogram/               微信小程序（原生，独立构建，不参与 Web 部署）
 ├── scripts/                   维护脚本（env.js 统一读环境变量）
 ├── styles/                    tokens / globals / layout / shell / main
 ├── docs/                      对外导览（showcase.md）+ 项目链路.md
@@ -71,6 +83,40 @@
 ├── vercel.json                ⚠ 已弃用残留文件，Vercel 不再使用，可删
 └── .env.local.example         环境变量模板
 ```
+
+---
+
+## 微信小程序
+
+`miniprogram/` 是同一套后端之上的微信小程序（原生 WXML/WXSS/JS，**不用** Taro / uni-app），
+让群友在微信里直接用，不用跳浏览器。
+
+**怎么连后端**：小程序没有 cookie jar，所以会话走 `Authorization: Bearer <签名串>`。
+登录 / 注册接口在响应体里多返回一个 `token`（与 `Set-Cookie` 里是**同一个** HMAC 签名串，
+30 天），客户端存进 storage 后每次请求带回来。`getSession()` 先读 Bearer、再退回 cookie；
+**带了 Bearer 但签名无效时直接判未登录、不退回 cookie**（避免"token 错了却一直登录态"带偏排查）。
+网页端行为完全不变。
+
+```bash
+# 用微信开发者工具「导入项目」指向本仓库根目录即可（app.json 里 miniprogramRoot=./miniprogram）
+# 域名白名单需放行 https://dota.playerallocationsystem.online
+```
+
+**页面（20 个）**：首页 / 群友（列表·详情·分布图）/ 赛事 / 开黑 / 活动（列表·发布）/ 美食 /
+语录 / 帮派（列表·我的帮派·邀请）/ 个人信息 / 我的（含意见反馈）/ 登录 / 注册 / 更新日志。
+
+**与网页端的差异（有意为之，不是缺口）**：
+
+| | 网页端 | 小程序 |
+|---|---|---|
+| 管理后台 | `/admin/*` 全套 | 只有最小动作：管理员展开评价列表删除违规评价。表格密集的后台不适合手机 |
+| 活动地区 | 省 / 市 / 区三级 | 同样三级（`components/region-picker`），地区数据走 `wx.request` 拉 `public/data/china-division.json` 并缓存 7 天 |
+| 工单 | `/admin/support` | 只提交 + 查自己的（`client_token` 保证匿名提交也能查回） |
+
+**踩过的坑（改动前先看）**：WXML 里不能用 `?.` / `??` / 箭头函数 / `indexOf()`；
+WXSS 自定义属性不能带 `rpx`；每个页面**和每个组件**都必须四件套齐全；
+WXML 里用了但没在 `usingComponents` 注册的标签只会报一句语焉不详的模板错误。
+`node scripts/check-miniprogram.cjs` 会把上面这些都查一遍。
 
 ---
 
@@ -120,7 +166,8 @@ npm start
 | `denyIfNotAdmin` | 非管理员 | 选手增删改、删除队伍、赛事 CRUD、赛程、选队长、整包导入 |
 | `isAdmin`（页面级） | 非管理员 | `/admin/*`、`/main` 的 `getServerSideProps` |
 
-登录态是 HMAC 签名的 httpOnly cookie，30 天有效。登录失败按 IP + 账号双维度计数，10 分钟内 5 次即锁定。
+登录态是 HMAC 签名的 httpOnly cookie，30 天有效。小程序等无 cookie 容器另走
+`Authorization: Bearer`（同一签名串，见下方「微信小程序」）。登录失败按 IP + 账号双维度计数，10 分钟内 5 次即锁定。
 
 ---
 
@@ -151,10 +198,13 @@ npm start
 - `team_players`（392）— 队员关系，带队内担任位置
 
 **社区内容**
-- `party_posts`（2）/ `party_signups`（0）— 开黑卡片与报名
-- `foods`（106）/ `food_reviews`（36）— 美食与饭后评价
-- `messages`（5）— 留言板
-- `page_views`（7406）— 浏览记录（按 `account_name` 存，改用户名要迁移）
+- `party_posts` / `party_signups`— 开黑卡片与报名
+- `activity_posts` / `activity_signups`— 活动招募卡片与报名（含地区、过期状态）
+- `foods` / `food_reviews`— 美食与饭后评价
+- `quotes` / `quote_reviews`— 群友语录与打分评价（0–5 半星，触发器聚合 `rating_avg` / `rating_count`）
+- `guilds` / `guild_members` / `guild_invites`— 帮派、成员、邀请
+- `messages`— 留言板
+- `page_views`— 浏览记录（按 `account_name` 存，改用户名要迁移）
 
 **运维**
 - `support_reports`（412）— 反馈与自动报错工单（按 `account_name` 存，改用户名要迁移）
@@ -219,6 +269,24 @@ node scripts/backfill-league.js          # 回填联赛数据
 node scripts/dump-data.js                # 导出数据快照
 ```
 
+小程序（`scripts/lib/mp-runtime.cjs` 是个迷你运行时：把 `Page()` / `Component()` 的
+`setData`、组件属性、事件翻译成 Node 里可调用的对象，所以能直接**driving 页面方法**做联调，
+不必开模拟器）：
+
+```bash
+node scripts/check-miniprogram.cjs         # 静态自查：四件套 / tabBar / 组件注册 / 语法 / 浏览器 API，不用网络
+node scripts/check-auth-bearer.cjs         # 会话双通道 19 条断言，不用网络
+node scripts/smoke-miniprogram.cjs         # 只读冒烟，逐页拉接口
+node scripts/check-miniprogram-writes.cjs  # 写操作（发卡片 / 报名 / 评价 / 语录），需要探针账号 + 管理员 token
+node scripts/check-miniprogram-guild.cjs   # 帮派全链路 38 条断言，需要两个夹具账号
+node scripts/check-miniprogram-extras.cjs  # 活动地区 / 意见反馈 / 管理员删评价
+
+# 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
+node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
+# …跑完…
+node deploy/probe-account.cjs down
+```
+
 更多脚本（地图生成、语法补丁、图标预热等）见 `scripts/`，完整清单见 `docs/项目链路.md` 第 8 节。
 
 ---
@@ -237,6 +305,25 @@ node scripts/dump-data.js                # 导出数据快照
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.0 (2026-10-26)
+
+- **微信小程序**：`miniprogram/` 20 个页面（首页 / 群友 / 赛事 / 开黑 / 活动 / 美食 / 语录 / 帮派 / 个人信息 / 我的 / 登录注册 / 更新日志），覆盖网页端除管理后台外的全部功能
+- **会话双通道**：`getSession()` 支持 `Authorization: Bearer`（同一签名串，登录 / 注册接口回传 `token`），网页端 cookie 行为不变；小程序无 cookie 也能登录
+- **小程序补齐**：活动发布补三级地区选择（首个自定义组件 `region-picker`）、意见反馈（带 `client_token`，匿名也能查回自己的）、管理员在美食页展开并删除违规评价
+- **接口配合**：`/api/options` 下发帮派配色与长度限制（小程序不再复制一份常量）；`/api/quotes` 每条带 `canDelete`，判据与 DELETE 分支完全一致
+- **联调脚本**：`scripts/lib/mp-runtime.cjs` 迷你运行时 + 6 个检查脚本（静态自查 / 双通道 / 冒烟 / 写操作 / 帮派全链路 / 补丁三联），夹具统一由 `deploy/probe-account.cjs` 建拆
+- **数据修复**：后台合并选手时把被并入方的显示名 / 群昵称迁成可搜索别名，合并后旧名仍能搜到人
+
+### v2.6.0 (2026-10-24)
+
+- **公会系统**：帮派独立 Tab + 帮派主页（成员 / 邀请 / 口号）、个人信息里的帮派区块、后台管理（`/admin/guilds`）
+- **群友语录**：独立页 + 底部悬浮栏，登录后可提交；语录可打分（0–5 半星）与评价，后台可管理（`/admin/quotes`、`/admin/reviews`）
+- **活动招募**：独立于开黑的「活动」板块，支持地区筛选、过期折叠、「只看招募中」、日历日期筛选，配套后台增删改查（`/admin/activities`）
+- **内容安全**：所有 UGC（开黑 / 活动 / 美食评价 / 美食 / 个人信息 / 注册 / 工单 / 语录）先过 `moderation.mjs` 违禁词 + 外链白名单初筛，再送 DeepSeek 语义复审（`ai-moderate.mjs`，超时 / 无 key 自动放行）
+- **前台体验**：开黑 / 活动过期自动折叠；赛事 / 美食页来源声明；个人信息页接入最近比赛（可折叠）+ AI 分析；英雄格缩小一倍、胜负角标改绿 / 红底黑字
+- **后台补齐**：赛事后台搜索选人 / 新建选手、统一后台外壳 + 补 4 个管理页（比赛 / 消息 / 数据分析 / 公会）
+- **数据修复**：八届赛事选手归属全部修复（含第八届整届重建、队伍 2 夺冠），补 `haruna` / `光神` 等身份
 
 ### v2.5.0 (2026-10-23)
 

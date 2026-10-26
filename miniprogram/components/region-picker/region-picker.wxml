@@ -1,0 +1,40 @@
+<view class="rp">
+  <view wx:if="{{failed}}" class="rp-failed">地区数据没加载出来，可以先只填具体地点</view>
+
+  <view wx:else class="rp-row">
+    <picker
+      class="rp-cell"
+      mode="selector"
+      range="{{provinceList}}"
+      value="{{iProv}}"
+      disabled="{{disabled}}"
+      bindchange="onProv"
+    >
+      <view class="rp-val {{province ? '' : 'is-empty'}}">{{province || '省份'}}</view>
+    </picker>
+
+    <picker
+      class="rp-cell"
+      mode="selector"
+      range="{{cityList}}"
+      value="{{iCity}}"
+      disabled="{{disabled || !cityList.length}}"
+      bindchange="onCity"
+    >
+      <view class="rp-val {{city ? '' : 'is-empty'}}">{{city || '市'}}</view>
+    </picker>
+
+    <picker
+      class="rp-cell"
+      mode="selector"
+      range="{{areaList}}"
+      value="{{iArea}}"
+      disabled="{{disabled || !areaList.length}}"
+      bindchange="onArea"
+    >
+      <view class="rp-val {{district ? '' : 'is-empty'}}">{{district || '区'}}</view>
+    </picker>
+
+    <view wx:if="{{province && !disabled}}" class="rp-clear" catchtap="clear">清除</view>
+  </view>
+</view>

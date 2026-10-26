@@ -1,0 +1,126 @@
+@import "../../styles/form.wxss";
+
+.pad {
+  padding: 24rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 10rpx;
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+.act {
+  margin: 0 0 0 12rpx;
+  padding: 0 26rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 26rpx;
+  color: var(--brand);
+  background: var(--bg-card);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+  flex: 0 0 auto;
+}
+.act::after {
+  border: none;
+}
+
+.results {
+  margin-bottom: 16rpx;
+}
+.row {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 16rpx;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  margin-bottom: 8rpx;
+}
+.row.is-on {
+  border-color: var(--brand);
+  background: rgba(176, 43, 37, 0.05);
+}
+.row.is-off {
+  opacity: 0.45;
+}
+.avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 10rpx;
+  background: var(--bg-subtle);
+  margin-right: 14rpx;
+  flex: 0 0 auto;
+}
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25rpx;
+  color: var(--text-3);
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+.row-name {
+  display: flex;
+  align-items: center;
+}
+.nick {
+  font-size: 27rpx;
+  color: var(--text);
+}
+.state {
+  font-size: 21rpx;
+  color: var(--text-3);
+  flex: 0 0 auto;
+  margin-left: 10rpx;
+}
+
+.picked {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 16rpx;
+  margin-bottom: 18rpx;
+  background: rgba(176, 43, 37, 0.05);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+}
+.picked-label {
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.picked-name {
+  font-size: 26rpx;
+  color: var(--text);
+  margin-left: 4rpx;
+}
+.picked-clear {
+  margin-left: auto;
+  font-size: 23rpx;
+  color: var(--brand);
+}
+
+.btn {
+  margin-top: 8rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 29rpx;
+}
+.btn::after {
+  border: none;
+}
+.btn.is-busy {
+  opacity: 0.6;
+}

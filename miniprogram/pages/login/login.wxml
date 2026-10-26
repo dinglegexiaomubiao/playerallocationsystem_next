@@ -1,0 +1,45 @@
+<view class="page-wrap">
+  <view class="surface card">
+    <view class="title">登录 LaRoja 社区</view>
+    <view class="sub">用网页端同一个账号</view>
+
+    <view class="field">
+      <view class="label">用户名</view>
+      <input
+        class="input"
+        value="{{username}}"
+        placeholder="群里那个账号名"
+        placeholder-class="ph"
+        bindinput="onUsername"
+      />
+    </view>
+
+    <view class="field">
+      <view class="label">密码</view>
+      <input
+        class="input"
+        password
+        value="{{password}}"
+        placeholder="密码"
+        placeholder-class="ph"
+        bindinput="onPassword"
+        bindconfirm="submit"
+      />
+    </view>
+
+    <view wx:if="{{error}}" class="err">
+      <text>{{error}}</text>
+      <text wx:if="{{hint}}" class="err-hint">{{hint}}</text>
+    </view>
+
+    <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+      {{submitting ? '登录中…' : '登录'}}
+    </button>
+  </view>
+
+  <view wx:if="{{showRegisterHint}}" class="tip">
+    注册请到网页端 dota.playerallocationsystem.online 完成，注册好再回来登录。
+  </view>
+
+  <view class="tip">登录只用来发开黑、报名活动、评分这些写操作；只看内容不需要登录。</view>
+</view>

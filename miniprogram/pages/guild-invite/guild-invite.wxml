@@ -1,0 +1,74 @@
+<view class="page-wrap">
+  <view wx:if="{{needLogin}}" class="surface pad">
+    <view class="title">登录后才能邀请群友</view>
+    <view class="muted">只有帮主能邀请。登录后如果发现你不是帮主，服务端会直接拒绝。</view>
+    <button class="btn" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="surface pad">
+      <view class="field">
+        <view class="label">找群友<text class="req">*</text><text class="hint">昵称或 Steam ID</text></view>
+        <view class="search-row">
+          <input
+            class="input grow"
+            value="{{keyword}}"
+            placeholder="输入昵称或 Steam ID"
+            placeholder-class="ph"
+            confirm-type="search"
+            bindinput="onKeyword"
+            bindconfirm="search"
+          />
+          <button class="act" bindtap="search">搜索</button>
+        </view>
+      </view>
+
+      <view wx:if="{{searching}}" class="center">搜索中…</view>
+
+      <view wx:elif="{{results.length}}" class="results">
+        <view
+          wx:for="{{results}}"
+          wx:key="id"
+          class="row {{picked.id === item.id ? 'is-on' : ''}} {{item.disabled ? 'is-off' : ''}}"
+          data-id="{{item.id}}"
+          data-nick="{{item.nickname}}"
+          data-avatar="{{item.avatar}}"
+          data-disabled="{{item.disabled}}"
+          data-state="{{item.stateText}}"
+          bindtap="pick"
+        >
+          <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="avatar placeholder">{{item.initial}}</view>
+          <view class="row-main">
+            <view class="row-name"><text class="nick">{{item.nickname}}</text></view>
+            <view wx:if="{{item.meta}}" class="muted">{{item.meta}}</view>
+          </view>
+          <text wx:if="{{item.stateText}}" class="state">{{item.stateText}}</text>
+        </view>
+      </view>
+
+      <view wx:if="{{picked}}" class="picked">
+        <text class="picked-label">要邀请：</text>
+        <text class="picked-name">{{picked.nickname}}</text>
+        <text class="picked-clear" bindtap="clearPick">换一个</text>
+      </view>
+
+      <view class="field">
+        <view class="label">邀请语<text class="hint">{{limit}} 字以内</text></view>
+        <input
+          class="input"
+          value="{{message}}"
+          maxlength="{{limit}}"
+          placeholder="选填，会直接显示在对方屏幕上"
+          placeholder-class="ph"
+          bindinput="onMessage"
+        />
+      </view>
+
+      <view wx:if="{{error}}" class="err">{{error}}</view>
+
+      <button class="btn {{busy ? 'is-busy' : ''}}" bindtap="submit">发送邀请</button>
+      <view class="tip">帮派不能自己申请加入，只能由帮主邀请。对方同意后才会成为成员。</view>
+    </view>
+  </block>
+</view>

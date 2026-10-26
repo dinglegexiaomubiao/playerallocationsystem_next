@@ -1,0 +1,76 @@
+<view class="page-wrap">
+  <view class="filters">
+    <input
+      class="search"
+      type="text"
+      value="{{keyword}}"
+      placeholder="搜店名 / 菜系 / 地址"
+      placeholder-class="search-ph"
+      confirm-type="search"
+      bindinput="onKeyword"
+    />
+    <view class="chips">
+      <text
+        wx:for="{{cuisines}}"
+        wx:key="*this"
+        class="chip {{cuisine === item ? 'is-on' : ''}}"
+        data-v="{{item}}"
+        bindtap="onCuisine"
+      >{{item}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="center" bindtap="onClear">没有匹配的店，点这里重置筛选</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="surface food">
+    <view class="line1">
+      <text class="name">{{item.name}}</text>
+      <text wx:if="{{item.priceText}}" class="price">{{item.priceText}}</text>
+    </view>
+
+    <view class="line2">
+      <text class="stars">{{item.ratingStars}}</text>
+      <text wx:if="{{item.cuisine}}" class="tag">{{item.cuisine}}</text>
+      <text wx:if="{{item.area}}" class="tag">{{item.area}}</text>
+    </view>
+
+    <view wx:if="{{item.feature}}" class="feature">{{item.feature}}</view>
+
+    <view class="line3">
+      <view class="line3-left">
+        <text class="muted">{{item.reviewText}}</text>
+        <text wx:if="{{item.recommender}}" class="muted"> · 推荐 {{item.recommender}}</text>
+      </view>
+      <text class="rate-btn" data-id="{{item.id}}" data-name="{{item.name}}" catchtap="goReview">写评价</text>
+    </view>
+
+    <view
+      wx:if="{{item.toggleText}}"
+      class="review-toggle"
+      data-id="{{item.id}}"
+      catchtap="toggleReviews"
+    >{{item.toggleText}}</view>
+
+    <view wx:if="{{item.expanded}}" class="reviews">
+      <view wx:for="{{item.reviews}}" wx:for-item="rv" wx:key="id" class="review">
+        <view class="review-head">
+          <text class="review-who">{{rv.reviewer}}</text>
+          <text class="review-stars">{{rv.stars}}</text>
+          <text class="review-time">{{rv.timeText}}</text>
+          <text
+            wx:if="{{isAdmin}}"
+            class="review-del"
+            data-id="{{rv.id}}"
+            data-food="{{item.id}}"
+            catchtap="removeReview"
+          >删除</text>
+        </view>
+        <view class="review-text">{{rv.content}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{list.length}}" class="footer">共 {{list.length}} 家 · 数据来自群友推荐</view>
+</view>

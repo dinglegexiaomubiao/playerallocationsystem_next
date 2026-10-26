@@ -1,0 +1,41 @@
+<view class="page-wrap">
+  <view class="bar">
+    <view class="bar-left">
+      <text>共 {{total}} 条</text>
+      <text wx:if="{{people}}" class="bar-sep">·</text>
+      <text wx:if="{{people}}">出自 {{people}} 位群友</text>
+    </view>
+    <text class="new-btn" bindtap="goNew">＋ 收录</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!groups.length}}" class="center">还没有语录，去网页收录第一条吧</view>
+
+  <block wx:for="{{groups}}" wx:key="key" wx:for-item="group">
+    <view class="month">{{group.label}}</view>
+
+    <view wx:for="{{group.items}}" wx:key="id" class="surface quote">
+      <view class="quote-text">{{item.content}}</view>
+
+      <view class="quote-meta">
+        <view class="who" data-id="{{item.sourcePlayerId}}" bindtap="onTapSource">
+          <image wx:if="{{item.sourceAvatar}}" class="who-avatar" src="{{item.sourceAvatar}}" mode="aspectFill"></image>
+          <text class="who-name">{{item.sourceName}}</text>
+          <text wx:if="{{item.saidText}}" class="who-date">{{item.saidText}}</text>
+        </view>
+        <text wx:if="{{item.ratingText}}" class="rating">{{item.ratingText}}</text>
+      </view>
+
+      <view wx:if="{{item.submittedText}}" class="by">{{item.submittedText}}</view>
+
+      <view wx:if="{{item.canDelete}}" class="quote-acts">
+        <text class="del" data-id="{{item.id}}" catchtap="removeQuote">删除</text>
+      </view>
+    </view>
+  </block>
+
+  <view wx:if="{{loadingMore}}" class="center">加载中…</view>
+  <view wx:elif="{{hasMore}}" class="center">上滑加载更多</view>
+  <view wx:elif="{{groups.length}}" class="center">没有更多了</view>
+</view>

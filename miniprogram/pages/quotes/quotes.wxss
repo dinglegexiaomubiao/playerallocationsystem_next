@@ -1,0 +1,98 @@
+.bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.bar-left {
+  flex: 1;
+  min-width: 0;
+}
+.new-btn {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: #ffffff;
+  background: var(--brand);
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+}
+.bar-sep {
+  margin: 0 8rpx;
+}
+
+.month {
+  margin: 8rpx 0 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+
+.quote {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.quote-text {
+  font-size: 30rpx;
+  line-height: 1.65;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.quote-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 18rpx;
+}
+.who {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.who-avatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: var(--bg-subtle);
+  margin-right: 10rpx;
+  flex: 0 0 auto;
+}
+.who-name {
+  font-size: 24rpx;
+  color: var(--brand-on-soft);
+  max-width: 260rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.who-date {
+  font-size: 22rpx;
+  color: var(--text-3);
+  margin-left: 12rpx;
+}
+.rating {
+  font-size: 22rpx;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+.by {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* 只有本人（或管理员）看得到，所以不做常驻占位 */
+.quote-acts {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8rpx;
+}
+.del {
+  padding: 4rpx 16rpx;
+  font-size: 22rpx;
+  color: var(--brand);
+  border: 1px solid var(--brand-border);
+  border-radius: 6rpx;
+}

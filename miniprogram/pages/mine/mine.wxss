@@ -1,0 +1,145 @@
+.user {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 24rpx;
+}
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 14rpx;
+  background: var(--brand);
+  color: #ffffff;
+  font-size: 38rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 22rpx;
+  flex: 0 0 auto;
+}
+.user-body {
+  flex: 1;
+  min-width: 0;
+}
+.line1 {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 12rpx;
+}
+.tag {
+  font-size: 20rpx;
+  color: var(--brand-on-soft);
+  background: rgba(176, 43, 37, 0.08);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+.guest {
+  padding: 32rpx 24rpx;
+}
+.guest-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+.guest-desc {
+  margin: 8rpx 0 24rpx;
+  line-height: 1.6;
+  display: block;
+}
+
+.note {
+  margin: 16rpx 4rpx 20rpx;
+  display: block;
+  line-height: 1.6;
+}
+
+/* 我的帮派入口：一整行可点，右边留箭头暗示会跳页 */
+.link {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 22rpx;
+  margin-bottom: 20rpx;
+}
+.link-text {
+  font-size: 28rpx;
+  color: var(--text);
+  flex: 0 0 auto;
+}
+.link-sub {
+  margin-left: 14rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+  flex: 1;
+  min-width: 0;
+}
+.link-arrow {
+  font-size: 32rpx;
+  color: var(--text-3);
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.btn {
+  background: var(--brand);
+  color: #ffffff;
+  border-radius: var(--radius);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+.btn::after {
+  border: none;
+}
+.btn.ghost {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.small {
+  margin-top: 18rpx;
+  font-size: 26rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}
+
+.section-title {
+  margin: 40rpx 0 16rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+.dev {
+  padding: 24rpx;
+}
+.label {
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+  color: var(--text-2);
+}
+.input {
+  height: 76rpx;
+  padding: 0 20rpx;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 26rpx;
+  color: var(--text);
+}
+.dev-tip {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.ver {
+  margin-top: 48rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--text-3);
+}

@@ -1,0 +1,256 @@
+@import "../../styles/form.wxss";
+
+.pad {
+  padding: 24rpx;
+}
+
+.title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 10rpx;
+}
+
+.block {
+  margin-top: 28rpx;
+}
+.block-title {
+  margin: 0 4rpx 12rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+/* ---------- 我的帮派卡 ---------- */
+.card {
+  display: flex;
+  overflow: hidden;
+  padding: 0;
+  margin-bottom: 8rpx;
+}
+.stripe {
+  width: 10rpx;
+  flex: 0 0 auto;
+}
+.body {
+  flex: 1;
+  min-width: 0;
+  padding: 22rpx;
+}
+.line1 {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text);
+  margin-right: 12rpx;
+}
+.tag {
+  font-size: 20rpx;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 12rpx;
+  flex: 0 0 auto;
+}
+.count {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+.slogan {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 动作按钮 ---------- */
+/* 小程序 button 默认 100% 宽 + 有伪边框，这里统一压平 */
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 18rpx;
+}
+.act {
+  margin: 0 12rpx 0 0;
+  padding: 0 22rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 24rpx;
+  color: var(--brand);
+  background: var(--bg-card);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+}
+.act::after {
+  border: none;
+}
+.act.is-quiet {
+  color: var(--text-2);
+  border-color: var(--border);
+}
+.act.is-danger {
+  color: #b02b25;
+  border-color: rgba(176, 43, 37, 0.35);
+}
+.act.is-busy {
+  opacity: 0.6;
+}
+
+.btn {
+  margin-top: 20rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  font-size: 28rpx;
+}
+.btn::after {
+  border: none;
+}
+
+.mini-btn {
+  margin: 0 0 0 10rpx;
+  padding: 0 16rpx;
+  height: 52rpx;
+  line-height: 52rpx;
+  font-size: 22rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6rpx;
+  flex: 0 0 auto;
+}
+.mini-btn::after {
+  border: none;
+}
+.mini-btn.is-danger {
+  color: #b02b25;
+  border-color: rgba(176, 43, 37, 0.3);
+}
+
+/* ---------- 成员行 ---------- */
+.row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child {
+  border-bottom: none;
+}
+.avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 10rpx;
+  background: var(--bg-subtle);
+  margin-right: 16rpx;
+  flex: 0 0 auto;
+}
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  color: var(--text-3);
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+}
+.row-name {
+  display: flex;
+  align-items: center;
+}
+.nick {
+  font-size: 27rpx;
+  color: var(--text);
+  margin-right: 10rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mini-tag {
+  font-size: 19rpx;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 1rpx 8rpx;
+  border-radius: 5rpx;
+  margin-right: 8rpx;
+  flex: 0 0 auto;
+}
+.mini-tag.is-me {
+  color: var(--text-2);
+  background: var(--bg-subtle);
+}
+
+/* ---------- 收到的邀请 ---------- */
+.invite {
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+.invite-head {
+  display: flex;
+  align-items: center;
+}
+.dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  margin-right: 12rpx;
+  flex: 0 0 auto;
+}
+.invite-msg {
+  margin-top: 8rpx;
+  font-size: 25rpx;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+/* ---------- 配色选择 ---------- */
+.colors {
+  display: flex;
+  flex-wrap: wrap;
+}
+.color {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 16rpx;
+  margin: 0 12rpx 12rpx 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999rpx;
+}
+.color.is-on {
+  border-color: var(--brand);
+  background: rgba(176, 43, 37, 0.06);
+}
+.color.is-off {
+  opacity: 0.4;
+}
+.color-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  flex: 0 0 auto;
+}
+.color-name {
+  font-size: 23rpx;
+  color: var(--text-2);
+}
+.color.is-on .color-name {
+  color: var(--brand-on-soft);
+}
+
+.tip {
+  margin-top: 14rpx;
+  padding: 0 4rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--text-3);
+}

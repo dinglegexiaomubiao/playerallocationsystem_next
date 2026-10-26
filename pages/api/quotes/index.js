@@ -10,7 +10,7 @@
  * 语录本质是引用，允许随便写别人的名字等于提供了一个造谣工具，
  * 而这段文字本身完全合规，AI 审核拦不住。
  */
-import { getSession, denyIfNotLoggedIn } from '../../../lib/auth';
+import { getSession, isAdmin, denyIfNotLoggedIn } from '../../../lib/auth';
 import { checkInput, moderationMessage, LIMITS } from '../../../lib/moderation.mjs';
 import { aiModerate, aiModerationMessage } from '../../../lib/ai-moderate.mjs';
 import { playerIdOfAccount } from '../../../lib/guild.mjs';
@@ -47,9 +47,28 @@ export default async function handler(req, res) {
         offset,
         sourcePlayerId: source ? String(source) : null,
       });
+      /**
+       * 每条带上「我能不能删」。
+       *
+       * 为什么不在客户端算：网页端是拿服务端直出的 myPlayerId 在浏览器里比，
+       * 小程序没有这条路（登录接口不返回 playerId），照抄就得为了一个布尔值
+       * 再发一次请求。判据和 DELETE 分支完全同一套（本人收录 或 管理员），
+       * 这里只决定按钮显不显示，真正拦截仍在 DELETE 里 —— 别把这里当权限校验。
+       */
+      const session = getSession(req);
+      const myPlayerId = session && session.name ? await playerIdOfAccount(session.name) : null;
+      const admin = isAdmin(req);
+      const quotes = (data.quotes || []).map((q) => ({
+        ...q,
+        canDelete:
+          admin ||
+          (!!myPlayerId &&
+            !!q.submittedBy &&
+            String(q.submittedBy.playerId) === String(myPlayerId)),
+      }));
       // 语录会随时增加，不能让浏览器或 CDN 久缓存
       res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).json({ success: true, ...data });
+      return res.status(200).json({ success: true, ...data, quotes });
     }
 
     if (req.method === 'POST') {

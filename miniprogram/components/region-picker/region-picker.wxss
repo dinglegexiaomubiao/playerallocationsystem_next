@@ -1,0 +1,47 @@
+/* 三个下拉并排，和活动表单里其它 .picker 长一样的壳 */
+.rp {
+  width: 100%;
+}
+.rp-row {
+  display: flex;
+  align-items: center;
+}
+.rp-cell {
+  flex: 1;
+  min-width: 0;
+  margin-right: 10rpx;
+}
+.rp-cell:last-of-type {
+  margin-right: 0;
+}
+.rp-val {
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 14rpx;
+  background: var(--bg-page, #f5f6f8);
+  border: 1px solid var(--border, #dee2e7);
+  border-radius: 8rpx;
+  font-size: 26rpx;
+  color: var(--text, #15181c);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.rp-val.is-empty {
+  color: var(--text-3, #626973);
+}
+.rp-clear {
+  flex: 0 0 auto;
+  margin-left: 8rpx;
+  padding: 0 12rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 24rpx;
+  color: var(--text-3, #626973);
+}
+.rp-failed {
+  font-size: 23rpx;
+  line-height: 1.6;
+  color: var(--text-3, #626973);
+}

@@ -118,7 +118,9 @@ export default async function handler(req, res) {
     );
     // 下发会话 cookie，供后续接口识别身份（含管理员判定）
     clearFail();
-    setSessionCookie(res, trimmedUsername);
+    const token = setSessionCookie(res, trimmedUsername);
+    // 响应体里有 token，不能被任何中间层缓存住
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({
       name: trimmedUsername,
       count: updated.rows[0].count,
@@ -126,6 +128,9 @@ export default async function handler(req, res) {
       isAdmin: isAdminName(trimmedUsername),
       // true 表示这个密码是管理员重置的临时密码，前端要强制他去改
       mustChangePassword: !!user.must_change_password,
+      // 小程序拿它当 Authorization: Bearer；网页继续只用上面的 cookie
+      token,
+      expiresInSec: 60 * 60 * 24 * 30,
     });
   } catch (error) {
     console.error('登录错误:', error);

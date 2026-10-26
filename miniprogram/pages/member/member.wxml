@@ -1,0 +1,89 @@
+<view class="page-wrap">
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+
+  <block wx:else>
+    <view class="surface hero">
+      <image wx:if="{{p.avatar}}" class="avatar" src="{{p.avatar}}" mode="aspectFill"></image>
+      <view wx:else class="avatar placeholder">{{p.initial}}</view>
+
+      <view class="hero-body">
+        <view class="name">{{p.nickname}}</view>
+        <view wx:if="{{p.groupNickname}}" class="muted">群昵称 {{p.groupNickname}}</view>
+        <view wx:if="{{p.regionText}}" class="muted">{{p.regionText}}</view>
+        <view wx:if="{{p.guildName}}" class="guild">
+          <text class="guild-dot"></text>
+          <text>{{p.guildName}}</text>
+          <text wx:if="{{p.guildSlogan}}" class="guild-slogan">「{{p.guildSlogan}}」</text>
+        </view>
+      </view>
+
+      <view class="hero-score">
+        <text class="score-num">{{p.score}}</text>
+        <text class="score-label">分数</text>
+      </view>
+    </view>
+
+    <view class="surface stats">
+      <view class="cell">
+        <text class="cell-num">{{p.winRate}}%</text>
+        <text class="cell-label">胜率</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{p.championships}}</text>
+        <text class="cell-label">冠军</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{p.runnerUp}}</text>
+        <text class="cell-label">亚军</text>
+      </view>
+      <view class="cell">
+        <text class="cell-num">{{p.recordCount}}</text>
+        <text class="cell-label">参赛届</text>
+      </view>
+    </view>
+
+    <view wx:if="{{p.positions.length}}" class="block">
+      <view class="sec-title">位置</view>
+      <view class="chips">
+        <text wx:for="{{p.positions}}" wx:key="*this" class="chip">{{item}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{p.heroesText}}" class="block">
+      <view class="sec-title">擅长英雄</view>
+      <view class="text">{{p.heroesText}}</view>
+    </view>
+
+    <view wx:if="{{p.selfIntro}}" class="block">
+      <view class="sec-title">自述</view>
+      <view class="surface quote">{{p.selfIntro}}</view>
+    </view>
+
+    <view wx:if="{{p.synergyText}}" class="block">
+      <view class="sec-title">老搭档</view>
+      <view class="text">{{p.synergyText}}</view>
+    </view>
+
+    <view wx:if="{{p.enemiesText}}" class="block">
+      <view class="sec-title">苦主</view>
+      <view class="text">{{p.enemiesText}}</view>
+    </view>
+
+    <view wx:if="{{p.records.length}}" class="block">
+      <view class="sec-title">参赛记录</view>
+      <view class="surface board">
+        <view wx:for="{{p.records}}" wx:key="key" class="rec">
+          <view class="rec-main">
+            <text class="rec-tour">{{item.tournament}}</text>
+            <text wx:if="{{item.rankText}}" class="rec-rank {{item.rank === 1 ? 'is-gold' : ''}}">{{item.rankText}}</text>
+          </view>
+          <view class="rec-sub">
+            <text wx:if="{{item.team}}">{{item.team}}</text>
+            <text wx:if="{{item.dateText}}" class="rec-date">{{item.dateText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,25 @@
+<view class="page-wrap">
+  <view class="bar">共 {{total}} 位群友</view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="surface row" data-id="{{item.id}}" bindtap="onTap">
+    <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+    <view wx:else class="avatar placeholder">{{item.initial}}</view>
+
+    <view class="body">
+      <view class="line1">
+        <text class="name">{{item.nickname}}</text>
+        <text wx:if="{{item.guildName}}" class="tag">{{item.guildName}}</text>
+        <text class="score">{{item.score}}</text>
+      </view>
+      <view wx:if="{{item.meta}}" class="muted">{{item.meta}}</view>
+      <view wx:if="{{item.positions.length}}" class="tags">
+        <text wx:for="{{item.positions}}" wx:for-item="pos" wx:key="*this" class="chip">{{pos}}</text>
+      </view>
+      <view wx:if="{{item.heroesText}}" class="muted">擅长：{{item.heroesText}}<text wx:if="{{item.heroesMore}}"> +{{item.heroesMore}}</text></view>
+      <view wx:if="{{item.championships}}" class="muted">冠军 {{item.championships}}</view>
+    </view>
+  </view>
+</view>

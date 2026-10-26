@@ -148,6 +148,7 @@ echo ""
 echo "[2/5] 打包源码"
 tar -czf "$TAR" \
   --exclude=node_modules --exclude=.next --exclude=.cache \
+  --exclude=miniprogram \
   --exclude=.next-build --exclude=.next-prev \
   --exclude=.git --exclude=.workbuddy --exclude=.env.local \
   --exclude=logs --exclude='*.log' \

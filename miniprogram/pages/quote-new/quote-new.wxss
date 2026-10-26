@@ -1,0 +1,105 @@
+@import "../../styles/form.wxss";
+
+/* 出处二选一 */
+.seg {
+  display: flex;
+  margin-bottom: 14rpx;
+}
+.seg-item {
+  font-size: 24rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8rpx 22rpx;
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+}
+.seg-item.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+}
+.search-btn {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  font-size: 25rpx;
+  color: var(--brand-on-soft);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+  padding: 0 22rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+}
+
+.results {
+  margin-top: 12rpx;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.result {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 18rpx;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+.result:last-child {
+  border-bottom: none;
+}
+.r-avatar {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 8rpx;
+  background: var(--bg-subtle);
+  margin-right: 14rpx;
+  flex: 0 0 auto;
+}
+.r-ph {
+  font-size: 20rpx;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.r-body {
+  flex: 1;
+  min-width: 0;
+}
+.r-name {
+  font-size: 27rpx;
+  color: var(--text);
+}
+.r-meta {
+  font-size: 21rpx;
+  color: var(--text-3);
+}
+
+/* 已选中的人 */
+.picked {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  background: rgba(176, 43, 37, 0.05);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+}
+.picked-name {
+  flex: 1;
+  font-size: 27rpx;
+  color: var(--brand-on-soft);
+}
+.picked-x {
+  font-size: 23rpx;
+  color: var(--text-3);
+}
