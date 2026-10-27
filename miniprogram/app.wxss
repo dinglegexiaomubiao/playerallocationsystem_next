@@ -1,0 +1,48 @@
+/* 设计令牌：对齐网页 styles/tokens.css（浅色主题，网页默认观感）
+   小程序是独立前端，无法复用网页 CSS，这里手动同步关键令牌：
+   --bg-page #f5f6f8 / --bg-card #ffffff / --brand #b02b25 / --text #15181c / --border #dee2e7
+   注意：令牌值只用 px / 颜色，不放 rpx（自定义属性里的 rpx 不被编译期转换）。 */
+page {
+  --bg-page: #f5f6f8;
+  --bg-card: #ffffff;
+  --bg-subtle: #f1f3f5;
+  --brand: #b02b25;
+  --brand-on-soft: #8c211c;
+  --brand-border: rgba(176, 43, 37, 0.20);
+  --text: #15181c;
+  --text-2: #4b535b;
+  --text-3: #626973;
+  --border: #dee2e7;
+  /* 星级用网页的 --gold（浅色主题取 #83590f），别自己编金色 */
+  --gold: #83590f;
+  --gold-soft: rgba(131, 89, 15, 0.10);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --shadow: 0 2px 7px rgba(21, 24, 28, 0.06);
+
+  background: var(--bg-page);
+  color: var(--text-2);
+  font-family: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+/* 通用工具类 */
+.page-wrap {
+  padding: 24rpx 28rpx 48rpx;
+}
+.surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.muted {
+  color: var(--text-3);
+  font-size: 24rpx;
+}
+.center {
+  padding: 60rpx 0;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 26rpx;
+}

@@ -1,0 +1,69 @@
+<view class="page-wrap">
+  <view class="head">
+    <view class="tabs">
+      <text
+        wx:for="{{tabs}}"
+        wx:key="key"
+        class="tab {{tab === item.key ? 'is-on' : ''}}"
+        data-v="{{item.key}}"
+        bindtap="onTab"
+      >{{item.label}}</text>
+    </view>
+    <text class="new-btn" bindtap="goNew">＋ 发活动</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="center">这个分类下还没有活动</view>
+
+  <view wx:for="{{list}}" wx:key="id" class="surface post" data-index="{{index}}" bindtap="onTap">
+    <view class="line1">
+      <text class="title">{{item.title}}</text>
+      <text class="status {{item.isOpen ? 'is-open' : 'is-closed'}}">{{item.statusLabel}}</text>
+    </view>
+
+    <view class="tags">
+      <text wx:if="{{item.typeLabel}}" class="tag is-type">{{item.typeLabel}}</text>
+      <text wx:if="{{item.regionText}}" class="tag">{{item.regionText}}</text>
+      <text wx:if="{{item.costText}}" class="tag">{{item.costText}}</text>
+      <text wx:if="{{item.iJoined}}" class="tag is-mine">已报名</text>
+    </view>
+
+    <view class="meta">集合：{{item.meetText}}<text wx:if="{{item.locationText}}"> · {{item.locationText}}</text></view>
+    <view class="meta">{{item.peopleText}}</view>
+
+    <view wx:if="{{item.note}}" class="note {{item.expanded ? 'is-full' : ''}}">{{item.note}}</view>
+
+    <view wx:if="{{item.expanded && item.signups.length}}" class="signups">
+      <view class="su-head">已报名 {{item.signups.length}}<text wx:if="{{item.needText}}" class="su-need">{{item.needText}}</text></view>
+      <view wx:for="{{item.signups}}" wx:for-item="su" wx:key="idx" class="su-row">
+        <text class="su-av">{{su.initial}}</text>
+        <view class="su-main">
+          <view class="su-line">
+            <text class="su-name">{{su.nickname}}</text>
+            <text class="su-rank">{{su.guestsText}}</text>
+          </view>
+          <text wx:if="{{su.note}}" class="su-note">{{su.note}}</text>
+          <text wx:if="{{su.dayText}}" class="su-meta">{{su.dayText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="foot">
+      <text class="muted">{{item.creatorText}} 发起</text>
+      <text class="muted">已报名 {{item.signupCount}} 人</text>
+    </view>
+
+    <view wx:if="{{item.actionText}}" class="action-row">
+      <button
+        wx:if="{{item.actionKey}}"
+        class="act {{item.actionKey === 'cancel' ? 'is-ghost' : ''}}"
+        data-id="{{item.id}}"
+        data-act="{{item.actionKey}}"
+        loading="{{busyId === item.id}}"
+        catchtap="onAction"
+      >{{item.actionText}}</button>
+      <text wx:else class="own-tag">{{item.actionText}}</text>
+    </view>
+  </view>
+</view>

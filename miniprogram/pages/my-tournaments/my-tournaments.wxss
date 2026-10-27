@@ -1,0 +1,61 @@
+.row {
+  padding: 20rpx 24rpx;
+  margin-bottom: 14rpx;
+}
+.row-line {
+  display: flex;
+  align-items: baseline;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 29rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+.status {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
+}
+.row-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+}
+.cap {
+  margin-right: 12rpx;
+  padding: 0 10rpx;
+  font-size: 20rpx;
+  color: var(--brand);
+  border: 1px solid var(--brand-border);
+  border-radius: 4rpx;
+}
+.team {
+  margin-right: 12rpx;
+  color: var(--text-2);
+}
+.date {
+  margin-left: auto;
+}
+.small {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+}
+.btn {
+  margin-top: 20rpx;
+  padding: 0 40rpx;
+  display: inline-block;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 27rpx;
+  color: #ffffff;
+  background: var(--brand);
+  border-radius: var(--radius);
+}
+.btn::after {
+  border: 0;
+}

@@ -469,6 +469,35 @@ export default async function handler(req, res) {
       );
       await syncPrimary(client, keepId);
 
+      // ---------- 8c. 把被删方的显示名 / 群昵称补成可搜索别名 ----------
+      // 合并后 B 的 players.nickname（主显示名）会随 B 一起删除，但站内搜索
+      // 同时查 player_group_nicknames 子表（searchPlayers / buildHaystack），
+      // 所以把 B 的 nickname 与 group_nickname 作为「非主号别名」迁到 A，
+      // 否则旧名不可搜、用户会以为人丢了。已在 A 的主名 / 群昵称 / 已有别名里
+      // 出现过的不再重复加（避免 UNIQUE 冲突与冗余）。
+      {
+        const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/\s+/g, '');
+        const dropNames = [drop.nickname, drop.group_nickname]
+          .filter((v) => !isBlank(v))
+          .map((v) => String(v).trim());
+        for (const nm of dropNames) {
+          if (norm(nm) === norm(keep.nickname)) continue;
+          if (keep.group_nickname && norm(nm) === norm(keep.group_nickname)) continue;
+          const dup = await client.query(
+            `SELECT 1 FROM public.player_group_nicknames
+              WHERE player_id = $1
+                AND lower(regexp_replace(btrim(nickname), '\\s+', '', 'g')) = $2`,
+            [keepId, norm(nm)]
+          );
+          if (dup.rowCount > 0) continue;
+          await client.query(
+            `INSERT INTO public.player_group_nicknames (player_id, nickname, is_primary, source)
+             VALUES ($1, $2, false, 'merge-alias')`,
+            [keepId, nm.slice(0, 50)]
+          );
+        }
+      }
+
       // ---------- 9. 删掉并入方 ----------
       await client.query('DELETE FROM public.players WHERE id = $1', [dropId]);
 

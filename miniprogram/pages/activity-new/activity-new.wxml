@@ -1,0 +1,80 @@
+<view class="page-wrap">
+  <view wx:if="{{loadingOptions}}" class="state">加载选项…</view>
+  <view wx:elif="{{optionsError}}" class="state" bindtap="loadOpts">{{optionsError}}，点我重试</view>
+
+  <block wx:else>
+    <view class="surface form">
+      <view class="field">
+        <view class="label">类型<text class="req">*</text></view>
+        <picker class="picker" range="{{typeLabels}}" value="{{typeIndex}}" bindchange="onType">
+          {{typeLabels[typeIndex]}}
+        </picker>
+      </view>
+
+      <view class="row2">
+        <view class="field">
+          <view class="label">需要几人<text class="req">*</text></view>
+          <picker class="picker" range="{{needLabels}}" value="{{needIndex}}" bindchange="onNeed">
+            {{needLabels[needIndex]}}
+          </picker>
+        </view>
+        <view class="field">
+          <view class="label">预计多久<text class="req">*</text></view>
+          <picker class="picker" range="{{durLabels}}" value="{{durIndex}}" bindchange="onDur">
+            {{durLabels[durIndex]}}
+          </picker>
+        </view>
+      </view>
+
+      <view class="row2">
+        <view class="field">
+          <view class="label">集合日期<text class="req">*</text></view>
+          <picker class="picker" mode="date" value="{{date}}" bindchange="onDate">{{date}}</picker>
+        </view>
+        <view class="field">
+          <view class="label">集合时间<text class="req">*</text></view>
+          <picker class="picker" mode="time" value="{{time}}" bindchange="onTime">{{time}}</picker>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label">地区<text class="hint">选填，选到区更准</text></view>
+        <region-picker value="{{region}}" bind:change="onRegion" />
+      </view>
+
+      <view class="field">
+        <view class="label">集合地点<text class="req">*</text></view>
+        <input class="input" value="{{location}}" data-k="location"
+          placeholder="例如 深圳湾公园 A 口" placeholder-class="ph" bindinput="onInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">费用</view>
+        <picker class="picker" range="{{costLabels}}" value="{{costIndex}}" bindchange="onCost">
+          {{costLabels[costIndex]}}
+        </picker>
+      </view>
+
+      <view class="field">
+        <view class="label">活动名称<text class="hint">留空按类型自动生成</text></view>
+        <input class="input" value="{{title}}" data-k="title"
+          placeholder="例如 周六梧桐山" placeholder-class="ph" bindinput="onInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">备注</view>
+        <textarea class="textarea" value="{{note}}" data-k="note"
+          placeholder="装备、路线、集合联络方式…" placeholder-class="ph"
+          maxlength="500" bindinput="onInput" />
+      </view>
+
+      <view wx:if="{{error}}" class="err">{{error}}</view>
+
+      <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+        {{submitting ? '发布中…' : '发布活动'}}
+      </button>
+    </view>
+
+    <view class="tip">地区可以只选到省市。取不到区划数据时也能发（地点是必填的）。</view>
+  </block>
+</view>

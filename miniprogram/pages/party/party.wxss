@@ -1,0 +1,214 @@
+.tabs {
+  display: flex;
+  margin-bottom: 18rpx;
+}
+.tab {
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+}
+.tab.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.post {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.line1 {
+  display: flex;
+  align-items: center;
+}
+.title {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.status {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+}
+.status.is-open {
+  color: var(--brand-on-soft);
+  background: rgba(176, 43, 37, 0.08);
+}
+.status.is-closed {
+  color: var(--text-3);
+  background: var(--bg-subtle);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+}
+.tag {
+  font-size: 20rpx;
+  color: var(--text-2);
+  background: var(--bg-subtle);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  margin: 4rpx 8rpx 0 0;
+}
+.tag.is-type {
+  color: var(--brand-on-soft);
+  background: rgba(176, 43, 37, 0.08);
+}
+.tag.is-mine {
+  color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.meta {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.note {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+/* 展开名单时备注不再截断 */
+.note.is-full {
+  -webkit-line-clamp: unset;
+  display: block;
+  overflow: visible;
+}
+
+/* 报名者名单（点卡片展开，对齐网页端 PartyCard 的平铺样式） */
+.signups {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1px solid var(--border);
+}
+.su-head {
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.su-need {
+  color: var(--gold);
+}
+.su-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 10rpx;
+}
+.su-av {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: var(--brand-border);
+  color: var(--brand-on-soft);
+  font-size: 22rpx;
+  line-height: 48rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+.su-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 14rpx;
+}
+.su-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.su-name {
+  font-size: 26rpx;
+  color: var(--text);
+  font-weight: 600;
+}
+.su-rank {
+  margin-left: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.su-meta {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-3);
+  margin-top: 2rpx;
+}
+.su-note {
+  display: block;
+  font-size: 24rpx;
+  color: var(--text-2);
+  margin-top: 4rpx;
+  line-height: 1.5;
+}
+.foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding-top: 12rpx;
+  border-top: 1px solid var(--border);
+}
+
+/* 顶部：筛选 + 发开黑 */
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18rpx;
+}
+.head .tabs {
+  flex: 1;
+  margin-bottom: 0;
+}
+.new-btn {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: #ffffff;
+  background: var(--brand);
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+}
+
+/* 报名 / 取消报名 */
+.action-row {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+.act {
+  margin: 0;
+  padding: 0 28rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 24rpx;
+  background: var(--brand);
+  color: #ffffff;
+  border-radius: var(--radius);
+}
+.act::after {
+  border: none;
+}
+.act.is-ghost {
+  background: var(--bg-card);
+  color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.own-tag {
+  font-size: 22rpx;
+  color: var(--text-3);
+}

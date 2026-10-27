@@ -1,0 +1,35 @@
+<view class="page-wrap">
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{needLogin}}" class="center">
+    <view>登录后才能看自己的赛事</view>
+    <button class="btn link-btn" bindtap="goLogin">去登录</button>
+  </view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!bound}}" class="center">
+    <view>这个账号还没绑定选手资料</view>
+    <view class="muted small">绑定之后，参加过的赛事会出现在这里</view>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{!list.length}}" class="center">还没有参加过任何赛事</view>
+
+    <view
+      wx:for="{{list}}"
+      wx:key="id"
+      class="surface row"
+      data-id="{{item.id}}"
+      bindtap="onOpen"
+    >
+      <view class="row-line">
+        <text class="name">{{item.name}}</text>
+        <text class="status">{{item.statusText}}</text>
+      </view>
+      <view class="row-meta">
+        <text wx:if="{{item.captain}}" class="cap">队长</text>
+        <text wx:if="{{item.teamsText}}" class="team">{{item.teamsText}}</text>
+        <text wx:if="{{item.signupText}}" class="muted">{{item.signupText}}</text>
+        <text wx:if="{{item.dateText}}" class="muted date">{{item.dateText}} 报名</text>
+      </view>
+    </view>
+  </block>
+</view>

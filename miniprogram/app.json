@@ -1,0 +1,57 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/mine/mine",
+    "pages/members/members",
+    "pages/tournaments/tournaments",
+    "pages/tournament/tournament",
+    "pages/quotes/quotes",
+    "pages/foods/foods",
+    "pages/activities/activities",
+    "pages/party/party",
+    "pages/guilds/guilds",
+    "pages/guild/guild",
+    "pages/guild-invite/guild-invite",
+    "pages/dist/dist",
+    "pages/member/member",
+    "pages/login/login",
+    "pages/party-new/party-new",
+    "pages/activity-new/activity-new",
+    "pages/food-review/food-review",
+    "pages/quote-new/quote-new",
+    "pages/feedback/feedback",
+    "pages/profile/profile",
+    "pages/my-tournaments/my-tournaments",
+    "pages/password/password"
+  ],
+  "window": {
+    "navigationBarTitleText": "LaRoja 社区",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#626973",
+    "selectedColor": "#b02b25",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "networkTimeout": {
+    "request": 100000,
+    "downloadFile": 30000
+  }
+}

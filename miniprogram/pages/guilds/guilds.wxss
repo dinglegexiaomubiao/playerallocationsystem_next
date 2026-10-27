@@ -1,0 +1,86 @@
+.bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.bar-text {
+  flex: 1;
+}
+/* 有帮派时说「我的帮派」，没有时引导去创建 —— 文案在 js 里算，模板不做判断 */
+.bar-btn {
+  padding: 8rpx 20rpx;
+  font-size: 24rpx;
+  color: var(--brand);
+  background: var(--bg-card);
+  border: 1px solid var(--brand-border);
+  border-radius: 999rpx;
+  flex: 0 0 auto;
+}
+.card {
+  display: flex;
+  overflow: hidden;
+  padding: 0;
+  margin-bottom: 16rpx;
+}
+.stripe {
+  width: 10rpx;
+  flex: 0 0 auto;
+}
+.body {
+  flex: 1;
+  min-width: 0;
+  padding: 22rpx;
+}
+.line1 {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text);
+  margin-right: 12rpx;
+}
+.tag.is-mine {
+  font-size: 20rpx;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 12rpx;
+}
+.count {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+.slogan {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.heads {
+  display: flex;
+  margin-top: 14rpx;
+}
+.head {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 10rpx;
+  background: var(--bg-subtle);
+  margin-right: 10rpx;
+  flex: 0 0 auto;
+}
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: var(--text-3);
+}

@@ -89,3 +89,9 @@ docs/screenshots/_internal/
 /_*.html
 /_*.png
 /_*_cache.json
+
+# 微信小程序（独立构建，不参与 Web 部署；产物与私密配置不入库）
+miniprogram/node_modules/
+miniprogram/miniprogram_npm/
+miniprogram/.miniprogram-cache/
+miniprogram/project.private.config.json

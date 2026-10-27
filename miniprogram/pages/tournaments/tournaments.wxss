@@ -1,0 +1,32 @@
+.row {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.line1 {
+  display: flex;
+  align-items: center;
+}
+.name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.status {
+  font-size: 22rpx;
+  color: var(--brand-on-soft);
+  background: rgba(176, 43, 37, 0.08);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  margin-left: 12rpx;
+}
+.muted {
+  margin-top: 6rpx;
+  display: block;
+}
+.champ {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+}

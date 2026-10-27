@@ -1,0 +1,42 @@
+<view class="page-wrap">
+  <view class="bar">
+    <text class="bar-text">共 {{total}} 个帮派</text>
+    <view class="bar-btn" bindtap="goMine">
+      {{mineCount ? '我的帮派' : '创建 / 加入帮派'}}
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="center">还没有帮派</view>
+
+  <view
+    wx:for="{{list}}"
+    wx:key="id"
+    class="surface card"
+    data-id="{{item.id}}"
+    data-name="{{item.name}}"
+    data-mine="{{item.isMine}}"
+    bindtap="onTap"
+  >
+    <view class="stripe" style="background: {{item.color}}"></view>
+
+    <view class="body">
+      <view class="line1">
+        <text class="name">{{item.name}}</text>
+        <text wx:if="{{item.isMine}}" class="tag is-mine">我的</text>
+        <text class="count">{{item.memberText}}</text>
+      </view>
+
+      <view wx:if="{{item.slogan}}" class="slogan">{{item.slogan}}</view>
+      <view wx:if="{{item.leaderText}}" class="muted">首领 {{item.leaderText}}</view>
+
+      <view wx:if="{{item.heads.length}}" class="heads">
+        <block wx:for="{{item.heads}}" wx:for-item="h" wx:key="playerId">
+          <image wx:if="{{h.avatar}}" class="head" src="{{h.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="head placeholder">{{h.initial}}</view>
+        </block>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,26 @@
+@import "../../styles/form.wxss";
+
+.shop {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin: 6rpx 0 26rpx;
+}
+.stars {
+  display: flex;
+  align-items: center;
+}
+.star {
+  font-size: 56rpx;
+  line-height: 1;
+  color: var(--bg-subtle);
+  margin-right: 8rpx;
+}
+.star.is-on {
+  color: var(--gold);
+}
+.star-num {
+  margin-left: 12rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}

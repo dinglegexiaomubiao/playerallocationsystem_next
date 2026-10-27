@@ -1,0 +1,91 @@
+<view class="page-wrap">
+  <view class="tabs">
+    <view class="tab {{tab === 'form' ? 'is-on' : ''}}" data-tab="form" bindtap="switchTab">写反馈</view>
+    <view class="tab {{tab === 'mine' ? 'is-on' : ''}}" data-tab="mine" bindtap="switchTab">我的反馈</view>
+  </view>
+
+  <!-- 写反馈 -->
+  <block wx:if="{{tab === 'form'}}">
+    <view class="surface form">
+      <view class="field">
+        <view class="label">类型</view>
+        <view class="kinds">
+          <view
+            class="kind {{kind === 'feedback' ? 'is-on' : ''}}"
+            data-kind="feedback"
+            bindtap="pickKind"
+          >意见 / 建议</view>
+          <view
+            class="kind {{kind === 'error' ? 'is-on' : ''}}"
+            data-kind="error"
+            bindtap="pickKind"
+          >页面报错</view>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label">
+          {{kind === 'error' ? '哪里不对' : '想说的内容'}}<text class="req">*</text>
+        </view>
+        <textarea
+          class="textarea"
+          value="{{message}}"
+          data-k="message"
+          maxlength="2000"
+          placeholder="{{kind === 'error' ? '描述一下点哪个按钮、出现什么提示' : '功能建议、活动想法、想加的内容都可以'}}"
+          placeholder-class="ph"
+          bindinput="onInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">联系方式<text class="hint">选填</text></view>
+        <input
+          class="input"
+          value="{{contact}}"
+          data-k="contact"
+          maxlength="120"
+          placeholder="微信 / QQ / 群昵称，方便回你"
+          placeholder-class="ph"
+          bindinput="onInput"
+        />
+      </view>
+
+      <view wx:if="{{error}}" class="err">{{error}}</view>
+
+      <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+        {{submitting ? '提交中…' : '提交'}}
+      </button>
+
+      <view class="tip" bindtap="copyBase">
+        提交后会推到管理员那边。未登录也能提，提交后在本页「我的反馈」里能看到处理状态。
+      </view>
+    </view>
+  </block>
+
+  <!-- 我的反馈 -->
+  <block wx:else>
+    <view wx:if="{{loadingMine}}" class="state">加载中…</view>
+    <view wx:elif="{{mineError}}" class="state">{{mineError}}</view>
+    <view wx:elif="{{!reports.length}}" class="state">
+      还没有提交过反馈。
+    </view>
+
+    <view wx:for="{{reports}}" wx:key="id" class="surface item">
+      <view class="item-head">
+        <text class="badge is-{{item.statusKey}}">{{item.statusText}}</text>
+        <text class="time">{{item.timeText}}</text>
+      </view>
+      <view class="item-body">{{item.message}}</view>
+      <view wx:if="{{item.reply}}" class="reply">
+        <view class="reply-text">{{item.reply}}</view>
+        <view wx:if="{{item.replyText}}" class="reply-time">{{item.replyText}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{!logged}}" class="tip center-line">
+      登录后能看到账号下提交的所有反馈（含网页端提交的）。
+      <text class="link" bindtap="goLogin">去登录</text>
+    </view>
+  </block>
+</view>

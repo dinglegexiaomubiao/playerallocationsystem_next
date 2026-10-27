@@ -1,0 +1,60 @@
+<view class="page-wrap">
+  <view class="surface form">
+    <view class="field">
+      <view class="label">这句话<text class="req">*</text><text class="hint">{{content.length}}/200</text></view>
+      <textarea class="textarea" value="{{content}}" maxlength="200"
+        placeholder="原话照抄，别加工" placeholder-class="ph" bindinput="onContent" />
+    </view>
+
+    <view class="field">
+      <view class="label">出处<text class="req">*</text></view>
+      <view class="seg">
+        <text class="seg-item {{sourceMode === 'player' ? 'is-on' : ''}}" data-v="player" bindtap="onMode">群里的人</text>
+        <text class="seg-item {{sourceMode === 'text' ? 'is-on' : ''}}" data-v="text" bindtap="onMode">自己写</text>
+      </view>
+
+      <block wx:if="{{sourceMode === 'player'}}">
+        <view wx:if="{{picked}}" class="picked">
+          <text class="picked-name">{{picked.nickname}}</text>
+          <text class="picked-x" bindtap="clearPick">换一个</text>
+        </view>
+        <block wx:else>
+          <view class="search-row">
+            <input class="input search-input" value="{{keyword}}" placeholder="搜昵称或 SteamID"
+              placeholder-class="ph" bindinput="onKeyword" bindconfirm="search" />
+            <text class="search-btn" bindtap="search">{{searching ? '搜…' : '搜索'}}</text>
+          </view>
+          <view wx:if="{{results.length}}" class="results">
+            <view wx:for="{{results}}" wx:key="id" class="result" data-id="{{item.id}}" data-nickname="{{item.nickname}}" bindtap="pick">
+              <image wx:if="{{item.avatar}}" class="r-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+              <view wx:else class="r-avatar r-ph">{{item.nickname}}</view>
+              <view class="r-body">
+                <view class="r-name">{{item.nickname}}</view>
+                <view wx:if="{{item.meta}}" class="r-meta">{{item.meta}}</view>
+              </view>
+            </view>
+          </view>
+        </block>
+      </block>
+
+      <input wx:else class="input" value="{{sourceText}}" maxlength="50"
+        placeholder="例如 群公告 / 某主播" placeholder-class="ph" bindinput="onSourceText" />
+    </view>
+
+    <view class="field">
+      <view class="label">日期</view>
+      <picker class="picker" mode="date" value="{{date}}" end="{{today}}" bindchange="onDate">{{date}}</picker>
+    </view>
+
+    <view wx:if="{{error}}" class="err">{{error}}</view>
+
+    <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+      {{submitting ? '提交中…' : '收录'}}
+    </button>
+  </view>
+
+  <view class="tip">
+    自定义出处不能和群友昵称重名（否则等于可以拿别人的名义说话），撞了会被拒；
+    内容会过违禁词 + AI 复审。
+  </view>
+</view>

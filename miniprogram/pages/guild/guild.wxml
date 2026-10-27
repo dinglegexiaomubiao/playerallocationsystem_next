@@ -1,0 +1,190 @@
+<view class="page-wrap">
+  <!-- 未登录 -->
+  <view wx:if="{{needLogin}}" class="surface pad">
+    <view class="title">登录后才能查看我的帮派</view>
+    <view class="muted">帮派挂在选手资料上，登录后才知道你属于哪个帮、有没有人发邀请给你。</view>
+    <button class="btn" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view wx:elif="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+
+  <block wx:else>
+    <!-- 我所在的帮派 -->
+    <view wx:if="{{guild}}" class="surface card">
+      <view class="stripe" style="background: {{guild.color}}"></view>
+      <view class="body">
+        <view class="line1">
+          <text class="name">{{guild.name}}</text>
+          <text class="tag">{{guild.roleText}}</text>
+          <text class="count">{{guild.memberText}}</text>
+        </view>
+        <view wx:if="{{guild.slogan}}" class="slogan">{{guild.slogan}}</view>
+
+        <view class="acts">
+          <block wx:if="{{guild.isLeader}}">
+            <button class="act" bindtap="goInvite">邀请群友</button>
+            <button class="act" bindtap="openEdit">改名换色</button>
+            <button class="act is-danger" bindtap="dissolve">解散</button>
+          </block>
+          <button wx:else class="act is-danger" bindtap="leave">退出帮派</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 成员 -->
+    <view wx:if="{{guild}}" class="block">
+      <view class="block-title">成员</view>
+      <view class="surface">
+        <view wx:for="{{guild.members}}" wx:key="playerId" class="row">
+          <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="avatar placeholder">{{item.initial}}</view>
+
+          <view class="row-main">
+            <view class="row-name">
+              <text class="nick">{{item.nickname}}</text>
+              <text wx:if="{{item.isLeader}}" class="mini-tag">帮主</text>
+              <text wx:if="{{item.isMe}}" class="mini-tag is-me">我</text>
+            </view>
+            <view wx:if="{{item.metaText}}" class="muted">{{item.metaText}}</view>
+          </view>
+
+          <block wx:if="{{guild.isLeader && !item.isMe}}">
+            <button
+              class="mini-btn"
+              data-id="{{item.playerId}}"
+              data-nick="{{item.nickname}}"
+              bindtap="transferTo"
+            >转让</button>
+            <button
+              class="mini-btn is-danger"
+              data-id="{{item.playerId}}"
+              data-nick="{{item.nickname}}"
+              bindtap="removeMember"
+            >移出</button>
+          </block>
+        </view>
+      </view>
+      <view wx:if="{{guild.isLeader}}" class="tip">
+        你是帮主：可以邀请群友、改名换色、把人移出，也能把帮主位子转给别人。要散伙就解散。
+      </view>
+      <view wx:else class="tip">想走随时可以退出。帮主要想走，得先把位子转给别人或直接解散。</view>
+    </view>
+
+    <!-- 已发出但还没回应的邀请 -->
+    <view wx:if="{{sentInvites.length}}" class="block">
+      <view class="block-title">已发出，还没回应</view>
+      <view class="surface">
+        <view wx:for="{{sentInvites}}" wx:key="id" class="row">
+          <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="avatar placeholder">{{item.initial}}</view>
+          <view class="row-main">
+            <view class="row-name"><text class="nick">{{item.nickname}}</text></view>
+            <view wx:if="{{item.message}}" class="muted">「{{item.message}}」</view>
+          </view>
+          <button class="mini-btn" data-id="{{item.id}}" bindtap="cancelInvite">撤回</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 收到的邀请 -->
+    <view wx:if="{{myInvites.length}}" class="block">
+      <view class="block-title">收到的邀请</view>
+      <view wx:for="{{myInvites}}" wx:key="id" class="surface invite">
+        <view class="invite-head">
+          <view class="dot" style="background: {{item.color}}"></view>
+          <text class="name">{{item.guildName}}</text>
+          <text class="count">{{item.memberText}}</text>
+        </view>
+        <view wx:if="{{item.slogan}}" class="slogan">{{item.slogan}}</view>
+        <view wx:if="{{item.message}}" class="invite-msg">「{{item.message}}」</view>
+        <view wx:if="{{item.inviterName}}" class="muted">来自 {{item.inviterName}} 的邀请</view>
+        <view class="acts">
+          <button
+            class="act"
+            data-id="{{item.id}}"
+            data-name="{{item.guildName}}"
+            data-action="accept"
+            bindtap="respondInvite"
+          >接受</button>
+          <button
+            class="act is-quiet"
+            data-id="{{item.id}}"
+            data-name="{{item.guildName}}"
+            data-action="reject"
+            bindtap="respondInvite"
+          >拒绝</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 没有帮派时的创建入口 -->
+    <view wx:if="{{!guild && !form.open}}" class="surface pad">
+      <block wx:if="{{unbound}}">
+        <view class="title">先补填选手资料</view>
+        <view class="muted">帮派是挂在选手资料上的。你的账号还没绑定选手，先去网页版「个人信息」补一下再回来建帮。</view>
+      </block>
+      <block wx:else>
+        <view class="title">建一个帮派</view>
+        <view class="muted">帮派不能自己申请加入，只能被帮主邀请。建好之后你就可以邀请群友了。</view>
+        <button class="btn" bindtap="openCreate">创建帮派</button>
+      </block>
+    </view>
+
+    <!-- 创建 / 修改表单 -->
+    <view wx:if="{{form.open}}" class="surface pad">
+      <view class="title">{{form.mode === 'edit' ? '修改帮派' : '创建帮派'}}</view>
+
+      <view class="field">
+        <view class="label">帮派名<text class="req">*</text></view>
+        <input
+          class="input"
+          value="{{form.name}}"
+          maxlength="{{limits.name}}"
+          placeholder="至少 2 个字"
+          placeholder-class="ph"
+          bindinput="onName"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">口号<text class="hint">{{limits.slogan}} 字以内</text></view>
+        <input
+          class="input"
+          value="{{form.slogan}}"
+          maxlength="{{limits.slogan}}"
+          placeholder="选填，一句话说清你们的风格"
+          placeholder-class="ph"
+          bindinput="onSlogan"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">配色<text class="req">*</text><text class="hint">被占用的不能选</text></view>
+        <view class="colors">
+          <view
+            wx:for="{{colors}}"
+            wx:key="key"
+            class="color {{form.colorKey === item.key ? 'is-on' : ''}} {{item.taken ? 'is-off' : ''}}"
+            data-key="{{item.key}}"
+            data-taken="{{item.taken}}"
+            bindtap="pickColor"
+          >
+            <view class="color-dot" style="background: {{item.solid}}"></view>
+            <text class="color-name">{{item.label}}</text>
+          </view>
+        </view>
+        <view wx:if="{{!colors.length}}" class="muted">配色表没取到，下拉刷新重试</view>
+      </view>
+
+      <view wx:if="{{form.error}}" class="err">{{form.error}}</view>
+
+      <view class="acts">
+        <button class="act {{form.busy ? 'is-busy' : ''}}" bindtap="submitForm">
+          {{form.mode === 'edit' ? '保存' : '创建'}}
+        </button>
+        <button class="act is-quiet" bindtap="closeForm">取消</button>
+      </view>
+    </view>
+  </block>
+</view>

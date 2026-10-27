@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "发活动",
+  "usingComponents": {
+    "region-picker": "/components/region-picker/region-picker"
+  }
+}

@@ -1,0 +1,102 @@
+<view class="page-wrap">
+  <view wx:if="{{loadingOptions}}" class="state">加载选项…</view>
+  <view wx:elif="{{optionsError}}" class="state" bindtap="loadOpts">{{optionsError}}，点我重试</view>
+
+  <block wx:else>
+    <view class="surface form">
+      <view class="field">
+        <view class="label">模式<text class="req">*</text></view>
+        <picker class="picker" range="{{modeLabels}}" value="{{modeIndex}}" bindchange="onMode">
+          {{modeLabels[modeIndex]}}
+        </picker>
+      </view>
+
+      <view class="row2">
+        <view class="field">
+          <view class="label">需要几人<text class="req">*</text></view>
+          <picker class="picker" range="{{needLabels}}" value="{{needIndex}}" bindchange="onNeed">
+            {{needLabels[needIndex]}}
+          </picker>
+        </view>
+        <view class="field">
+          <view class="label">打多久<text class="req">*</text></view>
+          <picker class="picker" range="{{durLabels}}" value="{{durIndex}}" bindchange="onDur">
+            {{durLabels[durIndex]}}
+          </picker>
+        </view>
+      </view>
+
+      <view class="row2">
+        <view class="field">
+          <view class="label">开始日期<text class="req">*</text></view>
+          <picker class="picker" mode="date" value="{{date}}" bindchange="onDate">{{date}}</picker>
+        </view>
+        <view class="field">
+          <view class="label">开始时间<text class="req">*</text></view>
+          <picker class="picker" mode="time" value="{{time}}" bindchange="onTime">{{time}}</picker>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label">语音</view>
+        <picker class="picker" range="{{voiceLabels}}" value="{{voiceIndex}}" bindchange="onVoice">
+          {{voiceLabels[voiceIndex]}}
+        </picker>
+      </view>
+
+      <view class="field">
+        <view class="label">缺哪些位置<text class="hint">可多选，不选就不显示</text></view>
+        <view class="chips">
+          <text
+            wx:for="{{positions}}"
+            wx:key="name"
+            wx:for-index="i"
+            class="chip {{item.on ? 'is-on' : ''}}"
+            data-i="{{i}}"
+            bindtap="togglePos"
+          >{{item.name}}</text>
+        </view>
+      </view>
+
+      <view class="row2">
+        <view class="field">
+          <view class="label">分数下限</view>
+          <input class="input" type="number" value="{{wantScoreMin}}" data-k="wantScoreMin"
+            placeholder="不限" placeholder-class="ph" bindinput="onInput" />
+        </view>
+        <view class="field">
+          <view class="label">分数上限</view>
+          <input class="input" type="number" value="{{wantScoreMax}}" data-k="wantScoreMax"
+            placeholder="不限" placeholder-class="ph" bindinput="onInput" />
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label">期望段位<text class="hint">留空用分数换算</text></view>
+        <input class="input" value="{{wantRank}}" data-k="wantRank"
+          placeholder="例如 传奇" placeholder-class="ph" bindinput="onInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">标题<text class="hint">留空自动生成</text></view>
+        <input class="input" value="{{title}}" data-k="title"
+          placeholder="例如 今晚冲分，缺个三号位" placeholder-class="ph" bindinput="onInput" />
+      </view>
+
+      <view class="field">
+        <view class="label">备注</view>
+        <textarea class="textarea" value="{{note}}" data-k="note"
+          placeholder="补充说明，比如连麦、只打两把" placeholder-class="ph"
+          maxlength="500" bindinput="onInput" />
+      </view>
+
+      <view wx:if="{{error}}" class="err">{{error}}</view>
+
+      <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+        {{submitting ? '发布中…' : '发布开黑'}}
+      </button>
+    </view>
+
+    <view class="tip">发布开黑需要先在网页端「个人信息」里补填选手资料（分数/位置），否则会被拒绝。</view>
+  </block>
+</view>

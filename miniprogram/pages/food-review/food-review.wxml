@@ -1,0 +1,33 @@
+<view class="page-wrap">
+  <view class="surface form">
+    <view class="shop">{{name}}</view>
+
+    <view class="field">
+      <view class="label">给几分</view>
+      <view class="stars">
+        <text
+          wx:for="{{stars}}"
+          wx:key="n"
+          class="star {{item.on ? 'is-on' : ''}}"
+          data-n="{{item.n}}"
+          bindtap="onStar"
+        >★</text>
+        <text class="star-num">{{rating}} 分</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="label">评价<text class="req">*</text></view>
+      <textarea class="textarea" value="{{content}}" maxlength="300"
+        placeholder="味道、性价比、排队情况…" placeholder-class="ph" bindinput="onContent" />
+    </view>
+
+    <view wx:if="{{error}}" class="err">{{error}}</view>
+
+    <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
+      {{submitting ? '提交中…' : '提交评价'}}
+    </button>
+  </view>
+
+  <view class="tip">评价会过一遍内容审核（违禁词 + AI 复审），被拒绝时会告诉你原因。</view>
+</view>

@@ -1,0 +1,111 @@
+@import "../../styles/form.wxss";
+
+/* 个人信息：字段多但同质，靠分组卡片（基本资料 / 关系标注）分段 */
+.page-wrap {
+  padding-bottom: 24rpx;
+}
+
+.head {
+  padding: 22rpx 24rpx;
+  margin-bottom: 8rpx;
+}
+.line1 {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 6rpx;
+}
+.nick {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--text);
+}
+.guild {
+  margin-left: 12rpx;
+  padding: 2rpx 12rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
+  background: var(--bg-subtle);
+  border-radius: 999rpx;
+}
+.small {
+  margin-top: 4rpx;
+  font-size: 21rpx;
+}
+
+.sec-title {
+  margin: 24rpx 0 10rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+.card {
+  padding: 20rpx 24rpx 4rpx;
+}
+
+/* 位置多选 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+}
+.chip {
+  margin: 0 14rpx 14rpx 0;
+  padding: 8rpx 22rpx;
+  font-size: 25rpx;
+  color: var(--text-2);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 999rpx;
+}
+.chip.on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.tip {
+  margin: 18rpx 4rpx 0;
+  font-size: 21rpx;
+  color: var(--text-3);
+}
+
+.bar-space {
+  height: 120rpx;
+}
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 16rpx 28rpx;
+  padding-bottom: calc(16rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.bar-info {
+  flex: 1;
+  min-width: 0;
+}
+.btn {
+  flex: 0 0 auto;
+  margin: 0;
+  min-width: 180rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  padding: 0 34rpx;
+  font-size: 28rpx;
+  color: #ffffff;
+  background: var(--brand);
+  border-radius: var(--radius);
+}
+.btn::after {
+  border: 0;
+}
+.link-btn {
+  margin-top: 20rpx;
+  padding: 0 40rpx;
+  display: inline-block;
+}

@@ -15,14 +15,17 @@
 
 | 板块 | 路由 | 做什么 |
 |---|---|---|
-| 首页 | `/` | 四个统计数字、本周焦点赛事、板块入口、天梯榜 |
-| 开黑组队 | `/party` | 发招募卡片（模式/段位要求/时间/语音），别人报名；替代群里刷屏 |
+| 首页 | `/` | 四个统计数字、本周焦点赛事、板块入口、天梯榜、最近动态（含新建帮派） |
+| 开黑组队 | `/party` | 发招募卡片（模式/段位要求/时间/语音），别人报名；过期自动折叠、可按日期筛选 |
+| 活动招募 | `/activities` | 与开黑并列的活动招募：地区筛选、过期折叠、「只看招募中」、日历日期筛选 |
 | 赛事信息 | `/tournaments` | 历届赛事、赛程对阵、比分、名次、报名选手与队伍 |
-| 群友信息 | `/members` | 档案卡片、六维筛选、比赛履历、AI 战力分析 |
-| 群友美食 | `/food` | 106 家店、菜系/区位/人均筛选、饭后评价 |
-| 个人信息 | `/profile` | 改自己资料（含默契队友 / 仇人标注）、汇总我的赛事 |
+| 群友信息 | `/members` | 档案卡片、六维筛选、比赛履历、AI 战力分析、深圳分布图 `/map` |
+| 群友美食 | `/food` | 美食店、菜系/区位/人均筛选、饭后评价 |
+| 群友语录 | `/quotes` | 群友名言摘抄，登录后可提交；可打分（0–5 半星）与评价 |
+| 公会/帮派 | `/guilds` | 群友自发组织的帮派，含成员、邀请、口号、帮派主页 `/guild/[id]` |
+| 个人信息 | `/profile` | 改自己资料（含默契队友 / 仇人标注）、汇总我的赛事、最近比赛（可折叠）+ AI 分析 |
 | 阵容分配 | `/main` | 群内比赛的分队工具，管理员专用 |
-| 管理后台 | `/admin` | 赛事 CRUD、报名名单、队伍与队长、赛程结果、整包 Excel 导入 |
+| 管理后台 | `/admin` | 赛事 / 开黑 / 活动招募 / 选手 / 美食 / 公会 / 语录 / 评价 / 比赛 / 消息 / 工单 / 数据分析 的全套增删改查 |
 | 售后工单 | `/admin/support` | 群友反馈 + 前端自动报错，统一处理 |
 
 ---
@@ -34,6 +37,7 @@
 - **@anthropic-ai/sdk**：AI 分析，当前指向 DeepSeek 兼容端点（须 `thinking:{type:'disabled'}`）
 - **xlsx**：Excel 批量导入导出
 - **nodemailer**：新工单邮件提醒（可选）
+- **内容安全**：`lib/moderation.mjs`（本地违禁词 / 外链白名单初筛）+ `lib/ai-moderate.mjs`（DeepSeek 语义复审，超时 / 无 key 自动放行，fail-open）
 - 没有 TypeScript、没有 Tailwind、没有组件库
 
 > 端到端的架构 / 请求 / 鉴权 / 数据 / 部署 / 自愈 / 兼容七条链路见 **`docs/项目链路.md`**。
@@ -43,27 +47,35 @@
 ## 目录结构
 
 ```
-├── pages/                     页面路由
-│   ├── api/                   45 个接口（鉴权见下方「权限模型」）
-│   ├── admin/                 管理后台（index / support / tournaments/[id]）
-│   ├── members/               群友列表、详情、阵容分配（重定向到 /main）
-│   ├── tournaments/           赛事列表、详情
-│   ├── party/                 开黑组队
-│   └── food/                  群友美食
-├── components/                29 个展示组件
-├── hooks/                     6 个状态钩子
-│   └── useSession.js          统一登录态（window 事件广播，跨组件同步）
-├── lib/                       33 个工具与数据层模块（关键几个）
+├── pages/                     页面路由（前端页面与 api 同仓）
+│   ├── api/                   60+ 个接口（鉴权见下方「权限模型」）
+│   ├── admin/                 管理后台全套：index / activities / analytics / food / guilds / members / matches / messages / party / quotes / reviews / support / tournaments/[id]
+│   ├── guild/ guilds/         帮派主页 / 帮派列表 Tab
+│   ├── quotes/                群友语录独立页
+│   ├── activities/            活动招募
+│   ├── members/ tournaments/ party/ food/   群友 / 赛事 / 开黑 / 美食
+│   ├── map.js                 深圳群友分布图
+│   ├── profile.js             个人信息
+│   ├── my-tournaments.js      我的赛事
+│   ├── changelog.js           更新日志页
+│   └── main.js                阵容分配（管理员专用）
+├── components/                展示组件（含 member/ 比赛履历、QuoteForm、ActivityCard 等）
+├── hooks/                     状态钩子（useSession 统一登录态）
+├── lib/                       数据层与工具模块（关键几个）
 │   ├── db.js                  建表 + 查询 + 幂等迁移（约 1000 行）
 │   ├── auth.js                会话与四档鉴权守卫
 │   ├── password.js            加盐 SHA256
 │   ├── player-identity.js     账号 / 群昵称 / Steam 账号身份解析
 │   ├── regions.js             地区路径解析（唯一解析层）
+│   ├── quotes.mjs / guild.mjs 语录 / 公会数据与建表
+│   ├── moderation.mjs         内容合规初筛（违禁词 + 外链白名单）
+│   ├── ai-moderate.mjs        DeepSeek 语义复审（超时 / 无 key 自动放行，fail-open）
 │   ├── image-cache.js         图片三层缓存（内存/磁盘/回源）
 │   ├── list-cache.js          列表接口的进程内 TTL 缓存
 │   ├── rate-limit.js          登录失败限流
 │   ├── excel.js               Excel 列定义与解析
 │   └── notify.js              SMTP / Webhook 通知
+├── miniprogram/               微信小程序（原生，独立构建，不参与 Web 部署）
 ├── scripts/                   维护脚本（env.js 统一读环境变量）
 ├── styles/                    tokens / globals / layout / shell / main
 ├── docs/                      对外导览（showcase.md）+ 项目链路.md
@@ -71,6 +83,45 @@
 ├── vercel.json                ⚠ 已弃用残留文件，Vercel 不再使用，可删
 └── .env.local.example         环境变量模板
 ```
+
+---
+
+## 微信小程序
+
+`miniprogram/` 是同一套后端之上的微信小程序（原生 WXML/WXSS/JS，**不用** Taro / uni-app），
+让群友在微信里直接用，不用跳浏览器。逐页进度、已用接口与待办见 **`小程序项目档案.md`**。
+
+**怎么连后端**：小程序没有 cookie jar，所以会话走 `Authorization: Bearer <签名串>`。
+登录 / 注册接口在响应体里多返回一个 `token`（与 `Set-Cookie` 里是**同一个** HMAC 签名串，
+30 天），客户端存进 storage 后每次请求带回来。`getSession()` 先读 Bearer、再退回 cookie；
+**带了 Bearer 但签名无效时直接判未登录、不退回 cookie**（避免"token 错了却一直登录态"带偏排查）。
+网页端行为完全不变。
+
+```bash
+# 用微信开发者工具「导入项目」指向本仓库根目录即可（app.json 里 miniprogramRoot=./miniprogram）
+# 域名白名单需放行 https://dota.playerallocationsystem.online
+```
+
+**页面（24 个）**：首页 / 助手 / 群友（列表·名片·分布图）/ 赛事（列表·详情：名次·赛程对阵·队伍·报名名单·报名退赛）/
+开黑（列表·发布·报名·关闭）/ 活动（列表·发布·报名）/ 美食（列表·评价）/ 语录（列表·收录·删除）/
+帮派（列表·我的帮派·邀请）/ 个人信息（分数·位置·地区·自我评价·默契队友·仇人）/ 我的赛事 / 修改密码 /
+我的 / 登录 / 意见反馈。
+
+**与网页端的差异（有意为之，不是缺口）**：
+
+| | 网页端 | 小程序 |
+|---|---|---|
+| 管理后台 | `/admin/*` 全套 | 只有最小动作：管理员展开评价列表删除违规评价。表格密集的后台不适合手机 |
+| 活动地区 | 省 / 市 / 区三级 | 同样三级（`components/region-picker`），地区数据走 `wx.request` 拉 `public/data/china-division.json` 并缓存 7 天 |
+| 工单 | `/admin/support` | 只提交 + 查自己的（`client_token` 保证匿名提交也能查回） |
+| 赛事编排 | 建轮次、录比分、选队长 | 只读 + 报名 / 退赛。编排是管理员动作 |
+| 注册 | `/register` | 只登录，账号由网页端注册。小程序拿不到手机号授权就不该造第二套账号体系 |
+| 多值身份 | `/profile` 里可加多个 SteamID / 群昵称 | 只读展示。服务端要求保留主号，改错的代价是头像、战绩、赛程集体失联，这种交互不适合手机 |
+
+**踩过的坑（改动前先看）**：WXML 里不能用 `?.` / `??` / 箭头函数 / `indexOf()`；
+WXSS 自定义属性不能带 `rpx`；每个页面**和每个组件**都必须四件套齐全；
+WXML 里用了但没在 `usingComponents` 注册的标签只会报一句语焉不详的模板错误。
+`node scripts/check-miniprogram.cjs` 会把上面这些都查一遍。
 
 ---
 
@@ -120,7 +171,8 @@ npm start
 | `denyIfNotAdmin` | 非管理员 | 选手增删改、删除队伍、赛事 CRUD、赛程、选队长、整包导入 |
 | `isAdmin`（页面级） | 非管理员 | `/admin/*`、`/main` 的 `getServerSideProps` |
 
-登录态是 HMAC 签名的 httpOnly cookie，30 天有效。登录失败按 IP + 账号双维度计数，10 分钟内 5 次即锁定。
+登录态是 HMAC 签名的 httpOnly cookie，30 天有效。小程序等无 cookie 容器另走
+`Authorization: Bearer`（同一签名串，见下方「微信小程序」）。登录失败按 IP + 账号双维度计数，10 分钟内 5 次即锁定。
 
 ---
 
@@ -151,10 +203,13 @@ npm start
 - `team_players`（392）— 队员关系，带队内担任位置
 
 **社区内容**
-- `party_posts`（2）/ `party_signups`（0）— 开黑卡片与报名
-- `foods`（106）/ `food_reviews`（36）— 美食与饭后评价
-- `messages`（5）— 留言板
-- `page_views`（7406）— 浏览记录（按 `account_name` 存，改用户名要迁移）
+- `party_posts` / `party_signups`— 开黑卡片与报名
+- `activity_posts` / `activity_signups`— 活动招募卡片与报名（含地区、过期状态）
+- `foods` / `food_reviews`— 美食与饭后评价
+- `quotes` / `quote_reviews`— 群友语录与打分评价（0–5 半星，触发器聚合 `rating_avg` / `rating_count`）
+- `guilds` / `guild_members` / `guild_invites`— 帮派、成员、邀请
+- `messages`— 留言板
+- `page_views`— 浏览记录（按 `account_name` 存，改用户名要迁移）
 
 **运维**
 - `support_reports`（412）— 反馈与自动报错工单（按 `account_name` 存，改用户名要迁移）
@@ -219,6 +274,30 @@ node scripts/backfill-league.js          # 回填联赛数据
 node scripts/dump-data.js                # 导出数据快照
 ```
 
+小程序（`scripts/lib/mp-runtime.cjs` 是个迷你运行时：把 `Page()` / `Component()` 的
+`setData`、组件属性、事件翻译成 Node 里可调用的对象，所以能直接**driving 页面方法**做联调，
+不必开模拟器）：
+
+```bash
+node scripts/check-miniprogram.cjs         # 静态自查：四件套 / tabBar / 组件注册 / 语法 / 浏览器 API，不用网络
+node scripts/check-auth-bearer.cjs         # 会话双通道 19 条断言，不用网络
+node scripts/smoke-miniprogram.cjs         # 只读冒烟，逐页拉接口
+node scripts/check-miniprogram-writes.cjs  # 写操作（发卡片 / 报名 / 评价 / 语录），需要探针账号 + 管理员 token
+node scripts/check-miniprogram-guild.cjs   # 帮派全链路 38 条断言，需要两个夹具账号
+node scripts/check-miniprogram-extras.cjs  # 活动地区 / 意见反馈 / 管理员删评价
+node scripts/check-miniprogram-tournament.cjs # 赛事详情 40 条（含报名退赛写链路）
+node scripts/check-miniprogram-profile.cjs     # 个人信息 / 我的赛事 / 改密码 38 条（含「只提交改动字段」回归）
+node scripts/check-miniprogram-members.cjs     # 六维筛选：39 组条件与 lib/member-filter.mjs 逐条比对（含 facets 与常量口径）
+node scripts/check-miniprogram-quotes.cjs      # 语录打分：一人一评 upsert / 非法分数 400 / 超长截断 / 删除回基线
+node scripts/check-miniprogram-ai.cjs          # 名片页战绩 + AI 分析：markdown 解析 / 真调 AI（消耗额度）/ 缓存命中
+node scripts/check-miniprogram-dist.cjs        # 分布页：面包屑 / 排行 / 未填名单 / 三级下钻 / 不设下级回落
+
+# 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
+node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
+# …跑完…
+node deploy/probe-account.cjs down
+```
+
 更多脚本（地图生成、语法补丁、图标预热等）见 `scripts/`，完整清单见 `docs/项目链路.md` 第 8 节。
 
 ---
@@ -237,6 +316,93 @@ node scripts/dump-data.js                # 导出数据快照
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.9 (2026-10-27)
+
+- **活动招募卡片同样支持展开报名者**：同 v2.7.8 的开黑处理——接口列表本来就带回 `signups`（昵称/携伴人数/留言/报名日期），之前只显示人数，点卡片弹「活动详情页待接入」。现对齐网页端 ActivityCard：点卡片展开/收起报名者（首字头像 + 昵称 + 「携 N 人同行/本人参加」 + 留言 + 日期），展开时备注取消截断，空名单提示「还没有人报名」
+- 验证：`mp-runtime` 驱动 5 条断言全过；线上当前无活动帖（`posts: []`），报名行 shape 已从接口源码逐字核对
+- 至此小程序两个列表占位提示全部消除，代码里不再有「待接入」
+
+### v2.7.8 (2026-10-27)
+
+- **开黑卡片支持查看报名者名单**：接口本来就在列表里带回每个卡片的 `signups`，但小程序只显示了人数，点卡片只弹「详情页待接入」。现对齐网页端 PartyCard 的做法（网页端也没有独立详情页，名单平铺在卡片里）：点卡片展开/收起报名者（首字头像 + 昵称 + 段位/分数 + 到点 + 备注），展开时备注取消两行截断；空名单提示「还没有人报名」
+- 验证：`mp-runtime` 驱动 5 条断言（展开/收起/空名单/越界/切 tab 重置）+ 线上真实数据组装核对
+
+### v2.7.7 (2026-10-27)
+
+- **全站分享能力补齐**：内容型 12 页全部支持「转发给朋友」（`onShareAppMessage`），其中 11 页支持「分享到朋友圈」（`onShareTimeline`，guild 因按登录态拉「我的帮派」而不做）。个人/表单/流程页（login、mine、profile、password、my-tournaments、feedback、4 个新建页、guild-invite）**有意不加** —— 不写该方法转发按钮即为灰色，符合预期
+- 详情页分享带参数：名片页/赛事详情 `path?id=`；朋友圈单页模式用 `query`，已确认两页核心数据均不依赖登录态
+- 静态校验 26 条通过，12 个改动 JS `node --check` 通过
+
+### v2.7.6 (2026-10-27)
+
+- **下线「助手」tab**：`pages/chat` 调的 `/api/assistant` 后端从未实现（线上 404），tabBar 第 2 项和首页 CTA 点了必失败。删除页面四件套、tabBar 收成 2 项（首页 / 我的，微信 tabBar 下限就是 2），首页 CTA 改指真实存在的「AI 战力分析」（进群友列表 → 名片页）
+- **静态校验与冒烟脚本都是动态取数**，tab 项数与页面数不用改断言；冒烟脚本里读分布页的字段名补了 `count ?? playerCount` 兼容
+
+### v2.7.5 (2026-10-27)
+
+- **群友分布下钻**（`pages/dist`）：面包屑（全国 → 省 → 市 → 区）+ 人数排行 + 比例条，点区划下钻、点人数展开该区名单，外加「未填地区 130 位」名单 —— 不摆出来会让人以为群里就 38 个人
+- **不做地图是刻意的**：网页端是自绘 SVG 行政区图，小程序既没 SVG 也不适合 canvas；原生 `map` 组件要腾讯地图底图 + 自塞行政区多边形，牵扯地图数据合规与 key 管理。排行 + 比例条 + 下钻信息量等价，还没有合规负担
+- **下钻接口的两个 200**：不设下级行政区（东莞市这类）返回 200 + `notice` 并回落到有数据的一级，页面当提示而不是错误；非法 adcode 在客户端就拦掉，不发请求
+- **别整包 setData**：`/api/map` 一次约 53KB（`areas[].path` 是 SVG 路径），只把算好的数字与名单塞进 `data`
+- **联调脚本**：`scripts/check-miniprogram-dist.cjs` 34 条（含「只用路径键刷一行、不牵连其他行」）
+
+### v2.7.4 (2026-10-27)
+
+- **近期战绩**（`pages/member`）：拉 `/api/player-stats`（转 OpenDota），显示近 20 场胜率、场均 GPM / KDA / 伤害与前 5 常用英雄；**点按钮才拉**，不占首屏、不白等
+- **AI 战力分析**（`pages/member`）：先补战绩再 `POST /api/ai-analysis`（`type:'player'`），输出按序号 / 加粗拆块渲染，可「重新分析」；结果本地缓存，服务端 30 分钟内命中会标「来自缓存」
+- **不引 markdown 库也不引 `rich-text`**：`utils/ai-text.js` 只认序号、加粗、列表三项，把 AI 文本切成 `blocks`/`segs` 交给 `wx:for` 渲染 —— 既不吃白名单限制，也不可能把 AI 输出当 HTML 执行
+- **超时当正常路径**：服务端允许 90 秒、而 `wx.request` 默认 60 秒，所以超时后的文案是「服务端算完会缓存 30 分钟，再点一次通常几秒出来」，而不是「分析失败」。同时 `app.json` 设了 `networkTimeout.request = 100000`（**超过 60 秒是否被平台截断需真机核实**）
+- **判断顺序修正**：没填 SteamID 的群友，先提示「没填 SteamID」再谈登录 —— 否则用户被赶去登录，回来才发现根本没有数据源
+- **联调脚本**：`scripts/check-miniprogram-ai.cjs`，解析层 14 条不联网，实测 AI 冷启 5 秒返回 669 字、二次命中缓存 0 秒
+
+### v2.7.3 (2026-10-27)
+
+- **六维筛选**（`pages/members`）：关键字 + 段位 / 分数区间 / 位置 / 地区 / 英雄 + 三种排序，全部**本地算**（拉一次 `/api/players`，168 条筛选是毫秒级，不必每次改条件都打接口）
+- **英雄与位置都是多选**：网页端本来就是多选下拉（OR 语义），小程序上一版做成单选等于问不出「会 A 或 B」；英雄池 67 个装进固定高度滚动区，按出现次数降序，第一屏就是最常见的
+- **筛选口径靠移植而非二次实现**：`miniprogram/utils/member-filter.js` 逐行抄 `lib/member-filter.mjs`，`scripts/check-miniprogram-members.cjs` 拿同一批真实群友比对 39 组条件 + 4 类 facets + 常量口径
+- **抓到一个真漂移**：移植版把 `regionShort` 简化成「取最后两段空格拼接」，而网页端是 `市 · 区`（还处理直辖市、外国、老自由文本），结果是**网页筛深圳 10 人、小程序 0 人**。现在解析与展示口径统一在 `miniprogram/utils/regions.js`（从 `lib/regions.js` 移植）
+- **语录打分与评价**（`pages/quotes`）：0~5 半星（11 档）、文字可选、一人一评可改（服务端 upsert，第二次提交不会变成第二条）、「我的评价」可删；评价区按需加载并缓存，不展开不发请求
+- **修掉一个必崩调用**：`pages/quotes` 里写了 `session.isAdmin()`，而 `utils/session.js` 只导出 `{ getToken, getUser, isLoggedIn, setLogin, clearLogin }` —— 管理员标记在 `getUser().isAdmin` 上
+- **`/api/options`** 追加 `limits.quote|quoteSource|reviewComment`（共 17 项），小程序不再抄长度常量
+- **联调脚本**：`scripts/check-miniprogram-members.cjs`（42 条）、`scripts/check-miniprogram-quotes.cjs`（37 条，可重复跑，跑完评价数回到基线）
+
+
+
+- **个人信息编辑**（`pages/profile`）：分数 / 最高分 / 胜率 / 擅长位置 / 擅长英雄 / 地区（复用 `region-picker`）/ 自我评价 / 默契队友 / 仇人
+- **只提交改动过的字段**：保存前与加载快照逐字段比对。整表提交会把用户没动的分数一起写一遍，`PUT /api/profile` 对数字字段的约定是「传 `''` = 清空」，一次手滑就能把天梯分清空
+- **留空 = 不修改**：分数清空的唯一方式是填 0，比「删掉就没了」更难误操作；小数在客户端就拦（服务端 integer 列会 500）
+- **我的赛事**（`pages/my-tournaments`）：参加过哪几届、第几届冠军、我的队伍、是否队长，点击进赛事详情
+- **修改密码**（`pages/password`）：验原密码（服务端把旧密码错误计入限流），成功后当前登录态不受影响
+- **`/api/options`** 下发 `limits.nickname|selfIntro|region|heroItem`，小程序不再抄一份长度常量
+- **联调脚本**：`scripts/check-miniprogram-profile.cjs` 38 条断言，可重复跑（开头把夹具资料复位成基线）
+
+### v2.7.1 (2026-10-27)
+
+- **赛事详情页**（`pages/tournament`）：名次（支持并列）、赛程对阵（按轮次分组、比分、胜者、恩怨局标记）、队伍成员（点击展开）、报名名单（默认 8 条可展开），附报名 / 退赛
+- **报名走服务端快照**：小程序不传分数与位置，由 `/api/tournaments/{id}/signup` 用档案值生成本届快照；队长退赛被服务端拒绝，页面给出「先去网页端卸任」的提示
+- **联调脚本**：`scripts/check-miniprogram-tournament.cjs` 40 条断言（含真写库的报名→退赛闭环，跑完不留残留）
+- **测试运行时**：`mp-runtime` 的 `setData` 支持数组下标路径键（`teams[0].open`），此前只认点号，会把「点了没反应」误判成页面 bug
+- **项目档案**：新增 `小程序项目档案.md`，记录页面进度、已用接口、待办与已知问题，供后续会话恢复上下文
+
+### v2.7.0 (2026-10-26)
+
+- **微信小程序**：`miniprogram/` 20 个页面（首页 / 群友 / 赛事 / 开黑 / 活动 / 美食 / 语录 / 帮派 / 个人信息 / 我的 / 登录注册 / 更新日志），覆盖网页端除管理后台外的全部功能
+- **会话双通道**：`getSession()` 支持 `Authorization: Bearer`（同一签名串，登录 / 注册接口回传 `token`），网页端 cookie 行为不变；小程序无 cookie 也能登录
+- **小程序补齐**：活动发布补三级地区选择（首个自定义组件 `region-picker`）、意见反馈（带 `client_token`，匿名也能查回自己的）、管理员在美食页展开并删除违规评价
+- **接口配合**：`/api/options` 下发帮派配色与长度限制（小程序不再复制一份常量）；`/api/quotes` 每条带 `canDelete`，判据与 DELETE 分支完全一致
+- **联调脚本**：`scripts/lib/mp-runtime.cjs` 迷你运行时 + 6 个检查脚本（静态自查 / 双通道 / 冒烟 / 写操作 / 帮派全链路 / 补丁三联），夹具统一由 `deploy/probe-account.cjs` 建拆
+- **数据修复**：后台合并选手时把被并入方的显示名 / 群昵称迁成可搜索别名，合并后旧名仍能搜到人
+
+### v2.6.0 (2026-10-24)
+
+- **公会系统**：帮派独立 Tab + 帮派主页（成员 / 邀请 / 口号）、个人信息里的帮派区块、后台管理（`/admin/guilds`）
+- **群友语录**：独立页 + 底部悬浮栏，登录后可提交；语录可打分（0–5 半星）与评价，后台可管理（`/admin/quotes`、`/admin/reviews`）
+- **活动招募**：独立于开黑的「活动」板块，支持地区筛选、过期折叠、「只看招募中」、日历日期筛选，配套后台增删改查（`/admin/activities`）
+- **内容安全**：所有 UGC（开黑 / 活动 / 美食评价 / 美食 / 个人信息 / 注册 / 工单 / 语录）先过 `moderation.mjs` 违禁词 + 外链白名单初筛，再送 DeepSeek 语义复审（`ai-moderate.mjs`，超时 / 无 key 自动放行）
+- **前台体验**：开黑 / 活动过期自动折叠；赛事 / 美食页来源声明；个人信息页接入最近比赛（可折叠）+ AI 分析；英雄格缩小一倍、胜负角标改绿 / 红底黑字
+- **后台补齐**：赛事后台搜索选人 / 新建选手、统一后台外壳 + 补 4 个管理页（比赛 / 消息 / 数据分析 / 公会）
+- **数据修复**：八届赛事选手归属全部修复（含第八届整届重建、队伍 2 夺冠），补 `haruna` / `光神` 等身份
 
 ### v2.5.0 (2026-10-23)
 

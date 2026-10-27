@@ -1,0 +1,166 @@
+.filters {
+  margin-bottom: 18rpx;
+}
+.search {
+  height: 72rpx;
+  padding: 0 22rpx;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 26rpx;
+  color: var(--text);
+}
+.search-ph {
+  color: var(--text-3);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+.chip {
+  font-size: 24rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  margin: 0 12rpx 12rpx 0;
+}
+.chip.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.food {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.line1 {
+  display: flex;
+  align-items: baseline;
+}
+.name {
+  font-size: 30rpx;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  min-width: 0;
+}
+.price {
+  font-size: 24rpx;
+  color: var(--brand);
+  margin-left: 12rpx;
+  flex: 0 0 auto;
+}
+.line2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}
+.stars {
+  font-size: 22rpx;
+  color: var(--gold);
+  letter-spacing: 1rpx;
+  margin-right: 12rpx;
+}
+.tag {
+  font-size: 20rpx;
+  color: var(--text-2);
+  background: var(--bg-subtle);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  margin: 4rpx 8rpx 0 0;
+}
+.feature {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.line3 {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+  font-size: 22rpx;
+}
+.footer {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.line3-left {
+  flex: 1;
+  min-width: 0;
+}
+.rate-btn {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: var(--brand-on-soft);
+  border: 1px solid var(--brand-border);
+  border-radius: 999rpx;
+  padding: 4rpx 18rpx;
+}
+
+/* 展开评价：列表默认只显示条数，809 家店全带明细会撑爆 setData */
+.review-toggle {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1px dashed var(--border);
+  font-size: 23rpx;
+  color: var(--brand);
+}
+.reviews {
+  margin-top: 8rpx;
+}
+.review {
+  padding: 12rpx 0;
+  border-bottom: 1px solid var(--border);
+}
+.review:last-child {
+  border-bottom: none;
+}
+.review-head {
+  display: flex;
+  align-items: center;
+}
+.review-who {
+  font-size: 24rpx;
+  color: var(--text-2);
+  margin-right: 10rpx;
+}
+.review-stars {
+  font-size: 22rpx;
+  color: var(--gold);
+  margin-right: 10rpx;
+  letter-spacing: 1rpx;
+}
+.review-time {
+  font-size: 21rpx;
+  color: var(--text-3);
+  margin-left: auto;
+}
+.review-del {
+  margin-left: 14rpx;
+  font-size: 21rpx;
+  color: var(--brand);
+  padding: 2rpx 10rpx;
+  border: 1px solid var(--brand-border);
+  border-radius: 5rpx;
+}
+.review-text {
+  margin-top: 6rpx;
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--text);
+  word-break: break-all;
+}

@@ -1,0 +1,280 @@
+.bar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.bar-left {
+  flex: 1;
+  min-width: 0;
+}
+.new-btn {
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  color: #ffffff;
+  background: var(--brand);
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+}
+.bar-sep {
+  margin: 0 8rpx;
+}
+
+.month {
+  margin: 8rpx 0 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+
+.quote {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+.quote-text {
+  font-size: 30rpx;
+  line-height: 1.65;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.quote-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 18rpx;
+}
+.who {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+.who-avatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  background: var(--bg-subtle);
+  margin-right: 10rpx;
+  flex: 0 0 auto;
+}
+.who-name {
+  font-size: 24rpx;
+  color: var(--brand-on-soft);
+  max-width: 260rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.who-date {
+  font-size: 22rpx;
+  color: var(--text-3);
+  margin-left: 12rpx;
+}
+.rating {
+  font-size: 22rpx;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+.by {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+/* 只有本人（或管理员）看得到，所以不做常驻占位 */
+.quote-acts {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 12rpx;
+}
+.act {
+  padding: 4rpx 16rpx;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  border-radius: 6rpx;
+}
+.del {
+  padding: 4rpx 16rpx;
+  font-size: 22rpx;
+  color: var(--brand);
+  border: 1px solid var(--brand-border);
+  border-radius: 6rpx;
+}
+
+/* ---------------- 评价区 ---------------- */
+.rv {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1px solid var(--border);
+}
+.rv-tip {
+  font-size: 22rpx;
+  color: var(--text-3);
+  padding: 8rpx 0;
+}
+.rv-sum {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 12rpx;
+}
+.rv-avg {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: var(--brand);
+}
+.rv-unit {
+  margin-left: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.rv-login {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 16rpx;
+  margin-bottom: 12rpx;
+  background: var(--bg-subtle);
+  border-radius: 10rpx;
+}
+.rv-login-text {
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.rv-login-btn {
+  font-size: 22rpx;
+  color: #ffffff;
+  background: var(--brand);
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+}
+
+.rv-form {
+  margin-bottom: 8rpx;
+}
+.rv-pick {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 16rpx;
+  margin-bottom: 10rpx;
+  background: var(--bg-subtle);
+  border-radius: 10rpx;
+}
+.rv-pick-label {
+  font-size: 24rpx;
+  color: var(--text-3);
+  flex: 1;
+}
+.rv-pick-val {
+  font-size: 24rpx;
+  color: var(--text);
+  font-weight: 600;
+}
+.rv-pick-arrow {
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+
+.rv-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 96rpx;
+  padding: 14rpx 16rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg-subtle);
+  border-radius: 10rpx;
+}
+.rv-ph {
+  color: var(--text-3);
+}
+
+.rv-submit-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+.rv-count {
+  flex: 1;
+  font-size: 20rpx;
+  color: var(--text-3);
+}
+.rv-submit {
+  font-size: 24rpx;
+  color: #ffffff;
+  background: var(--brand);
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+}
+.rv-submit.is-busy {
+  opacity: 0.55;
+}
+.rv-err {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--brand);
+}
+
+.rv-list {
+  margin-top: 8rpx;
+}
+.rv-item {
+  padding: 14rpx 0;
+  border-top: 1px dashed var(--border);
+}
+.rv-head {
+  display: flex;
+  align-items: center;
+}
+.rv-name {
+  font-size: 23rpx;
+  color: var(--text);
+  max-width: 260rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rv-mine {
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  font-size: 18rpx;
+  color: var(--brand);
+  border: 1px solid var(--brand-border);
+  border-radius: 4rpx;
+}
+.rv-stars {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: var(--brand);
+  letter-spacing: 1rpx;
+}
+.rv-when {
+  flex: 1;
+  text-align: right;
+  font-size: 20rpx;
+  color: var(--text-3);
+}
+.rv-text {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  line-height: 1.6;
+  color: var(--text-2);
+  word-break: break-word;
+}
+.rv-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4rpx;
+}
+.rv-del {
+  font-size: 20rpx;
+  color: var(--text-3);
+  padding: 2rpx 10rpx;
+}

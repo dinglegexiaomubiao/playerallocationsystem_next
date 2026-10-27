@@ -1,0 +1,120 @@
+@import "../../styles/form.wxss";
+
+.tabs {
+  display: flex;
+  margin-bottom: 18rpx;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  font-size: 26rpx;
+  color: var(--text-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.tab:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.tab:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+  border-left: none;
+}
+.tab.is-on {
+  color: var(--brand);
+  border-color: var(--brand-border);
+  background: rgba(176, 43, 37, 0.05);
+}
+
+/* 类型二选一：两个等宽块，选中态和 .chip.is-on 同一套观感 */
+.kinds {
+  display: flex;
+}
+.kind {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.kind:first-child {
+  margin-right: 12rpx;
+}
+.kind.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.item {
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+.item-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.badge {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx;
+  background: var(--bg-subtle);
+  color: var(--text-2);
+}
+.badge.is-new {
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+.badge.is-doing {
+  background: rgba(176, 43, 37, 0.08);
+  color: var(--brand-on-soft);
+}
+.badge.is-done {
+  background: rgba(47, 125, 120, 0.10);
+  color: #2f6f6a;
+}
+.badge.is-ignored {
+  background: var(--bg-subtle);
+  color: var(--text-3);
+}
+.time {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.item-body {
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: var(--text);
+  word-break: break-all;
+}
+.reply {
+  margin-top: 12rpx;
+  padding: 14rpx 16rpx;
+  background: var(--bg-subtle);
+  border-radius: var(--radius);
+}
+.reply-text {
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.reply-time {
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: var(--text-3);
+}
+
+.center-line {
+  text-align: center;
+  line-height: 1.7;
+}
+.link {
+  color: var(--brand);
+  margin-left: 6rpx;
+}

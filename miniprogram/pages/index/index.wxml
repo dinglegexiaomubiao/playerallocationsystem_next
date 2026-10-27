@@ -1,0 +1,33 @@
+<view class="wrap">
+  <view class="hero">
+    <view class="hero-title">深圳 LaRoja Dota2 社区</view>
+    <view class="hero-sub">开黑 · 活动 · 赛事 · 群友 · 帮派 · 美食 · 语录</view>
+  </view>
+
+  <view class="cta" bindtap="goMembers">
+    <view class="cta-title">AI 战力分析</view>
+    <view class="cta-desc">选一位群友，看近期战绩与打法推断</view>
+    <view class="cta-btn">去看群友</view>
+  </view>
+
+  <view wx:if="{{quotes.length}}" class="ticker" bindtap="onQuotes">
+    <text class="ticker-label">语录</text>
+    <swiper class="ticker-swiper" vertical autoplay circular interval="4000" duration="480">
+      <swiper-item wx:for="{{quotes}}" wx:key="id">
+        <view class="ticker-item">
+          <text class="ticker-text">{{item.content}}</text>
+          <text wx:if="{{item.from}}" class="ticker-from">— {{item.from}}</text>
+        </view>
+      </swiper-item>
+    </swiper>
+  </view>
+
+  <view class="grid">
+    <view wx:for="{{modules}}" wx:key="key" class="card" data-name="{{item.name}}" data-path="{{item.path}}" bindtap="onModule">
+      <view class="card-name">{{item.name}}</view>
+      <view class="card-desc">{{item.desc}}</view>
+    </view>
+  </view>
+
+  <view class="foot">数据与网页端同源，登录后逐步开放</view>
+</view>

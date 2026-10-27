@@ -164,7 +164,9 @@ export default async function handler(req, res) {
       throw error;
     }
 
-    setSessionCookie(res, username);
+    const token = setSessionCookie(res, username);
+    // 响应体里有 token，不能被任何中间层缓存住
+    res.setHeader('Cache-Control', 'no-store');
 
     const payload = {
       success: true,
@@ -173,6 +175,9 @@ export default async function handler(req, res) {
       playerId,
       message: '注册成功',
       isAdmin: isAdminName(username),
+      // 小程序拿它当 Authorization: Bearer；网页继续只用 cookie
+      token,
+      expiresInSec: 60 * 60 * 24 * 30,
     };
     res.status(200).json(payload);
 
