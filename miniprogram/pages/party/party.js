@@ -82,6 +82,17 @@ Page({
             actionKey = 'join';
           }
 
+          // 报名者名单：接口本来就带回（网页端 PartyCard 平铺展示），这里做轻量映射。
+          // WXML 里不能调方法，首字头像、段位文本都在 JS 算好。
+          const signups = (p.signups || []).map((s, i) => ({
+            idx: i,
+            initial: (s.nickname || '?').slice(0, 1),
+            nickname: s.nickname || '群友',
+            rankText: s.rank || (s.score ? s.score + ' 分' : ''),
+            eta: s.eta || '',
+            note: s.note || ''
+          }));
+
           return {
             id: String(p.id),
             title: p.title || '未命名开黑',
@@ -101,7 +112,10 @@ Page({
             positionsText: positions.slice(0, 4).join('、'),
             note: p.note || '',
             creatorText: (p.creator && p.creator.nickname) || '群友',
-            signupCount: p.signupCount || 0
+            signupCount: p.signupCount || 0,
+            needText: p.need_players ? ' / 需要 ' + p.need_players + ' 人' : '',
+            signups: signups,
+            expanded: false
           };
         });
 
@@ -140,9 +154,18 @@ Page({
   },
 
   onTap(e) {
-    // 卡片本身暂时没有详情页，点上去只提示；报名按钮用 catchtap 单独处理
-    const id = e.currentTarget.dataset.id;
-    if (id) wx.showToast({ title: '开黑详情页待接入', icon: 'none' });
+    // 点卡片 = 展开/收起报名者名单。网页端没有独立详情页（名单平铺在 PartyCard 里），
+    // 这里对齐：卡片信息已足够，缺的只是名单。
+    const i = Number(e.currentTarget.dataset.index);
+    const cur = this.data.list[i];
+    if (!cur) return;
+    if (!cur.signups.length) {
+      wx.showToast({ title: '还没有人报名', icon: 'none' });
+      return;
+    }
+    const patch = {};
+    patch['list[' + i + '].expanded'] = !cur.expanded;
+    this.setData(patch);
   },
 
   // 报名 / 取消报名

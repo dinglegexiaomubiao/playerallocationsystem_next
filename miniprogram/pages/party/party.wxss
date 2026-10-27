@@ -88,6 +88,75 @@
   -webkit-line-clamp: 2;
   overflow: hidden;
 }
+/* 展开名单时备注不再截断 */
+.note.is-full {
+  -webkit-line-clamp: unset;
+  display: block;
+  overflow: visible;
+}
+
+/* 报名者名单（点卡片展开，对齐网页端 PartyCard 的平铺样式） */
+.signups {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1px solid var(--border);
+}
+.su-head {
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.su-need {
+  color: var(--gold);
+}
+.su-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 10rpx;
+}
+.su-av {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: var(--brand-border);
+  color: var(--brand-on-soft);
+  font-size: 22rpx;
+  line-height: 48rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+.su-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 14rpx;
+}
+.su-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.su-name {
+  font-size: 26rpx;
+  color: var(--text);
+  font-weight: 600;
+}
+.su-rank {
+  margin-left: 10rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.su-meta {
+  display: block;
+  font-size: 22rpx;
+  color: var(--text-3);
+  margin-top: 2rpx;
+}
+.su-note {
+  display: block;
+  font-size: 24rpx;
+  color: var(--text-2);
+  margin-top: 4rpx;
+  line-height: 1.5;
+}
 .foot {
   display: flex;
   justify-content: space-between;
