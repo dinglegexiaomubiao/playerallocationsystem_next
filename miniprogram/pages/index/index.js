@@ -53,8 +53,11 @@ Page({
     wx.navigateTo({ url: '/pages/quotes/quotes' });
   },
 
-  goChat() {
-    wx.switchTab({ url: '/pages/chat/chat' });
+  // 原「AI 社区助手」CTA 指向的 /api/assistant 后端从未实现（点了必 404），
+  // tab 与页面已下线。CTA 改成指向真实存在的「AI 战力分析」入口：
+  // 名片页现在有 OpenDota 战绩 + AI 推断，这是首页最值得推的一个功能。
+  goMembers() {
+    wx.navigateTo({ url: '/pages/members/members' });
   },
 
   onModule(e) {

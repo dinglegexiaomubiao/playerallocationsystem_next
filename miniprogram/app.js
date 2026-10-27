@@ -1,5 +1,5 @@
 // 小程序入口：与 Web 共用同一套后端 /api/*
-// AI 助手 = /api/assistant（服务端跑 DeepSeek + 查库，key 不在小程序里）
+// AI 能力 = /api/ai-analysis（群友战力分析，名片页入口；key 只在服务端）
 App({
   globalData: {
     // 后端地址；上线前把域名加入小程序后台「request 合法域名」

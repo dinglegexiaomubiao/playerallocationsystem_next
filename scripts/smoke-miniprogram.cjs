@@ -179,7 +179,7 @@ async function run(title, rel, query, inspect) {
   await run('分布', 'pages/dist/dist.js', {}, (d) => {
     if (!d.areas.length) return new Error('没有区');
     if (d.areas[0].pct < 1) return new Error('pct 没算出来');
-    return d.scopeName + ' ' + d.areas.length + ' 区，最多「' + d.areas[0].name + ' ' + d.areas[0].playerCount + ' 人」';
+    return d.scopeName + ' ' + d.areas.length + ' 区，最多「' + d.areas[0].name + ' ' + (d.areas[0].count != null ? d.areas[0].count : d.areas[0].playerCount) + ' 人」';
   });
 
   // ---------- 登录与会话 ----------

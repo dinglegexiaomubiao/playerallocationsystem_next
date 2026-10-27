@@ -4,10 +4,10 @@
     <view class="hero-sub">开黑 · 活动 · 赛事 · 群友 · 帮派 · 美食 · 语录</view>
   </view>
 
-  <view class="cta" bindtap="goChat">
-    <view class="cta-title">AI 社区助手</view>
-    <view class="cta-desc">问一句就能查战绩、赛事、语录、美食</view>
-    <view class="cta-btn">去提问</view>
+  <view class="cta" bindtap="goMembers">
+    <view class="cta-title">AI 战力分析</view>
+    <view class="cta-desc">选一位群友，看近期战绩与打法推断</view>
+    <view class="cta-btn">去看群友</view>
   </view>
 
   <view wx:if="{{quotes.length}}" class="ticker" bindtap="onQuotes">
