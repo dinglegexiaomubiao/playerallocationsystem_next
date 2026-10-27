@@ -85,5 +85,94 @@
         </view>
       </view>
     </view>
+
+    <!-- 近期战绩（OpenDota）：AI 分析也吃这份数据，所以独立成块，AI 挂了它也有用 -->
+    <view class="block">
+      <view class="sec-title">近期战绩<text class="sec-note">近 20 场 · OpenDota</text></view>
+
+      <view wx:if="{{!gameId}}" class="surface empty-tip">
+        这位群友没填 SteamID，拉不到战绩，也没法做 AI 分析。
+      </view>
+
+      <view wx:elif="{{stats.status === 'idle'}}" class="surface act-row">
+        <text class="act-hint">数据从 OpenDota 实时拉，冷启动要几秒</text>
+        <text class="act-btn" bindtap="onTapStats">拉取战绩</text>
+      </view>
+
+      <view wx:elif="{{stats.status === 'loading'}}" class="surface act-row">
+        <text class="act-hint">正在拉取战绩…</text>
+      </view>
+
+      <view wx:elif="{{stats.status === 'error'}}" class="surface act-row">
+        <text class="act-hint is-error">{{stats.error}}</text>
+        <text class="act-btn" bindtap="onTapStats">重试</text>
+      </view>
+
+      <view wx:else class="surface stats">
+        <view class="cell">
+          <text class="cell-num">{{stats.data.winRate}}%</text>
+          <text class="cell-label">近 {{stats.data.total}} 场胜率</text>
+        </view>
+        <view class="cell">
+          <text class="cell-num">{{stats.data.gpm}}</text>
+          <text class="cell-label">场均 GPM</text>
+        </view>
+        <view class="cell">
+          <text class="cell-num">{{stats.data.kda}}</text>
+          <text class="cell-label">场均 KDA</text>
+        </view>
+        <view class="cell">
+          <text class="cell-num">{{stats.data.dmg}}</text>
+          <text class="cell-label">场均伤害</text>
+        </view>
+        <view wx:if="{{stats.data.heroes.length}}" class="stats-heroes">
+          <text wx:for="{{stats.data.heroes}}" wx:key="name" class="stats-hero">{{item.name}} {{item.text}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- AI 战力分析 -->
+    <view class="block ai-block">
+      <view class="sec-title">
+        AI 战力分析
+        <text wx:if="{{ai.status === 'done' && ai.cached}}" class="sec-note">来自缓存</text>
+        <text wx:elif="{{ai.status === 'done' && ai.elapsed}}" class="sec-note">耗时 {{ai.elapsed}}s</text>
+      </view>
+
+      <view wx:if="{{ai.status === 'idle'}}" class="surface act-row">
+        <text class="act-hint">按英雄池与近期数据做打法推断，仅供娱乐</text>
+        <text class="act-btn" bindtap="onTapAI">{{loggedIn ? '开始分析' : '登录后可用'}}</text>
+      </view>
+
+      <view wx:elif="{{ai.status === 'running'}}" class="surface ai-loading">
+        <view class="spinner"></view>
+        <view class="ai-loading-body">
+          <text class="ai-loading-title">{{stats.status === 'loading' ? '正在拉取战绩…' : 'AI 分析中…'}}</text>
+          <text class="ai-loading-hint">通常 30~60 秒，页面别退太快</text>
+        </view>
+      </view>
+
+      <view wx:elif="{{ai.status === 'error'}}" class="surface ai-error">
+        <text class="ai-error-text">{{ai.error}}</text>
+        <view class="ai-error-acts">
+          <text class="act-btn" bindtap="onTapAI">再试一次</text>
+        </view>
+      </view>
+
+      <block wx:else>
+        <view class="surface ai-body">
+          <view wx:for="{{ai.blocks}}" wx:key="k" class="ai-line {{item.type === 'item' ? 'is-item' : ''}}">
+            <text wx:if="{{item.num}}" class="ai-num">{{item.num}}</text>
+            <view class="ai-line-body">
+              <text wx:for="{{item.segs}}" wx:for-item="seg" wx:key="k" class="ai-seg {{seg.b ? 'is-bold' : ''}}">{{seg.t}}</text>
+            </view>
+          </view>
+          <view class="ai-foot">
+            <text class="ai-foot-hint">AI 推断，不保证准确</text>
+            <text class="ai-rerun" bindtap="rerunAI">重新分析</text>
+          </view>
+        </view>
+      </block>
+    </view>
   </block>
 </view>

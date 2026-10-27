@@ -289,6 +289,7 @@ node scripts/check-miniprogram-tournament.cjs # 赛事详情 40 条（含报名�
 node scripts/check-miniprogram-profile.cjs     # 个人信息 / 我的赛事 / 改密码 38 条（含「只提交改动字段」回归）
 node scripts/check-miniprogram-members.cjs     # 六维筛选：39 组条件与 lib/member-filter.mjs 逐条比对（含 facets 与常量口径）
 node scripts/check-miniprogram-quotes.cjs      # 语录打分：一人一评 upsert / 非法分数 400 / 超长截断 / 删除回基线
+node scripts/check-miniprogram-ai.cjs          # 名片页战绩 + AI 分析：markdown 解析 / 真调 AI（消耗额度）/ 缓存命中
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -314,6 +315,15 @@ node deploy/probe-account.cjs down
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.4 (2026-10-27)
+
+- **近期战绩**（`pages/member`）：拉 `/api/player-stats`（转 OpenDota），显示近 20 场胜率、场均 GPM / KDA / 伤害与前 5 常用英雄；**点按钮才拉**，不占首屏、不白等
+- **AI 战力分析**（`pages/member`）：先补战绩再 `POST /api/ai-analysis`（`type:'player'`），输出按序号 / 加粗拆块渲染，可「重新分析」；结果本地缓存，服务端 30 分钟内命中会标「来自缓存」
+- **不引 markdown 库也不引 `rich-text`**：`utils/ai-text.js` 只认序号、加粗、列表三项，把 AI 文本切成 `blocks`/`segs` 交给 `wx:for` 渲染 —— 既不吃白名单限制，也不可能把 AI 输出当 HTML 执行
+- **超时当正常路径**：服务端允许 90 秒、而 `wx.request` 默认 60 秒，所以超时后的文案是「服务端算完会缓存 30 分钟，再点一次通常几秒出来」，而不是「分析失败」。同时 `app.json` 设了 `networkTimeout.request = 100000`（**超过 60 秒是否被平台截断需真机核实**）
+- **判断顺序修正**：没填 SteamID 的群友，先提示「没填 SteamID」再谈登录 —— 否则用户被赶去登录，回来才发现根本没有数据源
+- **联调脚本**：`scripts/check-miniprogram-ai.cjs`，解析层 14 条不联网，实测 AI 冷启 5 秒返回 669 字、二次命中缓存 0 秒
 
 ### v2.7.3 (2026-10-27)
 
