@@ -57,6 +57,12 @@ export default function handler(req, res) {
       guildName: LIMITS.guildName,
       guildSlogan: LIMITS.guildSlogan,
       guildInvite: LIMITS.guildInvite,
+      // 个人信息页要卡长度：不从这里下发，小程序就得自己抄一份，抄一次迟早和
+      // lib/moderation.mjs 对不上（多一个字符就被服务端打回来，用户看不懂为什么）
+      nickname: LIMITS.nickname,
+      selfIntro: LIMITS.selfIntro,
+      region: LIMITS.region,
+      heroItem: LIMITS.heroItem,
     },
   });
 }

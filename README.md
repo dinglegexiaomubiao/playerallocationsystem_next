@@ -102,9 +102,10 @@
 # 域名白名单需放行 https://dota.playerallocationsystem.online
 ```
 
-**页面（21 个）**：首页 / 助手 / 群友（列表·名片·分布图）/ 赛事（列表·详情：名次·赛程对阵·队伍·报名名单·报名退赛）/
+**页面（24 个）**：首页 / 助手 / 群友（列表·名片·分布图）/ 赛事（列表·详情：名次·赛程对阵·队伍·报名名单·报名退赛）/
 开黑（列表·发布·报名·关闭）/ 活动（列表·发布·报名）/ 美食（列表·评价）/ 语录（列表·收录·删除）/
-帮派（列表·我的帮派·邀请）/ 我的 / 登录 / 意见反馈。
+帮派（列表·我的帮派·邀请）/ 个人信息（分数·位置·地区·自我评价·默契队友·仇人）/ 我的赛事 / 修改密码 /
+我的 / 登录 / 意见反馈。
 
 **与网页端的差异（有意为之，不是缺口）**：
 
@@ -114,7 +115,8 @@
 | 活动地区 | 省 / 市 / 区三级 | 同样三级（`components/region-picker`），地区数据走 `wx.request` 拉 `public/data/china-division.json` 并缓存 7 天 |
 | 工单 | `/admin/support` | 只提交 + 查自己的（`client_token` 保证匿名提交也能查回） |
 | 赛事编排 | 建轮次、录比分、选队长 | 只读 + 报名 / 退赛。编排是管理员动作 |
-| 注册 / 改资料 | `/register`、`/profile` | 只登录（账号由网页端注册），改资料去网页端。小程序拿不到手机号授权就不该造第二套账号体系 |
+| 注册 | `/register` | 只登录，账号由网页端注册。小程序拿不到手机号授权就不该造第二套账号体系 |
+| 多值身份 | `/profile` 里可加多个 SteamID / 群昵称 | 只读展示。服务端要求保留主号，改错的代价是头像、战绩、赛程集体失联，这种交互不适合手机 |
 
 **踩过的坑（改动前先看）**：WXML 里不能用 `?.` / `??` / 箭头函数 / `indexOf()`；
 WXSS 自定义属性不能带 `rpx`；每个页面**和每个组件**都必须四件套齐全；
@@ -284,6 +286,7 @@ node scripts/check-miniprogram-writes.cjs  # 写操作（发卡片 / 报名 / �
 node scripts/check-miniprogram-guild.cjs   # 帮派全链路 38 条断言，需要两个夹具账号
 node scripts/check-miniprogram-extras.cjs  # 活动地区 / 意见反馈 / 管理员删评价
 node scripts/check-miniprogram-tournament.cjs # 赛事详情 40 条（含报名退赛写链路）
+node scripts/check-miniprogram-profile.cjs     # 个人信息 / 我的赛事 / 改密码 38 条（含「只提交改动字段」回归）
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -309,6 +312,16 @@ node deploy/probe-account.cjs down
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.2 (2026-10-27)
+
+- **个人信息编辑**（`pages/profile`）：分数 / 最高分 / 胜率 / 擅长位置 / 擅长英雄 / 地区（复用 `region-picker`）/ 自我评价 / 默契队友 / 仇人
+- **只提交改动过的字段**：保存前与加载快照逐字段比对。整表提交会把用户没动的分数一起写一遍，`PUT /api/profile` 对数字字段的约定是「传 `''` = 清空」，一次手滑就能把天梯分清空
+- **留空 = 不修改**：分数清空的唯一方式是填 0，比「删掉就没了」更难误操作；小数在客户端就拦（服务端 integer 列会 500）
+- **我的赛事**（`pages/my-tournaments`）：参加过哪几届、第几届冠军、我的队伍、是否队长，点击进赛事详情
+- **修改密码**（`pages/password`）：验原密码（服务端把旧密码错误计入限流），成功后当前登录态不受影响
+- **`/api/options`** 下发 `limits.nickname|selfIntro|region|heroItem`，小程序不再抄一份长度常量
+- **联调脚本**：`scripts/check-miniprogram-profile.cjs` 38 条断言，可重复跑（开头把夹具资料复位成基线）
 
 ### v2.7.1 (2026-10-27)
 

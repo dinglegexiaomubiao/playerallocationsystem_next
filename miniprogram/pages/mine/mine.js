@@ -34,6 +34,18 @@ Page({
     wx.navigateTo({ url: '/pages/guild/guild' });
   },
 
+  goProfile() {
+    wx.navigateTo({ url: '/pages/profile/profile' });
+  },
+
+  goMyTournaments() {
+    wx.navigateTo({ url: '/pages/my-tournaments/my-tournaments' });
+  },
+
+  goPassword() {
+    wx.navigateTo({ url: '/pages/password/password' });
+  },
+
   goFeedback() {
     wx.navigateTo({ url: '/pages/feedback/feedback' });
   },

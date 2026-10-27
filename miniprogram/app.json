@@ -20,7 +20,10 @@
     "pages/activity-new/activity-new",
     "pages/food-review/food-review",
     "pages/quote-new/quote-new",
-    "pages/feedback/feedback"
+    "pages/feedback/feedback",
+    "pages/profile/profile",
+    "pages/my-tournaments/my-tournaments",
+    "pages/password/password"
   ],
   "window": {
     "navigationBarTitleText": "LaRoja 社区",

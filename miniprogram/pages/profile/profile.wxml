@@ -1,0 +1,147 @@
+<view class="page-wrap">
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{needLogin}}" class="center">
+    <view>个人信息需要先登录</view>
+    <button class="btn link-btn" bindtap="goLogin">去登录</button>
+  </view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+
+  <view wx:elif="{{!bound}}" class="center">
+    <view>这个账号还没绑定选手资料</view>
+    <view class="muted small">去网页端「个人信息」补填一次，之后这里就能改了</view>
+  </view>
+
+  <block wx:else>
+    <!-- 顶部身份（只读） -->
+    <view class="surface head">
+      <view class="line1">
+        <text class="nick">{{info.nickname}}</text>
+        <text wx:if="{{info.guildName}}" class="guild" data-name="{{info.guildName}}">{{info.guildName}}</text>
+      </view>
+      <view wx:if="{{info.gameId}}" class="muted">游戏 ID {{info.gameId}}</view>
+      <view wx:if="{{info.steamIds.length}}" class="muted">SteamID {{info.steamIds[0]}}</view>
+      <view wx:if="{{info.groupNicknames.length}}" class="muted">
+        群昵称 {{info.groupNicknames[0]}}
+      </view>
+      <view wx:if="{{info.steamIds.length > 1 || info.groupNicknames.length > 1}}" class="muted small">
+        还有多个身份没显示，多值身份请在网页端「个人信息」里管理
+      </view>
+    </view>
+
+    <view class="sec-title">基本资料</view>
+    <view class="surface card">
+      <view class="field">
+        <view class="label">所处地区</view>
+        <region-picker value="{{form.region}}" bind:change="onRegion" />
+        <view class="hint">选到区一级更准 —— 约线下局、找队友都靠它</view>
+      </view>
+
+      <view class="field">
+        <view class="label">当前天梯分</view>
+        <input
+          class="input"
+          type="number"
+          value="{{form.score}}"
+          data-key="score"
+          bindinput="onInput"
+          placeholder="填现在的分数，掉了就跟着改"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">历史最高分</view>
+        <input
+          class="input"
+          type="number"
+          value="{{form.peak_score}}"
+          data-key="peak_score"
+          bindinput="onInput"
+          placeholder="打上过的最好成绩，不随掉分变化"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">自报胜率（%）</view>
+        <input
+          class="input"
+          type="number"
+          value="{{form.win_rate}}"
+          data-key="win_rate"
+          bindinput="onInput"
+          placeholder="0 ~ 100"
+        />
+      </view>
+
+      <view class="field">
+        <view class="label">擅长位置</view>
+        <view class="chips">
+          <text
+            wx:for="{{posChips}}"
+            wx:key="name"
+            class="chip {{item.on ? 'on' : ''}}"
+            data-name="{{item.name}}"
+            bindtap="onTogglePos"
+          >{{item.name}}</text>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="label">擅长英雄</view>
+        <input
+          class="input"
+          value="{{form.heroes}}"
+          data-key="heroes"
+          bindinput="onInput"
+          placeholder="逗号分隔，按顺序排，如：影魔, 伐木机"
+        />
+        <view class="hint">群友卡片只展示前 4 个，顺序就是这里的顺序</view>
+      </view>
+
+      <view class="field">
+        <view class="label">自我评价</view>
+        <textarea
+          class="textarea"
+          value="{{form.self_intro}}"
+          data-key="self_intro"
+          bindinput="onInput"
+          maxlength="{{limits.selfIntro || 300}}"
+          placeholder="一句能让别人记住你的话"
+        />
+      </view>
+    </view>
+
+    <view class="sec-title">关系标注</view>
+    <view class="surface card">
+      <view class="field">
+        <view class="label">默契队友</view>
+        <input
+          class="input"
+          value="{{form.synergy}}"
+          data-key="synergy"
+          bindinput="onInput"
+          placeholder="昵称或 SteamID，逗号分隔"
+        />
+      </view>
+      <view class="field">
+        <view class="label">仇人</view>
+        <input
+          class="input"
+          value="{{form.enemies}}"
+          data-key="enemies"
+          bindinput="onInput"
+          placeholder="仅趣味展示，无实际影响"
+        />
+      </view>
+    </view>
+
+    <view class="tip">留空表示保持原值，不会把已有数据清掉。</view>
+    <view class="bar-space"></view>
+  </block>
+
+  <view wx:if="{{!loading && !needLogin && !error && bound}}" class="bar">
+    <text class="muted bar-info">改完点保存</text>
+    <button class="btn" bindtap="onSave" disabled="{{saving}}">
+      {{saving ? '保存中…' : '保存'}}
+    </button>
+  </view>
+</view>

@@ -98,6 +98,8 @@ function componentDir(target) {
 }
 
 const componentFiles = [];
+// 同一个组件被多个页面引用时只算一个组件（否则「2 个组件」会让人以为多了一份）
+const uniqComponents = new Set();
 for (const ref of componentRefs) {
   const base = componentDir(ref.target);
   const miss = ['.js', '.json', '.wxml', '.wxss'].filter((ext) => !fs.existsSync(base + ext));
@@ -106,6 +108,7 @@ for (const ref of componentRefs) {
     continue;
   }
   componentFiles.push(base);
+  uniqComponents.add(base);
   try {
     const cj = JSON.parse(fs.readFileSync(base + '.json', 'utf8'));
     if (cj.component !== true) bad(path.relative(ROOT, base) + '.json 缺 "component": true');
@@ -115,7 +118,9 @@ for (const ref of componentRefs) {
   const cjs = fs.readFileSync(base + '.js', 'utf8');
   if (cjs.indexOf('Component(') < 0) bad(path.relative(ROOT, base) + '.js 没有调用 Component()');
 }
-if (componentFiles.length) ok(componentFiles.length + ' 个自定义组件四件套齐全');
+if (uniqComponents.size) {
+  ok(uniqComponents.size + ' 个自定义组件四件套齐全（被 ' + componentFiles.length + ' 处引用）');
+}
 
 for (const f of wxmls) {
   const s = fs.readFileSync(abs(f), 'utf8');
