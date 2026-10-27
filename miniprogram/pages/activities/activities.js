@@ -69,6 +69,17 @@ Page({
             actionKey = 'join';
           }
 
+          // 报名者名单：接口本来就在列表里带回（网页端 ActivityCard 平铺展示）。
+          // WXML 不能调方法，首字头像、携伴文案、日期都在 JS 算好。
+          const signups = (p.signups || []).map((s, i) => ({
+            idx: i,
+            initial: (s.nickname || '?').slice(0, 1),
+            nickname: s.nickname || '群友',
+            guestsText: s.guests > 0 ? '携 ' + s.guests + ' 人同行' : '本人参加',
+            note: s.note || '',
+            dayText: s.created_at ? fmtDateTime(s.created_at).slice(0, 10) : ''
+          }));
+
           return {
             id: String(p.id),
             title: p.title || '未命名活动',
@@ -86,7 +97,10 @@ Page({
             peopleText: peopleText,
             note: p.note || '',
             creatorText: (p.creator && p.creator.nickname) || '群友',
-            signupCount: p.signupCount || 0
+            signupCount: p.signupCount || 0,
+            needText: p.need_people ? ' / 需要 ' + p.need_people + ' 人' : '',
+            signups: signups,
+            expanded: false
           };
         });
 
@@ -124,8 +138,17 @@ Page({
   },
 
   onTap(e) {
-    const id = e.currentTarget.dataset.id;
-    if (id) wx.showToast({ title: '活动详情页待接入', icon: 'none' });
+    // 点卡片 = 展开/收起报名者名单（与网页端 ActivityCard 平铺一致，没有独立详情页）
+    const i = Number(e.currentTarget.dataset.index);
+    const cur = this.data.list[i];
+    if (!cur) return;
+    if (!cur.signups.length) {
+      wx.showToast({ title: '还没有人报名', icon: 'none' });
+      return;
+    }
+    const patch = {};
+    patch['list[' + i + '].expanded'] = !cur.expanded;
+    this.setData(patch);
   },
 
   onAction(e) {
