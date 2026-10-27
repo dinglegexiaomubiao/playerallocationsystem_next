@@ -290,6 +290,7 @@ node scripts/check-miniprogram-profile.cjs     # 个人信息 / 我的赛事 / �
 node scripts/check-miniprogram-members.cjs     # 六维筛选：39 组条件与 lib/member-filter.mjs 逐条比对（含 facets 与常量口径）
 node scripts/check-miniprogram-quotes.cjs      # 语录打分：一人一评 upsert / 非法分数 400 / 超长截断 / 删除回基线
 node scripts/check-miniprogram-ai.cjs          # 名片页战绩 + AI 分析：markdown 解析 / 真调 AI（消耗额度）/ 缓存命中
+node scripts/check-miniprogram-dist.cjs        # 分布页：面包屑 / 排行 / 未填名单 / 三级下钻 / 不设下级回落
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -315,6 +316,14 @@ node deploy/probe-account.cjs down
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.5 (2026-10-27)
+
+- **群友分布下钻**（`pages/dist`）：面包屑（全国 → 省 → 市 → 区）+ 人数排行 + 比例条，点区划下钻、点人数展开该区名单，外加「未填地区 130 位」名单 —— 不摆出来会让人以为群里就 38 个人
+- **不做地图是刻意的**：网页端是自绘 SVG 行政区图，小程序既没 SVG 也不适合 canvas；原生 `map` 组件要腾讯地图底图 + 自塞行政区多边形，牵扯地图数据合规与 key 管理。排行 + 比例条 + 下钻信息量等价，还没有合规负担
+- **下钻接口的两个 200**：不设下级行政区（东莞市这类）返回 200 + `notice` 并回落到有数据的一级，页面当提示而不是错误；非法 adcode 在客户端就拦掉，不发请求
+- **别整包 setData**：`/api/map` 一次约 53KB（`areas[].path` 是 SVG 路径），只把算好的数字与名单塞进 `data`
+- **联调脚本**：`scripts/check-miniprogram-dist.cjs` 34 条（含「只用路径键刷一行、不牵连其他行」）
 
 ### v2.7.4 (2026-10-27)
 
