@@ -1,5 +1,5 @@
 {
-  "description": "深圳 LaRoja Dota2 社区 · 微信小程序（原生，20 页；会话走 Bearer，数据与网页端同源）",
+  "description": "深圳 LaRoja DoDo 社区 · 微信小程序（原生，23 页；会话走 Bearer，数据与网页端同源）",
   "packOptions": {
     "ignore": [],
     "include": []
@@ -29,9 +29,10 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.0.0",
-  "appid": "wxe47f45003f37cec0",
+  "appid": "wx06a849d0f1d69174",
   "projectname": "laroja-miniprogram",
   "miniprogramRoot": "./",
   "simulatorPluginLibVersion": {},
-  "editorSetting": {}
+  "editorSetting": {},
+  "isGameTourist": false
 }

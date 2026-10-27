@@ -291,6 +291,7 @@ node scripts/check-miniprogram-members.cjs     # 六维筛选：39 组条件与 
 node scripts/check-miniprogram-quotes.cjs      # 语录打分：一人一评 upsert / 非法分数 400 / 超长截断 / 删除回基线
 node scripts/check-miniprogram-ai.cjs          # 名片页战绩 + AI 分析：markdown 解析 / 真调 AI（消耗额度）/ 缓存命中
 node scripts/check-miniprogram-dist.cjs        # 分布页：面包屑 / 排行 / 未填名单 / 三级下钻 / 不设下级回落
+node scripts/check-miniprogram-login.cjs       # 登录跳转：栈深 1/2 分流 / 失败兜底 / 未登录不误跳（纯离线）
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -316,6 +317,13 @@ node deploy/probe-account.cjs down
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.10 (2026-10-27)
+
+- **修真机登录 bug：登录成功后停在登录界面**。根因是小程序**热启动会恢复上次的页面栈**，用户上次停在登录页，再打开时栈里只有一层，`wx.navigateBack()` 无页可回而静默失败。修法：`goBack()` 按栈深分流（有上一页 navigateBack + `fail` 兜底 reLaunch；无上一页直接 reLaunch 首页）；`onLoad` 对「未登录 + 栈只有登录页」也 reLaunch 首页，不再一打开就要求输账号密码
+- **改名 DoDo**：展示文案 4 处（首页标题、转发/朋友圈标题、`project.config.json` 描述）由「Dota2」改为「DoDo」。提审名称带具体游戏名可能被按游戏类目要求版号/授权，个人主体拿不到。**域名与 API 路径不动**
+- `scripts/lib/mp-runtime.cjs` 补真实页面栈模拟（`getCurrentPages` / `navigateTo` 压栈 / `navigateBack` 弹栈与栈底失败回调 / `reLaunch` 重置），暴露 `navLog`、`pageStack` —— 之前只 stub 了空实现，这类栈深 bug 测不出来
+- 新增 `scripts/check-miniprogram-login.cjs`：16 条断言，覆盖栈深 1/2 下的跳转分流、失败兜底、未登录不误跳
 
 ### v2.7.9 (2026-10-27)
 

@@ -70,10 +70,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja · 深圳 Dota2 社区', path: '/pages/index/index' };
+    return { title: 'LaRoja · 深圳 DoDo 社区', path: '/pages/index/index' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja · 深圳 Dota2 社区' };
+    return { title: 'LaRoja · 深圳 DoDo 社区' };
   }
 });

@@ -13,10 +13,35 @@ Page({
   },
 
   onLoad() {
+    const pages = getCurrentPages();
     const u = session.getUser();
+
     if (u && u.token) {
-      // 已经登录了，直接回去，别让用户看着一个还能再登一次的表格
-      wx.navigateBack();
+      // 已经登录了，直接走。别让用户看着一个还能再登一次的表格。
+      // 注意栈深：小程序热启动会恢复上次的页面栈，上次停在登录页时栈里只有 1 层，
+      // navigateBack 没有上一页可回、会静默失败 —— 所以补 reLaunch 兜底。
+      if (pages.length > 1) {
+        wx.navigateBack({ fail: () => wx.reLaunch({ url: '/pages/index/index' }) });
+      } else {
+        wx.reLaunch({ url: '/pages/index/index' });
+      }
+      return;
+    }
+
+    // 未登录 + 栈底就是登录页 = 热启动恢复到上次的登录页（登录页不是入口页）。
+    // 直接回首页，别让用户一打开小程序就面对账号密码 —— 首页不登录也能看。
+    if (pages.length <= 1) {
+      wx.reLaunch({ url: '/pages/index/index' });
+    }
+  },
+
+  /** 登录成功后的跳转：有上一页就回，没有（热启动恢复到本页）就回首页 */
+  goBack() {
+    const pages = getCurrentPages();
+    if (pages.length > 1) {
+      wx.navigateBack({ fail: () => wx.reLaunch({ url: '/pages/index/index' }) });
+    } else {
+      wx.reLaunch({ url: '/pages/index/index' });
     }
   },
 
@@ -56,7 +81,8 @@ Page({
 
         this.setData({ submitting: false });
         wx.showToast({ title: '登录成功', icon: 'success' });
-        setTimeout(() => wx.navigateBack(), 600);
+        // toast 是全局层，跳页后依然显示，不用等它走完
+        this.goBack();
       })
       .catch((e) => {
         const code = (e && e.code) || '';

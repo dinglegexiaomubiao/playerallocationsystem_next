@@ -70,6 +70,13 @@ function createRuntime(opts) {
     r.end();
   }
 
+  // 页面栈：navigateTo 压栈、navigateBack 弹栈、reLaunch 重置为 1 层。
+  // 这一层必须真实实现，否则「登录成功后停在登录页」这类栈深相关的 bug 测不出来：
+  // 真机上热启动会恢复到上次页面，栈深可能只有 1，navigateBack 会静默失败。
+  const pageStack = [{ route: 'pages/index/index' }];
+  const navLog = []; // 每次跳转按顺序记录，测试断言「去了哪」
+  const record = (kind, url) => navLog.push({ kind: kind, url: url || '' });
+
   global.wx = {
     request: fakeRequest,
     getStorageSync: (k) => (store.has(k) ? store.get(k) : ''),
@@ -81,11 +88,36 @@ function createRuntime(opts) {
       // 默认按「确定」处理，这样二次确认的流程也能跑下去
       if (o && typeof o.success === 'function') o.success({ confirm: true });
     },
-    navigateTo: () => {},
-    navigateBack: () => {},
-    switchTab: () => {}
+    navigateTo: (o) => {
+      const url = (o && o.url) || '';
+      record('navigateTo', url);
+      pageStack.push({ route: url.replace(/^\//, '').split('?')[0] });
+    },
+    navigateBack: (o) => {
+      if (pageStack.length > 1) {
+        record('navigateBack', pageStack[pageStack.length - 1].route);
+        pageStack.pop();
+      } else {
+        // 真机行为：栈底再返回是无效操作，只是静默失败（有 fail 回调才通知）
+        record('navigateBack-fail', '');
+        if (o && typeof o.fail === 'function') o.fail({ errMsg: 'navigateBack:fail cannot navigate back at first page' });
+      }
+    },
+    reLaunch: (o) => {
+      const url = (o && o.url) || '';
+      record('reLaunch', url);
+      pageStack.length = 0;
+      pageStack.push({ route: url.replace(/^\//, '').split('?')[0] });
+    },
+    switchTab: (o) => {
+      const url = (o && o.url) || '';
+      record('switchTab', url);
+      pageStack.length = 0;
+      pageStack.push({ route: url.replace(/^\//, '').split('?')[0] });
+    }
   };
   global.getApp = () => app;
+  global.getCurrentPages = () => pageStack;
 
   let def = null;
   global.Page = (o) => {
@@ -204,7 +236,7 @@ function createRuntime(opts) {
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  return { store, app, toasts, loadPage, loadComponent, wait, baseUrl };
+  return { store, app, toasts, loadPage, loadComponent, wait, baseUrl, navLog, pageStack };
 }
 
 module.exports = { createRuntime };
