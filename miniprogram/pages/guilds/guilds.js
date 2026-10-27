@@ -82,5 +82,13 @@ Page({
       showCancel: false,
       confirmText: '知道了'
     });
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja 帮派 · 阵营与成员', path: '/pages/guilds/guilds' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja 帮派' };
   }
 });

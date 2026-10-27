@@ -218,5 +218,13 @@ Page({
     if (!id) return;
     // id 是 17 位雪花号，拼 URL 时保持字符串，别 Number()（会丢最后一位）
     wx.navigateTo({ url: '/pages/member/member?id=' + String(id) });
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja 群友名录 · 战绩与名片', path: '/pages/members/members' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja 群友名录' };
   }
 });

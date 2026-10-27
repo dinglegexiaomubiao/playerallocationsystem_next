@@ -67,5 +67,13 @@ Page({
     } else {
       wx.showToast({ title: (ds.name || '该模块') + ' 待接入', icon: 'none' });
     }
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja · 深圳 Dota2 社区', path: '/pages/index/index' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja · 深圳 Dota2 社区' };
   }
 });

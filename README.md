@@ -317,6 +317,12 @@ node deploy/probe-account.cjs down
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
 
+### v2.7.7 (2026-10-27)
+
+- **全站分享能力补齐**：内容型 12 页全部支持「转发给朋友」（`onShareAppMessage`），其中 11 页支持「分享到朋友圈」（`onShareTimeline`，guild 因按登录态拉「我的帮派」而不做）。个人/表单/流程页（login、mine、profile、password、my-tournaments、feedback、4 个新建页、guild-invite）**有意不加** —— 不写该方法转发按钮即为灰色，符合预期
+- 详情页分享带参数：名片页/赛事详情 `path?id=`；朋友圈单页模式用 `query`，已确认两页核心数据均不依赖登录态
+- 静态校验 26 条通过，12 个改动 JS `node --check` 通过
+
 ### v2.7.6 (2026-10-27)
 
 - **下线「助手」tab**：`pages/chat` 调的 `/api/assistant` 后端从未实现（线上 404），tabBar 第 2 项和首页 CTA 点了必失败。删除页面四件套、tabBar 收成 2 项（首页 / 我的，微信 tabBar 下限就是 2），首页 CTA 改指真实存在的「AI 战力分析」（进群友列表 → 名片页）

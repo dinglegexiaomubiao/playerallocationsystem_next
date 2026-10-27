@@ -407,5 +407,14 @@ Page({
 
   goProfile() {
     wx.showToast({ title: '请在网页版「个人信息」补填选手资料', icon: 'none' });
+  },
+
+  // 帮派页按登录态拉「我的帮派」，path 不带 id —— 别人点开看到的是 TA 自己的帮派
+  onShareAppMessage() {
+    const g = this.data.guild;
+    return {
+      title: (g && g.name ? g.name : 'LaRoja 帮派') + ' · LaRoja',
+      path: '/pages/guild/guild'
+    };
   }
 });

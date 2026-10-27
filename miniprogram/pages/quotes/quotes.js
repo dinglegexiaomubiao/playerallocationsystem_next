@@ -352,5 +352,9 @@ Page({
 
   onShareAppMessage() {
     return { title: '群友语录 · LaRoja', path: '/pages/quotes/quotes' };
+  },
+
+  onShareTimeline() {
+    return { title: '群友语录 · LaRoja' };
   }
 });

@@ -36,5 +36,13 @@ Page({
     const id = String(e.currentTarget.dataset.id || '');
     if (!id) return;
     wx.navigateTo({ url: '/pages/tournament/tournament?id=' + id });
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja 赛事中心 · 历届名次', path: '/pages/tournaments/tournaments' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja 赛事中心' };
   }
 });

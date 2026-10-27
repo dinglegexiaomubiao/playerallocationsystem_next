@@ -340,5 +340,10 @@ Page({
       title: t ? t.name : 'LaRoja 赛事',
       path: '/pages/tournament/tournament?id=' + this.data.id
     };
+  },
+
+  onShareTimeline() {
+    const t = this.data.t;
+    return { title: t ? t.name : 'LaRoja 赛事', query: 'id=' + this.data.id };
   }
 });

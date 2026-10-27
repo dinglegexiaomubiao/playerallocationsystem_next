@@ -201,5 +201,13 @@ Page({
           showCancel: false
         });
       });
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja 活动招募 · 约饭爬山', path: '/pages/activities/activities' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja 活动招募' };
   }
 });

@@ -221,5 +221,13 @@ Page({
           showCancel: false
         });
       });
+  },
+
+  onShareAppMessage() {
+    return { title: 'LaRoja 开黑广场 · 缺人喊一嗓', path: '/pages/party/party' };
+  },
+
+  onShareTimeline() {
+    return { title: 'LaRoja 开黑广场' };
   }
 });

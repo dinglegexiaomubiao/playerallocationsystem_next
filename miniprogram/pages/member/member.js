@@ -306,5 +306,10 @@ Page({
   onShareAppMessage() {
     const name = this.data.p ? this.data.p.nickname : '群友';
     return { title: name + ' 的名片 · LaRoja', path: '/pages/member/member?id=' + this.data.id };
+  },
+
+  onShareTimeline() {
+    const name = this.data.p ? this.data.p.nickname : '群友';
+    return { title: name + ' 的名片 · LaRoja', query: 'id=' + this.data.id };
   }
 });
