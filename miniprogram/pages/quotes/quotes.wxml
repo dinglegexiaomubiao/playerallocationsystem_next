@@ -29,8 +29,88 @@
 
       <view wx:if="{{item.submittedText}}" class="by">{{item.submittedText}}</view>
 
-      <view wx:if="{{item.canDelete}}" class="quote-acts">
-        <text class="del" data-id="{{item.id}}" catchtap="removeQuote">删除</text>
+      <view class="quote-acts">
+        <text class="act" data-id="{{item.id}}" catchtap="toggleReviews">
+          {{reviews[item.id] && reviews[item.id].open ? '收起评价' : '评价'}}
+        </text>
+        <text wx:if="{{item.canDelete}}" class="del" data-id="{{item.id}}" catchtap="removeQuote">删除</text>
+      </view>
+
+      <!-- 评价区：按需拉取，拉过就缓存 -->
+      <view wx:if="{{reviews[item.id] && reviews[item.id].open}}" class="rv">
+        <view wx:if="{{reviews[item.id].loading}}" class="rv-tip">加载中…</view>
+
+        <block wx:else>
+          <view wx:if="{{reviews[item.id].count}}" class="rv-sum">
+            <text class="rv-avg">{{reviews[item.id].avg}}</text>
+            <text class="rv-unit">分 · {{reviews[item.id].count}} 人评价</text>
+          </view>
+          <view wx:else class="rv-tip">还没有人评价，说说你的看法？</view>
+
+          <!-- 打分表单：登录后才出现；未登录给一个入口而不是报错 -->
+          <view wx:if="{{!loggedIn}}" class="rv-login">
+            <text class="rv-login-text">登录后就能给这条语录打分</text>
+            <text class="rv-login-btn" catchtap="goLogin">去登录</text>
+          </view>
+          <view wx:else class="rv-form">
+            <picker
+              mode="selector"
+              range="{{scoreLabels}}"
+              value="{{reviews[item.id].scoreIndex}}"
+              data-id="{{item.id}}"
+              bindchange="onScoreChange"
+            >
+              <view class="rv-pick">
+                <text class="rv-pick-label">我的评分</text>
+                <text class="rv-pick-val">{{reviews[item.id].scoreLabel}}</text>
+                <text class="rv-pick-arrow">›</text>
+              </view>
+            </picker>
+
+            <textarea
+              class="rv-input"
+              placeholder="想补充两句？（可不填，最多 {{reviewMax}} 字）"
+              placeholder-class="rv-ph"
+              maxlength="{{reviewMax}}"
+              value="{{reviews[item.id].myComment}}"
+              data-id="{{item.id}}"
+              bindinput="onComment"
+              auto-height
+            />
+
+            <view class="rv-submit-row">
+              <text class="rv-count">{{reviews[item.id].commentLen}}/{{reviewMax}}</text>
+              <text
+                class="rv-submit {{reviews[item.id].busy ? 'is-busy' : ''}}"
+                data-id="{{item.id}}"
+                catchtap="submitReview"
+              >{{reviews[item.id].myId ? '更新我的评价' : '提交评价'}}</text>
+            </view>
+
+            <view wx:if="{{reviews[item.id].error}}" class="rv-err">{{reviews[item.id].error}}</view>
+          </view>
+
+          <view wx:if="{{reviews[item.id].list.length}}" class="rv-list">
+            <view wx:for="{{reviews[item.id].list}}" wx:key="id" wx:for-item="rv" class="rv-item">
+              <view class="rv-head">
+                <text class="rv-name">{{rv.name}}</text>
+                <text wx:if="{{rv.mine}}" class="rv-mine">我的</text>
+                <text class="rv-stars">{{rv.stars}}</text>
+                <text class="rv-when">{{rv.when}}</text>
+              </view>
+              <view wx:if="{{rv.comment}}" class="rv-text">{{rv.comment}}</view>
+              <view class="rv-foot">
+                <text
+                  wx:if="{{rv.mine || isAdmin}}"
+                  class="rv-del"
+                  data-id="{{item.id}}"
+                  data-rid="{{rv.id}}"
+                  catchtap="removeMyReview"
+                >删除</text>
+              </view>
+            </view>
+          </view>
+        </block>
       </view>
     </view>
   </block>

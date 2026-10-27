@@ -63,6 +63,9 @@ export default function handler(req, res) {
       selfIntro: LIMITS.selfIntro,
       region: LIMITS.region,
       heroItem: LIMITS.heroItem,
+      quote: LIMITS.quote,
+      quoteSource: LIMITS.quoteSource,
+      reviewComment: LIMITS.reviewComment,
     },
   });
 }

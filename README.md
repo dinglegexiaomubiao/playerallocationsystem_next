@@ -287,6 +287,8 @@ node scripts/check-miniprogram-guild.cjs   # 帮派全链路 38 条断言，需�
 node scripts/check-miniprogram-extras.cjs  # 活动地区 / 意见反馈 / 管理员删评价
 node scripts/check-miniprogram-tournament.cjs # 赛事详情 40 条（含报名退赛写链路）
 node scripts/check-miniprogram-profile.cjs     # 个人信息 / 我的赛事 / 改密码 38 条（含「只提交改动字段」回归）
+node scripts/check-miniprogram-members.cjs     # 六维筛选：39 组条件与 lib/member-filter.mjs 逐条比对（含 facets 与常量口径）
+node scripts/check-miniprogram-quotes.cjs      # 语录打分：一人一评 upsert / 非法分数 400 / 超长截断 / 删除回基线
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -313,7 +315,18 @@ node deploy/probe-account.cjs down
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
 
-### v2.7.2 (2026-10-27)
+### v2.7.3 (2026-10-27)
+
+- **六维筛选**（`pages/members`）：关键字 + 段位 / 分数区间 / 位置 / 地区 / 英雄 + 三种排序，全部**本地算**（拉一次 `/api/players`，168 条筛选是毫秒级，不必每次改条件都打接口）
+- **英雄与位置都是多选**：网页端本来就是多选下拉（OR 语义），小程序上一版做成单选等于问不出「会 A 或 B」；英雄池 67 个装进固定高度滚动区，按出现次数降序，第一屏就是最常见的
+- **筛选口径靠移植而非二次实现**：`miniprogram/utils/member-filter.js` 逐行抄 `lib/member-filter.mjs`，`scripts/check-miniprogram-members.cjs` 拿同一批真实群友比对 39 组条件 + 4 类 facets + 常量口径
+- **抓到一个真漂移**：移植版把 `regionShort` 简化成「取最后两段空格拼接」，而网页端是 `市 · 区`（还处理直辖市、外国、老自由文本），结果是**网页筛深圳 10 人、小程序 0 人**。现在解析与展示口径统一在 `miniprogram/utils/regions.js`（从 `lib/regions.js` 移植）
+- **语录打分与评价**（`pages/quotes`）：0~5 半星（11 档）、文字可选、一人一评可改（服务端 upsert，第二次提交不会变成第二条）、「我的评价」可删；评价区按需加载并缓存，不展开不发请求
+- **修掉一个必崩调用**：`pages/quotes` 里写了 `session.isAdmin()`，而 `utils/session.js` 只导出 `{ getToken, getUser, isLoggedIn, setLogin, clearLogin }` —— 管理员标记在 `getUser().isAdmin` 上
+- **`/api/options`** 追加 `limits.quote|quoteSource|reviewComment`（共 17 项），小程序不再抄长度常量
+- **联调脚本**：`scripts/check-miniprogram-members.cjs`（42 条）、`scripts/check-miniprogram-quotes.cjs`（37 条，可重复跑，跑完评价数回到基线）
+
+
 
 - **个人信息编辑**（`pages/profile`）：分数 / 最高分 / 胜率 / 擅长位置 / 擅长英雄 / 地区（复用 `region-picker`）/ 自我评价 / 默契队友 / 仇人
 - **只提交改动过的字段**：保存前与加载快照逐字段比对。整表提交会把用户没动的分数一起写一遍，`PUT /api/profile` 对数字字段的约定是「传 `''` = 清空」，一次手滑就能把天梯分清空

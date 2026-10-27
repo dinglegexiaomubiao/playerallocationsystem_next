@@ -7,10 +7,8 @@ function fullUrl(base, p) {
 }
 
 function regionShort(region) {
-  if (!region) return '';
-  const parts = String(region).split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return parts[0] || '';
-  return parts.slice(-2).join(' ');
+  // 口径在 utils/regions.js（移植自 lib/regions.js）：`深圳市 · 南山区`
+  return require('./regions').regionShort(region);
 }
 
 function pad2(n) {

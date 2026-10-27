@@ -1,8 +1,82 @@
 <view class="page-wrap">
-  <view class="bar">共 {{total}} 位群友</view>
+  <!-- 搜索 + 筛选开关 -->
+  <view class="search">
+    <input
+      class="input"
+      value="{{keyword}}"
+      bindinput="onKeyword"
+      placeholder="搜昵称 / 群昵称 / SteamID / 英雄"
+      confirm-type="search"
+    />
+    <text wx:if="{{keyword}}" class="clear" bindtap="onClearKeyword">×</text>
+    <view class="filter-btn {{activeCount ? 'on' : ''}}" bindtap="togglePanel">
+      筛选<text wx:if="{{activeCount}}"> {{activeCount}}</text>
+    </view>
+  </view>
+
+  <!-- 常用三档：一直露着，避免每次点开面板 -->
+  <view class="quick">
+    <picker mode="selector" range="{{tierLabels}}" value="{{tierIndex}}" bindchange="onTier">
+      <view class="quick-item">{{tierLabels[tierIndex]}}</view>
+    </picker>
+    <picker mode="selector" range="{{scoreLabels}}" value="{{scoreIndex}}" bindchange="onScore">
+      <view class="quick-item">{{scoreLabels[scoreIndex]}}</view>
+    </picker>
+    <picker mode="selector" range="{{sortLabels}}" value="{{sortIndex}}" bindchange="onSort">
+      <view class="quick-item">{{sortLabels[sortIndex]}}</view>
+    </picker>
+  </view>
+
+  <!-- 更多筛选 -->
+  <view wx:if="{{open}}" class="surface panel">
+    <view class="field">
+      <view class="label">地区</view>
+      <picker mode="selector" range="{{regionLabels}}" value="{{regionIndex}}" bindchange="onRegion">
+        <view class="picker-value">{{regionLabels[regionIndex]}}</view>
+      </picker>
+    </view>
+    <view class="field">
+      <view class="label">擅长位置（可多选）</view>
+      <view class="chips">
+        <text
+          wx:for="{{posChips}}"
+          wx:key="name"
+          class="chip {{item.on ? 'on' : ''}}"
+          data-name="{{item.name}}"
+          bindtap="onTogglePos"
+        >{{item.name}}</text>
+      </view>
+    </view>
+    <view class="field">
+      <view class="label">擅长英雄（可多选）<text wx:if="{{heroCount}}" class="label-note">已选 {{heroCount}}</text></view>
+      <scroll-view class="chips-scroll" scroll-y>
+        <view class="chips">
+          <text
+            wx:for="{{heroChips}}"
+            wx:key="name"
+            class="chip {{item.on ? 'on' : ''}}"
+            data-name="{{item.name}}"
+            bindtap="onHero"
+          >{{item.name}} <text class="chip-n">{{item.count}}</text></text>
+        </view>
+      </scroll-view>
+    </view>
+    <view class="panel-foot">
+      <text class="reset" bindtap="reset">重置全部</text>
+    </view>
+  </view>
+
+  <view class="bar">
+    <text wx:if="{{activeCount}}">筛出 {{shown}} 位 / 共 {{total}} 位</text>
+    <text wx:else>共 {{total}} 位群友</text>
+  </view>
 
   <view wx:if="{{loading}}" class="center">加载中…</view>
   <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!list.length}}" class="center">
+    没有符合条件的群友
+    <view class="muted small" bindtap="reset">点这里重置筛选</view>
+  </view>
 
   <view wx:for="{{list}}" wx:key="id" class="surface row" data-id="{{item.id}}" bindtap="onTap">
     <image wx:if="{{item.avatar}}" class="avatar" src="{{item.avatar}}" mode="aspectFill"></image>
