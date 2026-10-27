@@ -30,5 +30,11 @@ Page({
         this.setData({ loading: false, list });
       })
       .catch((e) => this.setData({ loading: false, error: (e && e.message) || '加载失败' }));
+  },
+
+  onOpen(e) {
+    const id = String(e.currentTarget.dataset.id || '');
+    if (!id) return;
+    wx.navigateTo({ url: '/pages/tournament/tournament?id=' + id });
   }
 });

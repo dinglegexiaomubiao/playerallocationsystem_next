@@ -97,24 +97,44 @@ function createRuntime(opts) {
     compDef = o;
   };
 
+  /**
+   * 路径键拆段：'teams[0].open' → ['teams', 0, 'open']。
+   * 数组下标是小程序的标准写法（列表里只刷一项，避免重发整个数组），
+   * 这里必须认，否则测试里的「点了没反应」其实是脚手架没实现。
+   */
+  function resolveSegments(pathStr) {
+    const out = [];
+    String(pathStr)
+      .split('.')
+      .forEach((part) => {
+        const m = /^([^[\]]+)((?:\[\d+\])*)$/.exec(part);
+        if (!m) {
+          out.push(part);
+          return;
+        }
+        out.push(m[1]);
+        const idxs = m[2].match(/\d+/g) || [];
+        idxs.forEach((n) => out.push(Number(n)));
+      });
+    return out;
+  }
+
   /** setData 的路径键实现，Page 与 Component 共用 */
   function attachSetData(inst) {
     inst.setData = function (patch, cb) {
-      /**
-       * 支持路径键（`'form.error': 'xx'`）—— 小程序里这是标准写法，页面靠它只刷一个字段。
-       * 之前这里是 Object.assign 平铺，路径键会被当成字面 key 塞进 data，
-       * 于是「页面提示没出现」其实是测试脚手架没实现，不是页面写错。
-       */
       Object.keys(patch || {}).forEach((k) => {
-        if (k.indexOf('.') < 0) {
+        if (k.indexOf('.') < 0 && k.indexOf('[') < 0) {
           this.data[k] = patch[k];
           return;
         }
-        const parts = k.split('.');
+        const parts = resolveSegments(k);
         let cur = this.data;
         for (let i = 0; i < parts.length - 1; i++) {
           const seg = parts[i];
-          if (!cur[seg] || typeof cur[seg] !== 'object') cur[seg] = {};
+          const needArray = typeof parts[i + 1] === 'number';
+          if (cur[seg] === undefined || cur[seg] === null || typeof cur[seg] !== 'object') {
+            cur[seg] = needArray ? [] : {};
+          }
           cur = cur[seg];
         }
         cur[parts[parts.length - 1]] = patch[k];

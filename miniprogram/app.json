@@ -5,6 +5,7 @@
     "pages/mine/mine",
     "pages/members/members",
     "pages/tournaments/tournaments",
+    "pages/tournament/tournament",
     "pages/quotes/quotes",
     "pages/foods/foods",
     "pages/activities/activities",

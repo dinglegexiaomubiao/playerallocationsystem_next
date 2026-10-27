@@ -89,7 +89,7 @@
 ## 微信小程序
 
 `miniprogram/` 是同一套后端之上的微信小程序（原生 WXML/WXSS/JS，**不用** Taro / uni-app），
-让群友在微信里直接用，不用跳浏览器。
+让群友在微信里直接用，不用跳浏览器。逐页进度、已用接口与待办见 **`小程序项目档案.md`**。
 
 **怎么连后端**：小程序没有 cookie jar，所以会话走 `Authorization: Bearer <签名串>`。
 登录 / 注册接口在响应体里多返回一个 `token`（与 `Set-Cookie` 里是**同一个** HMAC 签名串，
@@ -102,9 +102,9 @@
 # 域名白名单需放行 https://dota.playerallocationsystem.online
 ```
 
-**页面（20 个）**：首页 / 助手 / 群友（列表·名片·分布图）/ 赛事（列表）/ 开黑（列表·发布·报名·关闭）/
-活动（列表·发布·报名）/ 美食（列表·评价）/ 语录（列表·收录·删除）/ 帮派（列表·我的帮派·邀请）/
-我的 / 登录 / 意见反馈。
+**页面（21 个）**：首页 / 助手 / 群友（列表·名片·分布图）/ 赛事（列表·详情：名次·赛程对阵·队伍·报名名单·报名退赛）/
+开黑（列表·发布·报名·关闭）/ 活动（列表·发布·报名）/ 美食（列表·评价）/ 语录（列表·收录·删除）/
+帮派（列表·我的帮派·邀请）/ 我的 / 登录 / 意见反馈。
 
 **与网页端的差异（有意为之，不是缺口）**：
 
@@ -113,7 +113,7 @@
 | 管理后台 | `/admin/*` 全套 | 只有最小动作：管理员展开评价列表删除违规评价。表格密集的后台不适合手机 |
 | 活动地区 | 省 / 市 / 区三级 | 同样三级（`components/region-picker`），地区数据走 `wx.request` 拉 `public/data/china-division.json` 并缓存 7 天 |
 | 工单 | `/admin/support` | 只提交 + 查自己的（`client_token` 保证匿名提交也能查回） |
-| 赛事 | 详情 / 对阵 / 报名 / 队伍 | 只有列表（名称·状态·冠军）。详情页信息密度高，且赛事报名一年几次，留在网页端 |
+| 赛事编排 | 建轮次、录比分、选队长 | 只读 + 报名 / 退赛。编排是管理员动作 |
 | 注册 / 改资料 | `/register`、`/profile` | 只登录（账号由网页端注册），改资料去网页端。小程序拿不到手机号授权就不该造第二套账号体系 |
 
 **踩过的坑（改动前先看）**：WXML 里不能用 `?.` / `??` / 箭头函数 / `indexOf()`；
@@ -283,6 +283,7 @@ node scripts/smoke-miniprogram.cjs         # 只读冒烟，逐页拉接口
 node scripts/check-miniprogram-writes.cjs  # 写操作（发卡片 / 报名 / 评价 / 语录），需要探针账号 + 管理员 token
 node scripts/check-miniprogram-guild.cjs   # 帮派全链路 38 条断言，需要两个夹具账号
 node scripts/check-miniprogram-extras.cjs  # 活动地区 / 意见反馈 / 管理员删评价
+node scripts/check-miniprogram-tournament.cjs # 赛事详情 40 条（含报名退赛写链路）
 
 # 夹具由 deploy/probe-account.cjs 建与拆（在服务器上跑，跑完务必 down）：
 node deploy/probe-account.cjs up-pair Probe2026ga Probe2026gb
@@ -308,6 +309,14 @@ node deploy/probe-account.cjs down
 ## 更新日志
 
 > 2026-10 已从 Vercel + Neon 迁到阿里云自托管（本机 PostgreSQL）。v2.4.0 及更早里提到的 `vercel.json` / Neon 区域对齐，都是迁移前的操作，现已不适用。
+
+### v2.7.1 (2026-10-27)
+
+- **赛事详情页**（`pages/tournament`）：名次（支持并列）、赛程对阵（按轮次分组、比分、胜者、恩怨局标记）、队伍成员（点击展开）、报名名单（默认 8 条可展开），附报名 / 退赛
+- **报名走服务端快照**：小程序不传分数与位置，由 `/api/tournaments/{id}/signup` 用档案值生成本届快照；队长退赛被服务端拒绝，页面给出「先去网页端卸任」的提示
+- **联调脚本**：`scripts/check-miniprogram-tournament.cjs` 40 条断言（含真写库的报名→退赛闭环，跑完不留残留）
+- **测试运行时**：`mp-runtime` 的 `setData` 支持数组下标路径键（`teams[0].open`），此前只认点号，会把「点了没反应」误判成页面 bug
+- **项目档案**：新增 `小程序项目档案.md`，记录页面进度、已用接口、待办与已知问题，供后续会话恢复上下文
 
 ### v2.7.0 (2026-10-26)
 

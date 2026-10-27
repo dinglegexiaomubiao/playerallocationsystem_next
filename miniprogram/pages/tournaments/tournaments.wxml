@@ -2,7 +2,13 @@
   <view wx:if="{{loading}}" class="center">加载中…</view>
   <view wx:elif="{{error}}" class="center">{{error}}</view>
 
-  <view wx:for="{{list}}" wx:key="id" class="surface row">
+  <view
+    wx:for="{{list}}"
+    wx:key="id"
+    class="surface row"
+    data-id="{{item.id}}"
+    bindtap="onOpen"
+  >
     <view class="line1">
       <text class="name">{{item.name}}</text>
       <text class="status">{{item.statusText}}</text>
