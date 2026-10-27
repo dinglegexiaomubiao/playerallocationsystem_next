@@ -1,5 +1,5 @@
 {
-  "description": "深圳 LaRoja Dota2 社区 · 微信小程序（占位骨架，真实工程后续用 WorkBuddy 小程序脚手架生成）",
+  "description": "深圳 LaRoja Dota2 社区 · 微信小程序（原生，20 页；会话走 Bearer，数据与网页端同源）",
   "packOptions": {
     "ignore": [],
     "include": []
