@@ -38,6 +38,19 @@ function fmt(ts) {
   return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+// 「检查模板」结果的翻译。note 由 lib/mp-notify.mjs 的 judgeValidity 给出：
+//   40037 → invalid_template；43101 → user_not_subscribed；47003 → field_mismatch
+const TMPL_VERDICT = {
+  sent: { ok: true, text: '有效（自检消息已真发出）' },
+  user_not_subscribed: { ok: true, text: '有效（对方还没订阅，属于正常）' },
+  field_mismatch: { ok: true, text: '模板对，但字段名/值不匹配，FIELD_MAP 要修', warn: true },
+  invalid_template: { ok: false, text: '模板 id 无效，去小程序后台重新复制' },
+  no_template: { ok: false, text: '没配模板 id' },
+  unknown: { ok: null, text: '判不出来（看右侧微信原话）' },
+};
+
+const TEMPLATES_LABEL = { digest: '每日汇总', signup: '报名提醒' };
+
 function Report({ report }) {
   if (!report) return null;
   const c = report.counts || {};
@@ -87,6 +100,7 @@ export default function AdminMpPushPage({ denied }) {
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState(null);
   const [report, setReport] = useState(null);
+  const [checkResult, setCheckResult] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,13 +130,29 @@ export default function AdminMpPushPage({ denied }) {
     setBusy(action);
     setMsg(null);
     setReport(null);
+    if (action === 'check') setCheckResult(null);
     try {
       // 手动点「立即发汇总」带上 force：这是人确认过的动作，不该被「窗口太短」挡回去
       // （那道保护挡的是 pm2 重启连跑、脚本重复触发）。连点两下由 busy 状态防住。
       const payload = action === 'digest' ? { action, force: true } : { action };
       const r = await apiPost('/api/admin/mp/push', payload);
       setReport((r && r.report) || null);
-      setMsg({ type: 'ok', text: action === 'preview' ? '预览完成' : '已执行' });
+      if (action === 'check') {
+        const result = (r && r.result) || null;
+        setCheckResult(result);
+        const bad = (result && result.bad) || [];
+        const mismatch = (result && result.mismatch) || [];
+        setMsg({
+          type: bad.length || mismatch.length ? 'err' : 'ok',
+          text: bad.length
+            ? '有 ' + bad.length + ' 个模板 id 无效：' + bad.join('、')
+            : mismatch.length
+              ? '有 ' + mismatch.length + ' 个模板字段名对不上：' + mismatch.join('、')
+              : '两个模板都有效',
+        });
+      } else {
+        setMsg({ type: 'ok', text: action === 'preview' ? '预览完成' : '已执行' });
+      }
       await load();
     } catch (e) {
       setMsg({ type: 'err', text: e.message });
@@ -143,6 +173,18 @@ export default function AdminMpPushPage({ denied }) {
       lead="每一次订阅消息下发的结果。用户说没收到，先在这一页找他的账号。"
       actions={
         <>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => run('check')}
+            disabled={!!busy || !configured.canPush}
+            title={
+              configured.canPush
+                ? '逐个模板反证 id 是否有效（会挑一个已绑定微信的人，可能真收到一条「模板自检」）'
+                : '服务端还没配好 AppSecret'
+            }
+          >
+            {busy === 'check' ? '检查中…' : '检查模板'}
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={() => run('preview')} disabled={!!busy}>
             {busy === 'preview' ? '统计中…' : '预览汇总'}
           </button>
@@ -183,6 +225,45 @@ export default function AdminMpPushPage({ denied }) {
       </div>
 
       {msg && <div className={'adm-flash is-' + (msg.type === 'err' ? 'err' : 'ok')}>{msg.text}</div>}
+
+      {checkResult && (
+        <div className="adm-flash is-ok" style={{ lineHeight: 1.9 }}>
+          <div style={{ marginBottom: 6 }}>
+            <b>模板自检</b>
+            <span className="adm-tool-note" style={{ marginLeft: 8 }}>
+              用 {checkResult.openid} 反证，结果缓存 7 天（小程序据此跳过无效模板）
+            </span>
+          </div>
+          <table className="adm-data">
+            <thead>
+              <tr>
+                <th>模板</th>
+                <th>结论</th>
+                <th>微信返回</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(checkResult.templates || {}).map((k) => {
+                const t = checkResult.templates[k] || {};
+                const v = TMPL_VERDICT[t.note] || { ok: null, text: t.note || '—' };
+                const bad = v.ok === false || v.warn;
+                return (
+                  <tr key={k}>
+                    <td>{(TEMPLATES_LABEL[k] || k) + ' · ' + (t.tmplId || '')}</td>
+                    <td style={{ color: bad ? '#c0392b' : v.ok ? '#1e8449' : '#8a6d3b', fontWeight: bad ? 600 : 400 }}>
+                      {v.ok === false ? '✗ ' : v.warn ? '△ ' : v.ok === true ? '✓ ' : '? '}
+                      {v.text}
+                    </td>
+                    <td className="adm-tool-note">
+                      {t.errcode === 0 ? '0 · 成功' : t.errcode + ' · ' + (t.errmsg || '').slice(0, 50)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
       <Report report={report} />
 
       {loading ? (

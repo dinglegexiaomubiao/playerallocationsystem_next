@@ -8,12 +8,17 @@
  *   digest   真发。会消耗每个订阅者 1 次一次性订阅额度，额度为 0 的人跳过并记日志。
  *   test     给指定账号发一条测试提醒，用来验证「模板字段名对不对」
  *            （字段名填错时这里会立刻返回 errcode 47003，不用等到真事发生）。
+ *   check    逐个模板反证模板 id 是否有效，结果缓存 7 天并下发给小程序。
+ *            为什么需要：wx.requestSubscribeMessage 传的是一批 id，只要其中一个
+ *            无效整批就失败、只报笼统的 20001，前端无从知道是哪个坏了
+ *            （2026-10-28 就这样：报名模板 id 贴错，把汇总模板一起拖死）。
  *
  * 定时任务（scripts/mp-digest.cjs）走的是同一个 runDigest，行为完全一致 ——
  * 后台能发的，cron 就能发；cron 发的，后台能查到日志。
  */
 import { getSession, isAdmin } from '../../../../lib/auth';
 import {
+  checkTemplates,
   mpConfigured,
   notifySignupToOwner,
   runDigest,
@@ -71,6 +76,23 @@ export default async function handler(req, res) {
         joinerName: '测试群友',
         extra: '这条是后台手动发的测试提醒',
       });
+      return res.status(200).json({ ok: true, action, result: r });
+    }
+
+    if (action === 'check') {
+      if (!mpConfigured().canPush) {
+        return res.status(409).json({
+          ok: false,
+          error: '服务端还没配齐 AppSecret，现在查不了。',
+        });
+      }
+      const r = await checkTemplates();
+      if (r.reason === 'no_openid') {
+        return res.status(409).json({
+          ok: false,
+          error: '还没有任何人绑定微信，没有 openid 可用来反证模板（微信对假 openid 只报 40003）。先让一个人在小程序「消息提醒」页绑定微信。',
+        });
+      }
       return res.status(200).json({ ok: true, action, result: r });
     }
 

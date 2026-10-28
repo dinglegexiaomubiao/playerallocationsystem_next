@@ -178,5 +178,32 @@ for (const f of ['lib/mp-notify.mjs', 'pages/api/mp/link.js', 'pages/api/admin/m
 }
 dirty.length ? bad('有文件把 AppSecret 写死了: ' + dirty.join(', ')) : ok('没有硬编码 AppSecret');
 
+/* ---------- 10. 模板有效性：一个坏 id 不能拖死整批（2026-10-28 事故） ---------- */
+// 事故复盘：报名模板贴了个不属于本小程序的 id，wx.requestSubscribeMessage 传的是
+// 两个 id 的数组，微信整批拒绝、只报笼统的 20001，用户看到「没授权成功 · 模板 id 不对」，
+// 而本来有效的汇总模板一起用不了。所以三道防线一个都不能少。
+const pushApi = read('pages/api/admin/mp/push.js');
+
+if (!/valid\s*!==\s*false/.test(subSrc)) {
+  bad('订阅页没有按 valid !== false 过滤模板（无效 id 会再次拖死整批请求）');
+} else if (!/doRequestSubscribe\s*\(/.test(subSrc)) {
+  bad('订阅页没有把请求抽成可重试的方法，20001 时无法降级重试');
+} else if (!/20001/.test(subSrc) || !/attempt/.test(subSrc)) {
+  bad('订阅页缺少 20001 的降级重试（只留一个模板再试）');
+} else ok('订阅页会跳过无效模板，且 20001 时降级重试');
+
+if (!/templateValidity/.test(statusSrc) || !/valid:/.test(statusSrc)) {
+  bad('/api/mp/status 没下发 valid（前端无法知道哪个模板坏了）');
+} else ok('/api/mp/status 下发了模板有效性 valid');
+
+if (!/export async function checkTemplates/.test(notify)) {
+  bad('lib/mp-notify.mjs 缺 checkTemplates()');
+} else if (!/40037/.test(notify) || !/43101/.test(notify) || !/47003/.test(notify)) {
+  bad('checkTemplates 没覆盖 40037/43101/47003 三种判定');
+} else ok('checkTemplates() 会用 40037/43101/47003 反证模板有效性');
+
+if (!/action === 'check'/.test(pushApi)) bad('后台推送接口缺 action=check');
+else ok('后台有「检查模板」入口');
+
 console.log(fail === 0 ? '\n✅ 全部通过\n' : `\n❌ ${fail} 项未通过\n`);
 process.exit(fail === 0 ? 0 : 1);
