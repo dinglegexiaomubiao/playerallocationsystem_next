@@ -21,6 +21,8 @@
     "pages/quote-new/quote-new",
     "pages/feedback/feedback",
     "pages/changelog/changelog",
+    "pages/messages/messages",
+    "pages/subscribe/subscribe",
     "pages/profile/profile",
     "pages/my-tournaments/my-tournaments",
     "pages/password/password"

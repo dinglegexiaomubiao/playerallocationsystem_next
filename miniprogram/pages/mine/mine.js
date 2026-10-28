@@ -1,6 +1,7 @@
 const session = require('../../utils/session');
 const { getBase } = require('../../utils/api');
 const { fmtDateTime } = require('../../utils/format');
+const badge = require('../../utils/badge');
 
 Page({
   data: {
@@ -10,6 +11,7 @@ Page({
     isAdmin: false,
     loginAtText: '',
     base: '',
+    unread: 0,
     version: '0.2.0'
   },
 
@@ -24,6 +26,8 @@ Page({
       isAdmin: !!(user && user.isAdmin),
       loginAtText: user && user.loginAt ? fmtDateTime(user.loginAt) : ''
     });
+    // 顺手刷一次未读：从消息页返回时这里要跟着变，角标也一起更新
+    badge.refreshUnread().then((n) => this.setData({ unread: n }));
   },
 
   goLogin() {
@@ -54,6 +58,16 @@ Page({
   // 是因为它属于「关于这个站」的一类信息，跟个人信息、反馈摆在一起
   goChangelog() {
     wx.navigateTo({ url: '/pages/changelog/changelog' });
+  },
+
+  // 消息（站内信）+ 提醒设置。放在「我的」第一屏靠上的位置：
+  // 「有人报名了你的开黑」是唯一有时效的消息，埋太深等于没有
+  goMessages() {
+    wx.navigateTo({ url: '/pages/messages/messages' });
+  },
+
+  goSubscribe() {
+    wx.navigateTo({ url: '/pages/subscribe/subscribe' });
   },
 
   logout() {

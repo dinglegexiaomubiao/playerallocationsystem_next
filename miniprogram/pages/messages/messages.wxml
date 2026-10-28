@@ -1,0 +1,57 @@
+<view class="page-wrap">
+  <block wx:if="{{!logged}}">
+    <view class="surface guest">
+      <view class="guest-title">还没登录</view>
+      <view class="muted guest-desc">消息是「发给你的」，得先登录才知道发给谁。</view>
+      <button class="btn" bindtap="goLogin">去登录</button>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="msg-head">
+      <view class="msg-head-main">
+        <text class="msg-count">{{unread}}</text>
+        <text class="msg-count-label">条未读</text>
+      </view>
+      <view class="msg-head-acts">
+        <button wx:if="{{unread > 0}}" class="btn ghost tiny" bindtap="markAll" loading="{{marking}}">全部已读</button>
+        <button class="btn ghost tiny" bindtap="goSubscribe">提醒设置</button>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="center">加载中…</view>
+
+    <view wx:elif="{{error}}" class="surface err">
+      <text class="err-text">{{error}}</text>
+      <button class="btn ghost small" bindtap="load">重试</button>
+    </view>
+
+    <block wx:elif="{{items.length === 0}}">
+      <view class="surface guest">
+        <view class="guest-title">还没有消息</view>
+        <view class="muted guest-desc">有人报名你发起的开黑、或者你关注的类别有新内容时，会出现在这里。</view>
+        <button class="btn ghost small" bindtap="goParty">去看看开黑</button>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view
+        wx:for="{{items}}"
+        wx:key="id"
+        class="surface msg {{item.read ? '' : 'is-unread'}}"
+        data-id="{{item.id}}"
+        data-page="{{item.page}}"
+        bindtap="onTapItem"
+      >
+        <view class="msg-top">
+          <text class="msg-cat">{{item.catText}}</text>
+          <text class="msg-time">{{item.timeText}}</text>
+          <text wx:if="{{!item.read}}" class="msg-dot"></text>
+        </view>
+        <view class="msg-title">{{item.title}}</view>
+        <view wx:if="{{item.body}}" class="msg-body">{{item.body}}</view>
+      </view>
+      <view class="muted note">只保留最近的 40 条。想少收点消息，去「提醒设置」里关掉不关心的类别。</view>
+    </block>
+  </block>
+</view>

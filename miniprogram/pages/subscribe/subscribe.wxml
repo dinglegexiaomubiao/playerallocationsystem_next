@@ -1,0 +1,98 @@
+<view class="page-wrap">
+  <block wx:if="{{!logged}}">
+    <view class="surface guest">
+      <view class="guest-title">还没登录</view>
+      <view class="muted guest-desc">提醒是发给你账号的，得先登录。</view>
+      <button class="btn" bindtap="goLogin">去登录</button>
+    </view>
+  </block>
+
+  <block wx:elif="{{loading}}">
+    <view class="center">加载中…</view>
+  </block>
+
+  <block wx:elif="{{error}}">
+    <view class="surface err">
+      <text class="err-text">{{error}}</text>
+      <button class="btn ghost small" bindtap="load">重试</button>
+    </view>
+  </block>
+
+  <block wx:else>
+    <!-- 通道状态：能不能发，取决于服务端配没配好 -->
+    <view wx:if="{{!canLogin || !canPush}}" class="surface banner">
+      <view class="banner-title">提醒通道还没开通</view>
+      <view class="banner-text">
+        <block wx:if="{{!canLogin}}">服务端缺小程序密钥（AppSecret）。</block>
+        <block wx:if="{{missingText}}">还缺模板 id：{{missingText}}。</block>
+        这段时间里，「消息」页的站内信照常能用，只是不会有微信服务通知。
+      </view>
+      <button class="btn ghost small" bindtap="goMessages">先去看消息</button>
+    </view>
+
+    <!-- 1. 绑微信 -->
+    <view class="section-title">第一步 · 绑定微信</view>
+    <view class="surface card">
+      <block wx:if="{{linked}}">
+        <view class="row">
+          <text class="row-label">已绑定</text>
+          <text class="ok-tag">✓ 微信已连接（{{openidCount}} 个）</text>
+        </view>
+        <view class="muted tip">换手机重新登录后不需要再绑，openid 是跟微信号走的。</view>
+      </block>
+      <block wx:else>
+        <view class="muted tip top">微信要先知道「消息发给哪个微信号」，才能在你点授权时记账。</view>
+        <button class="btn" bindtap="bindWechat" loading="{{busy === 'bind'}}" disabled="{{busy === 'bind'}}">
+          {{canLogin ? '绑定微信' : '暂时绑不了（服务端未配置）'}}
+        </button>
+      </block>
+    </view>
+
+    <!-- 2. 关注类别 -->
+    <view class="section-title">第二步 · 想看什么</view>
+    <view class="surface card">
+      <view wx:for="{{categories}}" wx:key="key" class="sw-row">
+        <view class="sw-main">
+          <view class="sw-label">{{item.label}}</view>
+          <view class="muted">{{item.desc}}</view>
+        </view>
+        <switch
+          checked="{{item.on}}"
+          color="#b02b25"
+          data-key="{{item.key}}"
+          bindchange="toggleCategory"
+        />
+      </view>
+      <view class="muted tip">不选也照样能用；选了之后，每日汇总里只出现你关心的类别。</view>
+    </view>
+
+    <!-- 3. 领额度 -->
+    <view class="section-title">第三步 · 领取提醒次数</view>
+    <view class="surface card">
+      <view wx:for="{{templates}}" wx:key="key" class="tpl-row">
+        <view class="tpl-main">
+          <view class="sw-label">{{item.label}}</view>
+          <view class="muted">{{item.desc}}</view>
+          <view class="tpl-quota">
+            <text wx:if="{{item.remaining > 0}}" class="quota-ok">还能收 {{item.remaining}} 条</text>
+            <text wx:elif="{{!item.ready}}" class="quota-none">模板未配置</text>
+            <text wx:else class="quota-none">额度用完了</text>
+            <text wx:if="{{item.rejected}}" class="quota-warn">· 你拒绝过这条模板</text>
+          </view>
+        </view>
+      </view>
+
+      <button class="btn" bindtap="requestSubscribe" loading="{{busy === 'sub'}}" disabled="{{busy === 'sub'}}">
+        开启提醒（微信会弹一次授权）
+      </button>
+      <view class="muted tip">
+        微信的一次性订阅：你每授权一次，我们只能发「一条」消息，发完就没了。
+        所以隔一段时间回来点一下，额度就补上了。
+      </view>
+    </view>
+
+    <view class="muted note">
+      就算额度用光、或者你把通知关掉了，也不会漏事 —— 「消息」页里的记录一直都在。
+    </view>
+  </block>
+</view>

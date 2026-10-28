@@ -50,6 +50,10 @@ const NAV = [
     label: '站务',
     items: [
       { key: 'support', href: '/admin/support', label: '反馈' },
+      // 「订阅」「推送」是一对：前者看人（谁绑了微信、还剩几次额度），
+      // 后者看结果（这次到底发出去没有）。查「他没收到」必须两页一起看。
+      { key: 'mpSubscribers', href: '/admin/mp-subscribers', label: '订阅' },
+      { key: 'mpPush', href: '/admin/mp-push', label: '推送' },
       { key: 'analytics', href: '/admin/analytics', label: '访问' },
       { key: 'roster', href: '/main', label: '阵容' },
     ],

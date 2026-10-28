@@ -1,0 +1,136 @@
+.msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 4rpx 20rpx;
+}
+.msg-head-main {
+  display: flex;
+  align-items: baseline;
+}
+.msg-count {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: var(--brand);
+}
+.msg-count-label {
+  margin-left: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.msg-head-acts {
+  display: flex;
+  align-items: center;
+}
+.msg-head-acts .btn + .btn {
+  margin-left: 12rpx;
+}
+
+.msg {
+  padding: 22rpx 24rpx;
+  margin-bottom: 16rpx;
+}
+.msg.is-unread {
+  border-color: var(--brand-border);
+  background: #fffdfd;
+}
+.msg-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.msg-cat {
+  font-size: 20rpx;
+  color: var(--brand-on-soft);
+  background: rgba(176, 43, 37, 0.08);
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+.msg-time {
+  margin-left: auto;
+  font-size: 21rpx;
+  color: var(--text-3);
+}
+.msg-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background: var(--brand);
+  margin-left: 10rpx;
+}
+.msg-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+}
+.msg-body {
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: var(--text-2);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.guest {
+  padding: 40rpx 28rpx;
+  text-align: center;
+}
+.guest-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10rpx;
+}
+.guest-desc {
+  margin-bottom: 24rpx;
+  line-height: 1.7;
+}
+
+.err {
+  padding: 28rpx;
+  text-align: center;
+}
+.err-text {
+  display: block;
+  color: var(--brand);
+  font-size: 25rpx;
+  margin-bottom: 18rpx;
+}
+
+.note {
+  margin: 18rpx 6rpx 0;
+  line-height: 1.7;
+}
+
+/* .btn 没有全局定义（每个页面各写一份），这里补上本页需要的三档 */
+.btn {
+  background: var(--brand);
+  color: #ffffff;
+  border-radius: var(--radius);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+.btn::after {
+  border: none;
+}
+.btn.ghost {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.small {
+  margin-top: 18rpx;
+  font-size: 26rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}
+/* 页头那两个按钮要跟标题在同一行，所以比 small 还紧一档 */
+.btn.tiny {
+  display: inline-block;
+  margin: 0;
+  padding: 0 20rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  font-size: 22rpx;
+}

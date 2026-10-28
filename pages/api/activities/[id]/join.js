@@ -1,6 +1,7 @@
 // 活动报名：POST 报名（含携伴人数）/ DELETE 取消报名
 import { pool, ensureActivityTables } from '../../../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../../../lib/auth';
+import { notifySignupToOwner } from '../../../../lib/mp-notify.mjs';
 
 const num = (v) => {
   if (v === '' || v === null || v === undefined) return null;
@@ -29,7 +30,7 @@ export default async function handler(req, res) {
   const client = await pool.connect();
   try {
     const post = await client.query(
-      'SELECT id, player_id, status FROM public.activity_posts WHERE id = $1',
+      'SELECT id, player_id, account_name, title, type, status FROM public.activity_posts WHERE id = $1',
       [postId]
     );
     if (post.rows.length === 0) {
@@ -80,6 +81,18 @@ export default async function handler(req, res) {
          RETURNING id`,
         [postId, myPlayerId, session.name, myNickname, guests, clip(b.note, 200)]
       );
+
+      // 通知发起人。和开黑报名同一套：站内信必写，订阅消息有额度才发，
+      // 不 await —— 报名响应速度不该被微信接口拖住。
+      notifySignupToOwner({
+        kind: 'activity',
+        postId,
+        ownerAccount: p.account_name,
+        postTitle: p.title || p.type + ' 活动',
+        joinerName: myNickname,
+        extra: guests ? '带 ' + guests + ' 人' : '',
+      }).catch((e) => console.error('活动报名通知发起人失败:', e && e.message));
+
       return res.status(200).json({ success: true, id: String(inserted.rows[0].id) });
     }
 

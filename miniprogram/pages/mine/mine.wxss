@@ -85,6 +85,21 @@
   flex: 0 0 auto;
 }
 
+/* 未读数：夹在说明文字和箭头之间，比放进箭头里更醒目 */
+.msg-badge {
+  flex: 0 0 auto;
+  min-width: 34rpx;
+  height: 34rpx;
+  line-height: 34rpx;
+  padding: 0 8rpx;
+  margin-right: 8rpx;
+  border-radius: 17rpx;
+  background: var(--brand);
+  color: #ffffff;
+  font-size: 20rpx;
+  text-align: center;
+}
+
 .btn {
   background: var(--brand);
   color: #ffffff;

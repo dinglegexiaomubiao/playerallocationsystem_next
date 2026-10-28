@@ -2,6 +2,7 @@
 import { pool, ensurePartyTables } from '../../../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../../../lib/auth';
 import { tierOf } from '../../../../lib/tier.mjs';
+import { notifySignupToOwner } from '../../../../lib/mp-notify.mjs';
 
 const toList = (v) =>
   Array.isArray(v)
@@ -37,7 +38,8 @@ export default async function handler(req, res) {
   const client = await pool.connect();
   try {
     const post = await client.query(
-      'SELECT id, player_id, status, start_at, duration_min FROM public.party_posts WHERE id = $1',
+      `SELECT id, player_id, account_name, title, status, start_at, duration_min
+         FROM public.party_posts WHERE id = $1`,
       [postId]
     );
     if (post.rows.length === 0) {
@@ -113,6 +115,19 @@ export default async function handler(req, res) {
           clip(b.note, 200),
         ]
       );
+
+      // 通知发起人：站内信 + （有额度且配好了的话）订阅消息。
+      // **故意不 await**：微信接口慢的时候能让报名卡住一两秒，而报名成功与否
+      // 不该取决于通知发没发出去。函数内部自己 try/catch，不会漏成未捕获异常。
+      notifySignupToOwner({
+        kind: 'party',
+        postId,
+        ownerAccount: p.account_name,
+        postTitle: p.title || session.name + ' 的开黑',
+        joinerName: myNickname,
+        extra: [rank, b.eta ? '预计 ' + clip(b.eta, 40) : ''].filter(Boolean).join(' / '),
+      }).catch((e) => console.error('报名通知发起人失败:', e && e.message));
+
       return res.status(200).json({ success: true, id: String(inserted.rows[0].id) });
     }
 

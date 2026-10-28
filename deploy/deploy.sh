@@ -453,6 +453,23 @@ else
   fi
   exit 1
 fi
+
+# 5.6 每日汇总 cron（小程序订阅消息）
+# 单独一个 pm2 app，和网站互不影响：它只在 cron 触发时跑一次。
+# 放在健康检查**之后**：站点都起不来的话，装 cron 也没意义，而且这一步
+# 失败绝不能影响部署结果（站点已经好了）。
+if pm2 describe laroja-digest > /dev/null 2>&1; then
+  pm2 restart laroja-digest --update-env > /dev/null 2>&1 || true
+else
+  pm2 start deploy/ecosystem.config.js --only laroja-digest > /dev/null 2>&1 || true
+fi
+if pm2 describe laroja-digest > /dev/null 2>&1; then
+  echo "  ✓ 每日汇总 cron 就位（每天 20:00，pm2 logs laroja-digest 看输出）"
+  # 不 save 的话机器重启后这个 app 就没了（pm2 startup 恢复的是 dump 里的清单）
+  pm2 save > /dev/null 2>&1 || true
+else
+  echo "  ⚠ 每日汇总 cron 没起来（不影响站点）。手动：pm2 start deploy/ecosystem.config.js --only laroja-digest"
+fi
 REMOTE
 
 echo ""

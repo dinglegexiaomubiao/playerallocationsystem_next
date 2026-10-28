@@ -1,0 +1,151 @@
+.section-title {
+  margin: 36rpx 6rpx 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+
+.card {
+  padding: 24rpx;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.row-label {
+  font-size: 27rpx;
+  color: var(--text);
+}
+.ok-tag {
+  font-size: 24rpx;
+  color: #1e8449;
+}
+
+.tip {
+  margin-top: 14rpx;
+  line-height: 1.7;
+}
+.tip.top {
+  margin-top: 0;
+  margin-bottom: 20rpx;
+}
+
+.banner {
+  padding: 24rpx;
+  border-color: rgba(176, 43, 37, 0.25);
+  background: #fffafa;
+}
+.banner-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--brand-on-soft);
+  margin-bottom: 8rpx;
+}
+.banner-text {
+  font-size: 24rpx;
+  color: var(--text-2);
+  line-height: 1.7;
+  margin-bottom: 18rpx;
+}
+
+/* 关注类别：左边两行字，右边开关 */
+.sw-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1px solid var(--border);
+}
+.sw-row:last-of-type {
+  border-bottom: none;
+}
+.sw-main {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16rpx;
+}
+.sw-label {
+  font-size: 28rpx;
+  color: var(--text);
+  margin-bottom: 2rpx;
+}
+
+.tpl-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 16rpx 0;
+  border-bottom: 1px solid var(--border);
+}
+.tpl-main {
+  flex: 1;
+  min-width: 0;
+}
+.tpl-quota {
+  margin-top: 6rpx;
+  font-size: 23rpx;
+}
+.quota-ok {
+  color: #1e8449;
+}
+.quota-none {
+  color: var(--text-3);
+}
+.quota-warn {
+  color: #b9770e;
+}
+
+.err {
+  padding: 28rpx;
+  text-align: center;
+}
+.err-text {
+  display: block;
+  color: var(--brand);
+  font-size: 25rpx;
+  margin-bottom: 18rpx;
+}
+
+.guest {
+  padding: 40rpx 28rpx;
+  text-align: center;
+}
+.guest-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 10rpx;
+}
+.guest-desc {
+  margin-bottom: 24rpx;
+  line-height: 1.7;
+}
+
+.note {
+  margin: 24rpx 6rpx 0;
+  line-height: 1.7;
+}
+
+/* .btn 没有全局定义（每页各写一份），这里补本页用到的两档 */
+.btn {
+  background: var(--brand);
+  color: #ffffff;
+  border-radius: var(--radius);
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-top: 20rpx;
+}
+.btn::after {
+  border: none;
+}
+.btn.ghost {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.small {
+  font-size: 26rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+}

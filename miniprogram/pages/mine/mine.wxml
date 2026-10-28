@@ -16,6 +16,19 @@
 
     <view class="muted note">登录态 30 天内有效，过期会自动清掉并提示重新登录。</view>
 
+    <view class="surface link" bindtap="goMessages">
+      <text class="link-text">消息</text>
+      <text class="link-sub">有人报名你的开黑 / 关注类别的新内容</text>
+      <text wx:if="{{unread > 0}}" class="msg-badge">{{unread > 99 ? '99+' : unread}}</text>
+      <text class="link-arrow">›</text>
+    </view>
+
+    <view class="surface link" bindtap="goSubscribe">
+      <text class="link-text">消息提醒</text>
+      <text class="link-sub">绑定微信 / 选类别 / 领提醒次数</text>
+      <text class="link-arrow">›</text>
+    </view>
+
     <view class="surface link" bindtap="goProfile">
       <text class="link-text">个人信息</text>
       <text class="link-sub">分数 / 位置 / 地区 / 自我评价</text>
