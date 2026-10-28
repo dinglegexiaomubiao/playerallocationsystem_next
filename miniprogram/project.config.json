@@ -1,5 +1,5 @@
 {
-  "description": "深圳 LaRoja DoDo 社区 · 微信小程序（原生，23 页；会话走 Bearer，数据与网页端同源）",
+  "description": "DoDo资料查询 · 微信小程序（原生，23 页；会话走 Bearer，数据与网页端同源）",
   "packOptions": {
     "ignore": [],
     "include": []

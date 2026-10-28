@@ -41,9 +41,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# 构建输出
-dist/
-build/
+# 构建输出（仅根目录；不能用裸 `dist/`，否则会误伤 miniprogram/pages/dist 这类源码页面目录）
+/dist/
+/build/
 
 # 数据文件（如果使用本地文件存储数据）
 data/*.json

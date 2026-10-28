@@ -221,10 +221,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja 群友名录 · 战绩与名片', path: '/pages/members/members' };
+    return { title: 'DoDo 群友名录 · 战绩与名片', path: '/pages/members/members' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja 群友名录' };
+    return { title: 'DoDo 群友名录' };
   }
 });

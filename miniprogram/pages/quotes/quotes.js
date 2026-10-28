@@ -351,10 +351,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '群友语录 · LaRoja', path: '/pages/quotes/quotes' };
+    return { title: '群友语录 · DoDo', path: '/pages/quotes/quotes' };
   },
 
   onShareTimeline() {
-    return { title: '群友语录 · LaRoja' };
+    return { title: '群友语录 · DoDo' };
   }
 });

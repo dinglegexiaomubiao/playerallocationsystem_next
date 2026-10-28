@@ -39,10 +39,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja 赛事中心 · 历届名次', path: '/pages/tournaments/tournaments' };
+    return { title: 'DoDo 赛事中心 · 历届名次', path: '/pages/tournaments/tournaments' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja 赛事中心' };
+    return { title: 'DoDo 赛事中心' };
   }
 });

@@ -276,7 +276,7 @@ Page({
     if (this.data.busy) return;
 
     if (!st.loggedIn) {
-      confirmBox('还没登录', '报名需要用你的社区账号，去登录？', '去登录').then((ok) => {
+      confirmBox('还没登录', '报名需要用你的账号，去登录？', '去登录').then((ok) => {
         if (ok) wx.navigateTo({ url: '/pages/login/login' });
       });
       return;
@@ -337,13 +337,13 @@ Page({
   onShareAppMessage() {
     const t = this.data.t;
     return {
-      title: t ? t.name : 'LaRoja 赛事',
+      title: t ? t.name : 'DoDo 赛事',
       path: '/pages/tournament/tournament?id=' + this.data.id
     };
   },
 
   onShareTimeline() {
     const t = this.data.t;
-    return { title: t ? t.name : 'LaRoja 赛事', query: 'id=' + this.data.id };
+    return { title: t ? t.name : 'DoDo 赛事', query: 'id=' + this.data.id };
   }
 });

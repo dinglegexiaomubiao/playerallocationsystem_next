@@ -23,7 +23,7 @@ Page({
       { key: 'guilds', name: '帮派', desc: '阵营与成员', path: '/pages/guilds/guilds' },
       { key: 'dist', name: '群友分布', desc: '深圳九区', path: '/pages/dist/dist' },
       { key: 'foods', name: '群友美食', desc: '深圳好店', path: '/pages/foods/foods' },
-      { key: 'quotes', name: '群友语录', desc: '社区梗', path: '/pages/quotes/quotes' }
+      { key: 'quotes', name: '群友语录', desc: '群友梗', path: '/pages/quotes/quotes' }
     ],
     quotes: []
   },
@@ -53,7 +53,7 @@ Page({
     wx.navigateTo({ url: '/pages/quotes/quotes' });
   },
 
-  // 原「AI 社区助手」CTA 指向的 /api/assistant 后端从未实现（点了必 404），
+  // 原「AI 助手」CTA 指向的 /api/assistant 后端从未实现（点了必 404），
   // tab 与页面已下线。CTA 改成指向真实存在的「AI 战力分析」入口：
   // 名片页现在有 OpenDota 战绩 + AI 推断，这是首页最值得推的一个功能。
   goMembers() {
@@ -70,10 +70,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja · 深圳 DoDo 社区', path: '/pages/index/index' };
+    return { title: 'DoDo资料查询', path: '/pages/index/index' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja · 深圳 DoDo 社区' };
+    return { title: 'DoDo资料查询' };
   }
 });

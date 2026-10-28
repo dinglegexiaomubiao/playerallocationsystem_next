@@ -207,10 +207,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja 群友美食 · 深圳好店', path: '/pages/foods/foods' };
+    return { title: 'DoDo 群友美食 · 深圳好店', path: '/pages/foods/foods' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja 群友美食' };
+    return { title: 'DoDo 群友美食' };
   }
 });

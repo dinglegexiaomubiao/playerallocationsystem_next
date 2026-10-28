@@ -1,0 +1,99 @@
+<view class="page-wrap">
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+
+  <block wx:else>
+    <!-- 面包屑：能点回上一级（全国 → 省 → 市 → 区） -->
+    <scroll-view class="crumbs" scroll-x>
+      <view class="crumbs-inner">
+        <block wx:for="{{crumbs}}" wx:key="adcode">
+          <text
+            class="crumb {{index === crumbs.length - 1 ? 'is-now' : ''}}"
+            data-adcode="{{item.adcode}}"
+            bindtap="onTapCrumb"
+          >{{item.name}}</text>
+          <text wx:if="{{index < crumbs.length - 1}}" class="crumb-sep">›</text>
+        </block>
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{notice}}" class="notice">{{notice}}</view>
+
+    <view class="surface overview">
+      <view class="ov-title">{{scopeName}} · {{areas.length}} 个区划</view>
+      <view class="ov-grid">
+        <view wx:for="{{stats}}" wx:key="key" class="ov-cell">
+          <text class="ov-num">{{item.value}}</text>
+          <text class="ov-label">{{item.label}}</text>
+        </view>
+      </view>
+      <view class="ov-hint">点区划可下钻，点人数看名单</view>
+    </view>
+
+    <view class="section-title">人数排行</view>
+
+    <view class="surface board">
+      <view wx:for="{{areas}}" wx:key="adcode" class="area">
+        <view class="bar-row" data-index="{{index}}" bindtap="onTapArea">
+          <view class="bar-head">
+            <text class="bar-name {{item.isMine ? 'is-mine' : ''}}">{{item.name}}</text>
+            <text wx:if="{{item.isMine}}" class="mine-tag">我的</text>
+            <text wx:if="{{item.canDrill}}" class="drill-tag">›</text>
+            <text
+              class="bar-num {{item.players.length ? 'is-tappable' : ''}}"
+              data-index="{{index}}"
+              catchtap="onTapCount"
+            >{{item.count}} 人</text>
+          </view>
+          <view class="bar-track">
+            <view class="bar-fill lv{{item.level}}" style="width: {{item.pct}}%"></view>
+          </view>
+          <view wx:if="{{item.foodCount}}" class="bar-sub">美食 {{item.foodCount}} 家</view>
+        </view>
+
+        <!-- 展开的名单：不再请求，接口本来就带了 players -->
+        <view wx:if="{{item.open}}" class="area-people">
+          <view
+            wx:for="{{item.players}}"
+            wx:for-item="pp"
+            wx:key="id"
+            class="people-row"
+            data-id="{{pp.id}}"
+            catchtap="onTapPlayer"
+          >
+            <text class="people-initial">{{pp.initial}}</text>
+            <text class="people-name">{{pp.name}}</text>
+            <text class="people-arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 未填地区：这是「热力图看起来少人」的真正原因，必须摆出来 -->
+    <block wx:if="{{missingTotal}}">
+      <view class="section-title">
+        未填地区
+        <text class="section-note">{{missingTotal}} 位</text>
+      </view>
+      <view class="surface board">
+        <view
+          wx:for="{{missingOpen ? missing : missingPreview}}"
+          wx:for-item="mp"
+          wx:key="id"
+          class="people-row"
+          data-id="{{mp.id}}"
+          bindtap="onTapPlayer"
+        >
+          <text class="people-initial">{{mp.initial}}</text>
+          <text class="people-name">{{mp.name}}</text>
+          <text class="people-arrow">›</text>
+        </view>
+        <view class="more-row" bindtap="toggleMissing">
+          {{missingOpen ? '收起' : '展开全部 ' + missingTotal + ' 位'}}
+        </view>
+      </view>
+    </block>
+
+    <view class="foot">网页端是可视化地图，小程序按区划做排行（地图标注涉及测绘合规，不做）</view>
+  </block>
+</view>

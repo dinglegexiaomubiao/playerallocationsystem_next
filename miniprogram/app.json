@@ -25,7 +25,7 @@
     "pages/password/password"
   ],
   "window": {
-    "navigationBarTitleText": "LaRoja 社区",
+    "navigationBarTitleText": "DoDo资料查询",
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f5f6f8",
