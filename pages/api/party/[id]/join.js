@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   const client = await pool.connect();
   try {
     const post = await client.query(
-      `SELECT id, player_id, account_name, title, status, start_at, duration_min
+      `SELECT id, player_id, account_name, title, status, start_at, duration_min, voice_app
          FROM public.party_posts WHERE id = $1`,
       [postId]
     );
@@ -119,12 +119,16 @@ export default async function handler(req, res) {
       // 通知发起人：站内信 + （有额度且配好了的话）订阅消息。
       // **故意不 await**：微信接口慢的时候能让报名卡住一两秒，而报名成功与否
       // 不该取决于通知发没发出去。函数内部自己 try/catch，不会漏成未捕获异常。
+      // place 是订阅模板的必填字段：开黑没有实体地点，写「线上」+ 语音软件。
       notifySignupToOwner({
         kind: 'party',
         postId,
         ownerAccount: p.account_name,
         postTitle: p.title || session.name + ' 的开黑',
         joinerName: myNickname,
+        joinerAccount: session.name,
+        place: p.voice_app ? '线上·' + p.voice_app : '线上',
+        meetAt: p.start_at || null,
         extra: [rank, b.eta ? '预计 ' + clip(b.eta, 40) : ''].filter(Boolean).join(' / '),
       }).catch((e) => console.error('报名通知发起人失败:', e && e.message));
 

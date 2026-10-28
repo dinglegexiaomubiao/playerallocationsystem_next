@@ -100,6 +100,29 @@ tmplKeys.length === 0
     ? bad('这些模板在 FIELD_MAP 里没有字段映射: ' + unmapped.join(','))
     : ok(`${tmplKeys.length} 个模板都有字段映射（${tmplKeys.join(' / ')}）`);
 
+// 字段 key 必须与微信后台模板**完全一致，一个不许少**。
+// 少一个必填字段 → 47003，而且是「用户报名了才发现」的那种错。
+// 期望值来自「我的模板 → 详情页」截图（2026-10-28）。
+// ⚠ 这两个模板的编号不是从 thing1 开始的，第一个字段就是 time1。
+const EXPECTED_FIELDS = {
+  digest: ['time1', 'thing2', 'thing3'], // 游戏活动通知：活动时间/活动名称/活动内容
+  signup: ['time1', 'thing2', 'thing3', 'thing4'], // 活动报名成功通知：时间/地点/名称/备注
+};
+for (const [key, want] of Object.entries(EXPECTED_FIELDS)) {
+  const line = new RegExp('^\\s{2}' + key + ':\\s*\\{([^}]*)\\}', 'm').exec(mapBlock);
+  if (!line) {
+    bad('FIELD_MAP 里找不到 ' + key + ' 的字段映射');
+    continue;
+  }
+  const got = [...line[1].matchAll(/:\s*'([^']+)'/g)].map((m) => m[1]).sort();
+  const w = want.slice().sort();
+  if (got.join(',') !== w.join(',')) {
+    bad(`FIELD_MAP.${key} 的字段是 [${got.join(',')}]，模板要的是 [${w.join(',')}] → 会 47003`);
+  } else {
+    ok(`FIELD_MAP.${key} 与模板字段一一对应（${w.join(' / ')}）`);
+  }
+}
+
 // 一次性订阅的核心：必须有额度扣减，且只在额度 > 0 时成功
 if (notify.indexOf('remaining > 0') < 0) bad('consumeQuota 没有 remaining > 0 条件 → 没有额度也会推');
 else ok('额度扣减带 remaining > 0 条件（无额度不会推）');
@@ -121,6 +144,8 @@ for (const f of joinFiles) {
       bad(f + ' await 了通知 → 微信接口慢时报名会被卡住');
     }
     if (src.indexOf('account_name') < 0) bad(f + ' 没查 account_name（不知道通知谁）');
+    // 「活动地点」是订阅模板的必填字段，不传就是 47003
+    if (src.indexOf('place:') < 0) bad(f + ' 没传 place → 报名提醒模板缺必填字段，47003');
   }
 }
 if (joinHooked === joinFiles.length) ok('两条报名链路都接了定向通知，且不阻塞主流程');

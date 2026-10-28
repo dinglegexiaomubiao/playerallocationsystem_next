@@ -30,7 +30,8 @@ export default async function handler(req, res) {
   const client = await pool.connect();
   try {
     const post = await client.query(
-      'SELECT id, player_id, account_name, title, type, status FROM public.activity_posts WHERE id = $1',
+      `SELECT id, player_id, account_name, title, type, status, region, location, meet_at
+         FROM public.activity_posts WHERE id = $1`,
       [postId]
     );
     if (post.rows.length === 0) {
@@ -84,12 +85,16 @@ export default async function handler(req, res) {
 
       // 通知发起人。和开黑报名同一套：站内信必写，订阅消息有额度才发，
       // 不 await —— 报名响应速度不该被微信接口拖住。
+      // place 是模板必填项，线下活动优先用具体集合地点，退而用地区。
       notifySignupToOwner({
         kind: 'activity',
         postId,
         ownerAccount: p.account_name,
         postTitle: p.title || p.type + ' 活动',
         joinerName: myNickname,
+        joinerAccount: session.name,
+        place: p.location || p.region || '群内',
+        meetAt: p.meet_at || null,
         extra: guests ? '带 ' + guests + ' 人' : '',
       }).catch((e) => console.error('活动报名通知发起人失败:', e && e.message));
 
