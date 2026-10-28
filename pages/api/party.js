@@ -137,7 +137,12 @@ function shapePost(r) {
     voice_app: r.voice_app,
     note: r.note,
     status: r.status || 'open',
-    statusLabel: (PARTY_STATUS[r.status] || PARTY_STATUS.open).label,
+    // 过期优先：status 仍是 'open'（没人手动关）但开局时间已过的卡片，
+    // 显示「招募中」就是骗人 —— 用户会盯着标签找报名按钮，然后找不到。
+    // 这个小程序在用的字段网页端不消费（PartyCard 自己渲染 badge），改这里只影响小程序。
+    statusLabel: expired
+      ? '已过期'
+      : (PARTY_STATUS[r.status] || PARTY_STATUS.open).label,
     created_at: r.created_at_ts || r.created_at,
     creator: {
       player_id: r.player_id === null ? null : String(r.player_id),
@@ -271,11 +276,21 @@ export default async function handler(req, res) {
       const myRank = clip(b.my_rank, 30) || (myScore !== null ? tierOf(myScore).label : null);
       const myPositions = toList(b.my_positions).length ? toList(b.my_positions) : me.positions || [];
 
-      const openCount = await client.query(
-        `SELECT COUNT(*)::int AS n FROM public.party_posts WHERE player_id = $1 AND status = 'open'`,
+      // 配额只数「真正还在招募」的：status 一直是 open 的过期卡片（没人手动关）
+      // 如果也算占位，用户发满 5 次就再也发不出新开黑，而且看不出为什么。
+      // 老卡片没有 start_at / duration_min，判不了过期，仍算占位（页面上可以手动关闭）。
+      const openRows = await client.query(
+        `SELECT start_at, duration_min FROM public.party_posts
+          WHERE player_id = $1 AND status = 'open'`,
         [me.playerId]
       );
-      if (openCount.rows[0].n >= 5) {
+      const activeCount = openRows.rows.filter((r) => {
+        const s = r.start_at ? new Date(r.start_at).getTime() : NaN;
+        const d = r.duration_min === null || r.duration_min === undefined ? null : Number(r.duration_min);
+        if (!isFinite(s) || !d) return true; // 判不了过期 → 算占位
+        return s + d * 60000 > Date.now();
+      }).length;
+      if (activeCount >= 5) {
         return res
           .status(400)
           .json({ success: false, error: '你已有 5 张招募中的卡片，先关掉一些再发' });

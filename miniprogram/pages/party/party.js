@@ -21,15 +21,24 @@ Page({
   data: {
     tabs: TABS,
     tab: 'all',
+    // list 是「最终渲染行」：未过期的卡片 + 一条合成折叠条（__fold）+ 展开后的过期卡片。
+    // 这么设计是为了卡片模板只写一遍 —— 项目里没用过 WXML template，
+    // 而复制 45 行卡片两处维护迟早改漏。
     list: [],
+    showExpired: false,
+    expiredCount: 0,
     total: 0,
     loading: true,
     error: '',
+    emptyText: '',
     busyId: ''
   },
 
   onLoad() {
     this.all = [];
+    // 展开状态按卡片 id 记，不按列表下标 —— 下标会随 tab 切换/重新加载而错位，
+    // 出现「点开 A 却展开了 B」。
+    this.expandedIds = {};
     this.load();
   },
 
@@ -61,14 +70,24 @@ Page({
 
           const positions = Array.isArray(p.want_positions) ? p.want_positions : [];
           const wantRange = rangeText(p.want_score_min, p.want_score_max);
-          const isOpen = p.status === 'open' && !p.expired;
+          const isExpired = !!p.expired;
+          const isOpen = p.status === 'open' && !isExpired;
           const isMine = !!p.isMine;
           const iJoined = !!p.iJoined;
 
           // 按钮语义只在这里算一次，WXML 里不再写条件表达式
           let actionText = '';
           let actionKey = '';
-          if (isMine && isOpen) {
+          if (isExpired) {
+            // 过期的卡片不给报名入口：局都打完了，报名按钮点了也没意义。
+            // 已经报了名的人仍然可以取消（把自己的记录清掉）。
+            if (iJoined) {
+              actionText = '取消报名';
+              actionKey = 'cancel';
+            } else if (isMine) {
+              actionText = '我发起的 · 已结束';
+            }
+          } else if (isMine && isOpen) {
             // 自己发的、还在招募 → 给一个关闭入口（关掉后别人就报不了名）
             actionText = '关闭招募';
             actionKey = 'close';
@@ -97,8 +116,10 @@ Page({
             id: String(p.id),
             title: p.title || '未命名开黑',
             modeLabel: p.modeLabel || '',
-            statusLabel: p.statusLabel || '',
+            // 过期优先：服务端已改口径，这里再兜一层，免得接口没更新时又显示「招募中」
+            statusLabel: isExpired ? '已过期' : p.statusLabel || '',
             isOpen: isOpen,
+            isExpired: isExpired,
             isMine: isMine,
             iJoined: iJoined,
             actionText: actionText,
@@ -115,7 +136,7 @@ Page({
             signupCount: p.signupCount || 0,
             needText: p.need_players ? ' / 需要 ' + p.need_players + ' 人' : '',
             signups: signups,
-            expanded: false
+            expanded: !!this.expandedIds[String(p.id)]
           };
         });
 
@@ -128,12 +149,42 @@ Page({
       );
   },
 
+  // 把「未过期 / 已过期」分成两拨：未过期正常铺开，过期的一律折到底部折叠区
+  // （网页端 pages/party/index.js 的 activePosts / expiredPosts 就是这个口径）
   apply() {
     const tab = this.data.tab;
-    let list = this.all;
-    if (tab === 'open') list = list.filter((p) => p.isOpen);
-    if (tab === 'joined') list = list.filter((p) => p.iJoined);
-    this.setData({ list: list });
+    let src = this.all;
+    if (tab === 'open') src = src.filter((p) => p.isOpen);
+    if (tab === 'joined') src = src.filter((p) => p.iJoined);
+
+    // 展开态以 expandedIds 为准，每次重算都刷一遍；
+    // 只在 onTap 里打补丁的话，切 tab 回来会退回加载时的旧值。
+    for (const p of this.all) p.expanded = !!this.expandedIds[p.id];
+
+    const active = [];
+    const expired = [];
+    for (const p of src) {
+      if (p.isExpired) expired.push(p);
+      else active.push(p);
+    }
+
+    const rows = active.slice();
+    if (expired.length) {
+      // 合成折叠条。key 单独给，避免和卡片 id 撞车
+      rows.push({ __fold: true, id: '__fold', foldText: '已过期招募（' + expired.length + '）' });
+      if (this.data.showExpired) rows.push.apply(rows, expired);
+    }
+
+    let emptyText = '';
+    if (!active.length) {
+      emptyText = expired.length ? '没有正在招募的组队，看看下面的已过期招募' : '这个分类下还没有组队';
+    }
+
+    this.setData({ list: rows, expiredCount: expired.length, emptyText: emptyText });
+  },
+
+  toggleExpired() {
+    this.setData({ showExpired: !this.data.showExpired }, () => this.apply());
   },
 
   onTab(e) {
@@ -156,15 +207,25 @@ Page({
   onTap(e) {
     // 点卡片 = 展开/收起报名者名单。网页端没有独立详情页（名单平铺在 PartyCard 里），
     // 这里对齐：卡片信息已足够，缺的只是名单。
-    const i = Number(e.currentTarget.dataset.index);
-    const cur = this.data.list[i];
+    // 按 id 找卡片，不用下标 —— 折叠区里的下标跟主列表是两套。
+    const id = String((e.currentTarget.dataset && e.currentTarget.dataset.id) || '');
+    if (!id) return;
+    const cur = this.all.filter((p) => p.id === id)[0];
     if (!cur) return;
     if (!cur.signups.length) {
       wx.showToast({ title: '还没有人报名', icon: 'none' });
       return;
     }
+
+    const on = !this.expandedIds[id];
+    if (on) this.expandedIds[id] = true;
+    else delete this.expandedIds[id];
+
+    // 只改这一条的 expanded，别为一次展开把整个列表重渲染
+    const idx = this.data.list.map((p) => p.id).indexOf(id);
+    if (idx < 0) return;
     const patch = {};
-    patch['list[' + i + '].expanded'] = !cur.expanded;
+    patch['list[' + idx + '].expanded'] = on;
     this.setData(patch);
   },
 

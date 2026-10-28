@@ -14,59 +14,77 @@
 
   <view wx:if="{{loading}}" class="center">加载中…</view>
   <view wx:elif="{{error}}" class="center">{{error}}</view>
-  <view wx:elif="{{!list.length}}" class="center">这个分类下还没有组队</view>
 
-  <view wx:for="{{list}}" wx:key="id" class="surface post" data-index="{{index}}" bindtap="onTap">
-    <view class="line1">
-      <text class="title">{{item.title}}</text>
-      <text class="status {{item.isOpen ? 'is-open' : 'is-closed'}}">{{item.statusLabel}}</text>
-    </view>
+  <block wx:else>
+    <view wx:if="{{emptyText}}" class="center">{{emptyText}}</view>
 
-    <view class="tags">
-      <text wx:if="{{item.modeLabel}}" class="tag is-type">{{item.modeLabel}}</text>
-      <text wx:if="{{item.playTime}}" class="tag">{{item.playTime}}</text>
-      <text wx:if="{{item.voiceText}}" class="tag">{{item.voiceText}}</text>
-      <text wx:if="{{item.wantRank}}" class="tag">段位 {{item.wantRank}}</text>
-      <text wx:if="{{item.iJoined}}" class="tag is-mine">已报名</text>
-    </view>
+    <!-- list 是「渲染行」：未过期卡片 + 一条折叠条（__fold）+ 展开后的过期卡片。
+         卡片只写一份，靠 __fold 分支区分折叠条，别把卡片复制两份。 -->
+    <block wx:for="{{list}}" wx:key="id">
+      <view wx:if="{{item.__fold}}" class="fold-bar" bindtap="toggleExpired">
+        <text class="fold-arrow">{{showExpired ? '▾' : '▸'}}</text>
+        <text class="fold-text">{{item.foldText}}</text>
+        <text class="fold-hint">{{showExpired ? '收起' : '展开'}}</text>
+      </view>
 
-    <view wx:if="{{item.wantRange}}" class="meta">分数要求：{{item.wantRange}}</view>
-    <view wx:if="{{item.positionsText}}" class="meta">缺位置：{{item.positionsText}}</view>
-    <view wx:if="{{item.startText}}" class="meta">开局：{{item.startText}}</view>
-    <view class="meta">人数：{{item.peopleText}}</view>
+      <view
+        wx:else
+        class="surface post {{item.isExpired ? 'is-expired' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onTap"
+      >
+        <view class="line1">
+          <text class="title">{{item.title}}</text>
+          <text class="status {{item.isOpen ? 'is-open' : 'is-closed'}}">{{item.statusLabel}}</text>
+        </view>
 
-    <view wx:if="{{item.note}}" class="note {{item.expanded ? 'is-full' : ''}}">{{item.note}}</view>
+        <view class="tags">
+          <text wx:if="{{item.modeLabel}}" class="tag is-type">{{item.modeLabel}}</text>
+          <text wx:if="{{item.playTime}}" class="tag">{{item.playTime}}</text>
+          <text wx:if="{{item.voiceText}}" class="tag">{{item.voiceText}}</text>
+          <text wx:if="{{item.wantRank}}" class="tag">段位 {{item.wantRank}}</text>
+          <text wx:if="{{item.iJoined}}" class="tag is-mine">已报名</text>
+        </view>
 
-    <view wx:if="{{item.expanded && item.signups.length}}" class="signups">
-      <view class="su-head">已报名 {{item.signups.length}}<text wx:if="{{item.needText}}" class="su-need">{{item.needText}}</text></view>
-      <view wx:for="{{item.signups}}" wx:for-item="su" wx:key="idx" class="su-row">
-        <text class="su-av">{{su.initial}}</text>
-        <view class="su-main">
-          <view class="su-line">
-            <text class="su-name">{{su.nickname}}</text>
-            <text wx:if="{{su.rankText}}" class="su-rank">{{su.rankText}}</text>
+        <view wx:if="{{item.wantRange}}" class="meta">分数要求：{{item.wantRange}}</view>
+        <view wx:if="{{item.positionsText}}" class="meta">缺位置：{{item.positionsText}}</view>
+        <view wx:if="{{item.startText}}" class="meta">开局：{{item.startText}}</view>
+        <view class="meta">人数：{{item.peopleText}}</view>
+
+        <view wx:if="{{item.note}}" class="note {{item.expanded ? 'is-full' : ''}}">{{item.note}}</view>
+
+        <view wx:if="{{item.expanded && item.signups.length}}" class="signups">
+          <view class="su-head">已报名 {{item.signups.length}}<text wx:if="{{item.needText}}" class="su-need">{{item.needText}}</text></view>
+          <view wx:for="{{item.signups}}" wx:for-item="su" wx:key="idx" class="su-row">
+            <text class="su-av">{{su.initial}}</text>
+            <view class="su-main">
+              <view class="su-line">
+                <text class="su-name">{{su.nickname}}</text>
+                <text wx:if="{{su.rankText}}" class="su-rank">{{su.rankText}}</text>
+              </view>
+              <text wx:if="{{su.eta}}" class="su-meta">到点：{{su.eta}}</text>
+              <text wx:if="{{su.note}}" class="su-note">{{su.note}}</text>
+            </view>
           </view>
-          <text wx:if="{{su.eta}}" class="su-meta">到点：{{su.eta}}</text>
-          <text wx:if="{{su.note}}" class="su-note">{{su.note}}</text>
+        </view>
+
+        <view class="foot">
+          <text class="muted">{{item.creatorText}} 发起</text>
+          <text class="muted">已报名 {{item.signupCount}} 人</text>
+        </view>
+
+        <view wx:if="{{item.actionText}}" class="action-row">
+          <button
+            wx:if="{{item.actionKey}}"
+            class="act {{item.actionKey === 'cancel' ? 'is-ghost' : ''}}"
+            data-id="{{item.id}}"
+            data-act="{{item.actionKey}}"
+            loading="{{busyId === item.id}}"
+            catchtap="onAction"
+          >{{item.actionText}}</button>
+          <text wx:else class="own-tag">{{item.actionText}}</text>
         </view>
       </view>
-    </view>
-
-    <view class="foot">
-      <text class="muted">{{item.creatorText}} 发起</text>
-      <text class="muted">已报名 {{item.signupCount}} 人</text>
-    </view>
-
-    <view wx:if="{{item.actionText}}" class="action-row">
-      <button
-        wx:if="{{item.actionKey}}"
-        class="act {{item.actionKey === 'cancel' ? 'is-ghost' : ''}}"
-        data-id="{{item.id}}"
-        data-act="{{item.actionKey}}"
-        loading="{{busyId === item.id}}"
-        catchtap="onAction"
-      >{{item.actionText}}</button>
-      <text wx:else class="own-tag">{{item.actionText}}</text>
-    </view>
-  </view>
+    </block>
+  </block>
 </view>

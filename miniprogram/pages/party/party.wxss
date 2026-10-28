@@ -21,6 +21,10 @@
   padding: 24rpx;
   margin-bottom: 16rpx;
 }
+/* 过期卡片整体弱化：折叠区展开后一眼能看出这批是历史记录，不是待报名的局 */
+.post.is-expired {
+  opacity: 0.72;
+}
 .line1 {
   display: flex;
   align-items: center;
@@ -211,4 +215,32 @@
 .own-tag {
   font-size: 22rpx;
   color: var(--text-3);
+}
+
+/* 已过期折叠条：默认收起，点一下展开下面的过期卡片 */
+.fold-bar {
+  display: flex;
+  align-items: center;
+  margin: 8rpx 0 16rpx;
+  padding: 18rpx 22rpx;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.fold-arrow {
+  flex: 0 0 auto;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.fold-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+.fold-hint {
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  color: var(--brand);
 }

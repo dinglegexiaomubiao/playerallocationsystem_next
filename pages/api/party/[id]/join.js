@@ -37,13 +37,25 @@ export default async function handler(req, res) {
   const client = await pool.connect();
   try {
     const post = await client.query(
-      'SELECT id, player_id, status FROM public.party_posts WHERE id = $1',
+      'SELECT id, player_id, status, start_at, duration_min FROM public.party_posts WHERE id = $1',
       [postId]
     );
     if (post.rows.length === 0) {
       return res.status(404).json({ success: false, error: '卡片不存在或已被删除' });
     }
     const p = post.rows[0];
+
+    // 过期判定跟列表接口 shapePost 同一套口径（开始时间 + 持续时长）。
+    // 没人手动关的卡片 status 会一直是 'open'，光看 status 会放行「给上周的局报名」。
+    const startAt = p.start_at ? new Date(p.start_at) : null;
+    const durationMin =
+      p.duration_min === null || p.duration_min === undefined ? null : Number(p.duration_min);
+    const expired = !!(
+      startAt &&
+      !isNaN(startAt.getTime()) &&
+      durationMin &&
+      startAt.getTime() + durationMin * 60000 < Date.now()
+    );
 
     // 报名人自己的选手资料（可能还没绑定）
     const acct = await client.query(
@@ -61,6 +73,12 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       if (p.status !== 'open') {
         return res.status(409).json({ success: false, error: '这张卡片已停止招募' });
+      }
+      // 开局时间已过：再报名没有意义，而且会导致「已报名列表里有个人根本赶不上」
+      if (expired) {
+        return res
+          .status(409)
+          .json({ success: false, error: '这张卡片的开局时间已经过了，报名已关闭' });
       }
       if (myPlayerId && String(p.player_id) === myPlayerId) {
         return res.status(400).json({ success: false, error: '这是你自己发起的开黑' });

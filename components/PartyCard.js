@@ -114,6 +114,9 @@ export default function PartyCard({ post, me, onChanged }) {
   const st = PARTY_STATUS[post.status] || PARTY_STATUS.open;
   const isMine = post.isMine;
   const full = post.status !== 'open';
+  // 过期也算「不能报名」：没人手动关的卡片 status 会一直是 open，光看 status 会给
+  // 上周的局挂一个「我要报名」按钮，点了服务端也回 409。文案要能区分停招和过期。
+  const dead = full || !!post.expired;
 
   // 打开报名弹窗时用「我的」资料预填，省得重复输入
   useEffect(() => {
@@ -411,15 +414,19 @@ export default function PartyCard({ post, me, onChanged }) {
         ) : (
           <>
             <span className="pg-foot-note">
-              {full ? '这张卡片已停止招募' : '报名后发起人能看到你的段位与上线时间'}
+              {dead
+                ? post.expired
+                  ? '这张卡片的开局时间已过'
+                  : '这张卡片已停止招募'
+                : '报名后发起人能看到你的段位与上线时间'}
             </span>
             <button
               type="button"
               className="btn btn-sm btn-primary"
               onClick={() => setSigning(true)}
-              disabled={busy || full}
+              disabled={busy || dead}
             >
-              {full ? '已停止招募' : '我要报名'}
+              {dead ? (post.expired ? '已过期' : '已停止招募') : '我要报名'}
             </button>
           </>
         )}
