@@ -52,6 +52,12 @@ function Report({ report }) {
         <br />
         收件人 {report.recipients || 0} 人 · 写站内信 {report.inbox || 0} 条 · 推送成功 {report.pushed || 0} 次
         {report.reason === 'no_new' ? <div style={{ marginTop: 4 }}>这段时间没有新内容，什么都没发。</div> : null}
+        {report.reason === 'window_too_short' ? (
+          <div style={{ marginTop: 4 }}>
+            距上次汇总才 {report.windowMin} 分钟（不足 10 分钟），已跳过 —— 这是防止连点两次
+            把额度白消耗掉。真要补发，用「立即发汇总」并确认。
+          </div>
+        ) : null}
         {skipped.length > 0 ? (
           <div style={{ marginTop: 4 }}>
             跳过：
@@ -111,7 +117,10 @@ export default function AdminMpPushPage({ denied }) {
     setMsg(null);
     setReport(null);
     try {
-      const r = await apiPost('/api/admin/mp/push', { action });
+      // 手动点「立即发汇总」带上 force：这是人确认过的动作，不该被「窗口太短」挡回去
+      // （那道保护挡的是 pm2 重启连跑、脚本重复触发）。连点两下由 busy 状态防住。
+      const payload = action === 'digest' ? { action, force: true } : { action };
+      const r = await apiPost('/api/admin/mp/push', payload);
       setReport((r && r.report) || null);
       setMsg({ type: 'ok', text: action === 'preview' ? '预览完成' : '已执行' });
       await load();

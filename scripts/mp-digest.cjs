@@ -61,6 +61,23 @@ function stamp() {
     pool = db.pool || (db.default && db.default.pool) || null;
 
     const { runDigest, mpConfigured } = await import('../lib/mp-notify.mjs');
+
+    // 到点才跑。
+    //
+    // 为什么需要这道闸：pm2 每次 `pm2 start` / 重启都会**立刻执行一次** cron app，
+    // 所以每次部署都会白跑一次汇总 —— 部署在下午 4 点，全群就在 4 点收到「每日汇总」，
+    // 而晚上 20:00 那次的窗口只剩 4 小时，下午发的帖子反而进不了当天那条。
+    // 用「当前小时 >= 约定小时」直接挡掉，比在库里判断「今天发过没」干净得多：
+    // 后者一旦判断失误就会**吞掉当天的内容**，前者最多是晚发一会儿。
+    const runHour = Number(process.env.MP_DIGEST_HOUR || 20);
+    const nowHour = new Date().getHours();
+    if (!force && !sinceArg && Number.isFinite(runHour) && nowHour < runHour) {
+      console.log(
+        `[${stamp()}] 现在 ${nowHour} 点，还没到 ${runHour} 点，跳过（pm2 启动/重启会触发一次，属正常）。`
+      );
+      return;
+    }
+
     const cfg = mpConfigured();
     if (!cfg.canPush && !dryRun) {
       console.warn(
