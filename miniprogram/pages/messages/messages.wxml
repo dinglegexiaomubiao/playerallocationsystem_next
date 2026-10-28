@@ -29,8 +29,8 @@
     <block wx:elif="{{items.length === 0}}">
       <view class="surface guest">
         <view class="guest-title">还没有消息</view>
-        <view class="muted guest-desc">有人报名你发起的开黑、或者你关注的类别有新内容时，会出现在这里。</view>
-        <button class="btn ghost small" bindtap="goParty">去看看开黑</button>
+        <view class="muted guest-desc">有人报名你发起的组队、或者你关注的类别有新内容时，会出现在这里。</view>
+        <button class="btn ghost small" bindtap="goParty">去看看组队</button>
       </view>
     </block>
 

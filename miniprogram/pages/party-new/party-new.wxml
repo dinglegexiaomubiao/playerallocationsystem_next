@@ -80,7 +80,7 @@
       <view class="field">
         <view class="label">标题<text class="hint">留空自动生成</text></view>
         <input class="input" value="{{title}}" data-k="title"
-          placeholder="例如 今晚冲分，缺个三号位" placeholder-class="ph" bindinput="onInput" />
+          placeholder="例如 今晚缺人，缺个三号位" placeholder-class="ph" bindinput="onInput" />
       </view>
 
       <view class="field">
@@ -93,10 +93,10 @@
       <view wx:if="{{error}}" class="err">{{error}}</view>
 
       <button class="btn {{submitting ? 'is-busy' : ''}}" bindtap="submit" disabled="{{submitting}}">
-        {{submitting ? '发布中…' : '发布开黑'}}
+        {{submitting ? '发布中…' : '发布组队'}}
       </button>
     </view>
 
-    <view class="tip">发布开黑需要先在网页端「个人信息」里补填选手资料（分数/位置），否则会被拒绝。</view>
+    <view class="tip">发布组队需要先在网页端「个人信息」里补填选手资料（分数/位置），否则会被拒绝。</view>
   </block>
 </view>

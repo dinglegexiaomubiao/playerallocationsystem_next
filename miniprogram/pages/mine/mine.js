@@ -61,7 +61,7 @@ Page({
   },
 
   // 消息（站内信）+ 提醒设置。放在「我的」第一屏靠上的位置：
-  // 「有人报名了你的开黑」是唯一有时效的消息，埋太深等于没有
+  // 「有人报名了你的组队」是唯一有时效的消息，埋太深等于没有
   goMessages() {
     wx.navigateTo({ url: '/pages/messages/messages' });
   },
@@ -73,7 +73,7 @@ Page({
   logout() {
     wx.showModal({
       title: '退出登录',
-      content: '退出后发开黑、报名活动这些操作就不能用了，看内容不受影响。',
+      content: '退出后发组队、报名活动这些操作就不能用了，看内容不受影响。',
       confirmText: '退出',
       confirmColor: '#b02b25',
       success: (r) => {

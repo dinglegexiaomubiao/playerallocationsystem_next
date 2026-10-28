@@ -46,7 +46,7 @@ Page({
   // 从登录页 / 发布页返回时页面不会重建，只有 onShow 会再跑。
   onShow() {
     const app = getApp();
-    // 刚发完开黑回来：立刻重拉。原来这里只认「登录态变了」，所以发起的招募
+    // 刚发完组队回来：立刻重拉。原来这里只认「登录态变了」，所以发起的招募
     // 要等用户自己下拉刷新才出现 —— 看着像「没发成功」。
     if (app && app.globalData && app.globalData.partyListDirty) {
       app.globalData.partyListDirty = false;
@@ -119,7 +119,7 @@ Page({
 
           return {
             id: String(p.id),
-            title: p.title || '未命名开黑',
+            title: p.title || '未命名组队',
             modeLabel: p.modeLabel || '',
             // 过期优先：服务端已改口径，这里再兜一层，免得接口没更新时又显示「招募中」
             statusLabel: isExpired ? '已过期' : p.statusLabel || '',
@@ -342,10 +342,10 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: 'DoDo 开黑广场 · 缺人喊一嗓', path: '/pages/party/party' };
+    return { title: 'DoDo 组队广场 · 缺人喊一嗓', path: '/pages/party/party' };
   },
 
   onShareTimeline() {
-    return { title: 'DoDo 开黑广场' };
+    return { title: 'DoDo 组队广场' };
   }
 });

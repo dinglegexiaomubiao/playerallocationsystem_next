@@ -9,7 +9,7 @@
         bindtap="onTab"
       >{{item.label}}</text>
     </view>
-    <text class="new-btn" bindtap="goNew">＋ 发开黑</text>
+    <text class="new-btn" bindtap="goNew">＋ 发组队</text>
   </view>
 
   <view wx:if="{{loading}}" class="center">加载中…</view>

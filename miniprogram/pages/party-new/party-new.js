@@ -122,7 +122,7 @@ Page({
     const d = this.data;
 
     const mode = d.modes[d.modeIndex];
-    if (!mode) return this.setData({ error: '请选择开黑模式' });
+    if (!mode) return this.setData({ error: '请选择组队模式' });
 
     const need = d.needs[d.needIndex];
     if (!need) return this.setData({ error: '请选择需要几个人' });

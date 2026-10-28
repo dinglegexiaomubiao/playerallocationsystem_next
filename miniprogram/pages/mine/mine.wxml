@@ -18,7 +18,7 @@
 
     <view class="surface link" bindtap="goMessages">
       <text class="link-text">消息</text>
-      <text class="link-sub">有人报名你的开黑 / 关注类别的新内容</text>
+      <text class="link-sub">有人报名你的组队 / 关注类别的新内容</text>
       <text wx:if="{{unread > 0}}" class="msg-badge">{{unread > 99 ? '99+' : unread}}</text>
       <text class="link-arrow">›</text>
     </view>
@@ -71,7 +71,7 @@
   <block wx:else>
     <view class="surface guest">
       <view class="guest-title">还没登录</view>
-      <view class="muted guest-desc">看内容不需要登录；发开黑、报名活动、给美食评分这些需要。</view>
+      <view class="muted guest-desc">看内容不需要登录；发组队、报名活动、给美食评分这些需要。</view>
       <button class="btn" bindtap="goLogin">去登录</button>
     </view>
 

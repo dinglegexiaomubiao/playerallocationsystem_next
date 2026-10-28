@@ -14,9 +14,9 @@ function shuffle(arr) {
 
 Page({
   data: {
-    // 顺序对齐网页主导航：开黑 → 活动 → 赛事 → 群友 → 帮派 → 分布 → 美食 → 语录
+    // 顺序对齐网页主导航：组队 → 活动 → 赛事 → 群友 → 帮派 → 分布 → 美食 → 语录
     modules: [
-      { key: 'party', name: '开黑组队', desc: '缺人喊一嗓', path: '/pages/party/party' },
+      { key: 'party', name: '组队约局', desc: '缺人喊一嗓', path: '/pages/party/party' },
       { key: 'activities', name: '活动招募', desc: '约饭爬山', path: '/pages/activities/activities' },
       { key: 'tournaments', name: '赛事信息', desc: '历届名次', path: '/pages/tournaments/tournaments' },
       { key: 'members', name: '群友信息', desc: '战绩与名片', path: '/pages/members/members' },

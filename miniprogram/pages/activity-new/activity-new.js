@@ -11,7 +11,7 @@ function defaultWhen() {
   };
 }
 
-// 活动比开黑跨度大（爬山、钓鱼常常一整天），在共用时长表后面补几档长的。
+// 活动比组队跨度大（爬山、钓鱼常常一整天），在共用时长表后面补几档长的。
 // 服务端允许 15 分钟 ~ 48 小时。
 const LONG_DURATIONS = [
   { min: 480, label: '8 小时' },
@@ -62,7 +62,7 @@ Page({
     loadOptions()
       .then((o) => {
         const durs = (o.durations || []).concat(LONG_DURATIONS);
-        // 活动人数上限 50，和开黑的常用人数表不是一回事，直接给 1~50 的序列
+        // 活动人数上限 50，和组队的常用人数表不是一回事，直接给 1~50 的序列
         const needs = [];
         for (let i = 1; i <= 50; i += 1) needs.push(i);
 

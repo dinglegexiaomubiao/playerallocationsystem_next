@@ -11,7 +11,7 @@
 // 有意不做（去网页端）：
 //   - 群昵称 / SteamID 这类「多值身份」：服务端 replaceIdentities 要求保留主号，
 //     删空会导致头像、战绩、赛程集体失联；小程序不做这套交互。
-//   - 擅长英雄用英雄列表选（网页端有英雄图标库），这里退化成逗号分隔的文本。
+//   - 擅长项用擅长项列表选（网页端有擅长项图标库），这里退化成逗号分隔的文本。
 const { request } = require('../../utils/api');
 const { loadOptions } = require('../../utils/options');
 

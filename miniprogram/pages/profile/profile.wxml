@@ -18,7 +18,7 @@
         <text class="nick">{{info.nickname}}</text>
         <text wx:if="{{info.guildName}}" class="guild" data-name="{{info.guildName}}">{{info.guildName}}</text>
       </view>
-      <view wx:if="{{info.gameId}}" class="muted">游戏 ID {{info.gameId}}</view>
+      <view wx:if="{{info.gameId}}" class="muted">账号 ID {{info.gameId}}</view>
       <view wx:if="{{info.steamIds.length}}" class="muted">SteamID {{info.steamIds[0]}}</view>
       <view wx:if="{{info.groupNicknames.length}}" class="muted">
         群昵称 {{info.groupNicknames[0]}}
@@ -86,7 +86,7 @@
       </view>
 
       <view class="field">
-        <view class="label">擅长英雄</view>
+        <view class="label">擅长项</view>
         <input
           class="input"
           value="{{form.heroes}}"

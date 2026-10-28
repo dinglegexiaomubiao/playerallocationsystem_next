@@ -2,7 +2,7 @@
 //
 // 为什么站内信是主渠道：小程序的「一次性订阅」每授权一次只能推一条，
 // 额度用完、用户拒收、微信限流都会让推送失败 —— 那些都不在我们控制内。
-// 所以「有人报名了你的开黑」这件事先落库，保证打开小程序一定看得到。
+// 所以「有人报名了你的组队」这件事先落库，保证打开小程序一定看得到。
 //
 // 页面顺序上，未读置顶不额外排序：列表本身是 id 倒序，新的就在上面，
 // 再按未读排一次会让人找不到刚才看到的那条。
@@ -11,7 +11,7 @@ const session = require('../../utils/session');
 const { fmtDateTime } = require('../../utils/format');
 const badge = require('../../utils/badge');
 
-const CAT_LABEL = { party: '开黑', activity: '活动', tournament: '赛事', digest: '汇总' };
+const CAT_LABEL = { party: '组队', activity: '活动', tournament: '赛事', digest: '汇总' };
 
 Page({
   data: {

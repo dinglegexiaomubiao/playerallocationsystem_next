@@ -163,7 +163,7 @@
   background: var(--brand);
   border-color: var(--brand);
 }
-/* 英雄池上百种，装进固定高度的滚动区，不然面板本身会被撑到一两屏 */
+/* 擅长项上百种，装进固定高度的滚动区，不然面板本身会被撑到一两屏 */
 .chips-scroll {
   max-height: 320rpx;
 }

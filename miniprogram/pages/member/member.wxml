@@ -51,7 +51,7 @@
     </view>
 
     <view wx:if="{{p.heroesText}}" class="block">
-      <view class="sec-title">擅长英雄</view>
+      <view class="sec-title">擅长项</view>
       <view class="text">{{p.heroesText}}</view>
     </view>
 
@@ -140,7 +140,7 @@
       </view>
 
       <view wx:if="{{ai.status === 'idle'}}" class="surface act-row">
-        <text class="act-hint">按英雄池与近期数据做打法推断，仅供娱乐</text>
+        <text class="act-hint">按擅长项与近期数据做打法推断，仅供娱乐</text>
         <text class="act-btn" bindtap="onTapAI">{{loggedIn ? '开始分析' : '登录后可用'}}</text>
       </view>
 

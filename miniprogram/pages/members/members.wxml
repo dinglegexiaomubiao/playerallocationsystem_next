@@ -5,7 +5,7 @@
       class="input"
       value="{{keyword}}"
       bindinput="onKeyword"
-      placeholder="搜昵称 / 群昵称 / SteamID / 英雄"
+      placeholder="搜昵称 / 群昵称 / SteamID / 擅长项"
       confirm-type="search"
     />
     <text wx:if="{{keyword}}" class="clear" bindtap="onClearKeyword">×</text>
@@ -48,7 +48,7 @@
       </view>
     </view>
     <view class="field">
-      <view class="label">擅长英雄（可多选）<text wx:if="{{heroCount}}" class="label-note">已选 {{heroCount}}</text></view>
+      <view class="label">擅长项（可多选）<text wx:if="{{heroCount}}" class="label-note">已选 {{heroCount}}</text></view>
       <scroll-view class="chips-scroll" scroll-y>
         <view class="chips">
           <text

@@ -1,4 +1,4 @@
-// 群友列表：搜索 + 六维筛选（段位 / 分数区间 / 位置 / 地区 / 英雄 / 排序）。
+// 群友列表：搜索 + 六维筛选（段位 / 分数区间 / 位置 / 地区 / 擅长项 / 排序）。
 //
 // 筛选逻辑在 utils/member-filter.js（移植自 lib/member-filter.mjs，口径必须一致）。
 // 这里只负责：拉一次全量 → 建一次搜索索引 → 之后每次改筛选都在本地算，
@@ -27,7 +27,7 @@ Page({
     sortIndex: 0,
     regionLabels: ['全部地区'],
     regionIndex: 0,
-    // 英雄与位置都是**多选**（网页端是多选下拉，单选会让「会 A 或 B」问不出来）
+    // 擅长项与位置都是**多选**（网页端是多选下拉，单选会让「会 A 或 B」问不出来）
     heroChips: [],
     heroCount: 0,
     posChips: [],
@@ -64,7 +64,7 @@ Page({
         this._base = base;
         this._index = mf.buildSearchIndex(players);
 
-        // 维度可选项都从真实数据生成（英雄池上百种，写死会漏）
+        // 维度可选项都从真实数据生成（擅长项上百种，写死会漏）
         const facet = mf.buildRegionHeroFacets(players);
         const tiers = mf.buildTierFacets(players);
         const scores = mf.buildScoreFacets(players);
@@ -78,7 +78,7 @@ Page({
         this._regions = [{ value: '全部', label: '全部地区', count: players.length }].concat(
           facet.region.map((x) => ({ value: x.value, label: x.value + '（' + x.count + '）', count: x.count }))
         );
-        // 英雄按出现次数降序排（buildCountFacet 已排好），点开面板第一屏就是最常见的
+        // 擅长项按出现次数降序排（buildCountFacet 已排好），点开面板第一屏就是最常见的
         this._heroes = facet.hero.map((x) => ({ name: x.value, count: x.count }));
 
         this.setData({
