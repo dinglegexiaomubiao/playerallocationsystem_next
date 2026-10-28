@@ -164,6 +164,10 @@ Page({
     request('/api/party', body, { method: 'POST' })
       .then(() => {
         this.setData({ submitting: false });
+        // 标记列表页要重拉：返回后 onShow 会消费这个标记。
+        // 不加这行，刚发的招募要等用户自己下拉刷新才出现（像没发成功）。
+        const app = getApp();
+        if (app && app.globalData) app.globalData.partyListDirty = true;
         wx.showToast({ title: '已发布', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 600);
       })

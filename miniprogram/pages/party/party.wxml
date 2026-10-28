@@ -73,16 +73,17 @@
           <text class="muted">已报名 {{item.signupCount}} 人</text>
         </view>
 
-        <view wx:if="{{item.actionText}}" class="action-row">
+        <view wx:if="{{item.actions.length}}" class="action-row">
           <button
-            wx:if="{{item.actionKey}}"
-            class="act {{item.actionKey === 'cancel' ? 'is-ghost' : ''}}"
+            wx:for="{{item.actions}}"
+            wx:for-item="ac"
+            wx:key="key"
+            class="act {{ac.ghost ? 'is-ghost' : ''}} {{ac.danger ? 'is-danger' : ''}}"
             data-id="{{item.id}}"
-            data-act="{{item.actionKey}}"
-            loading="{{busyId === item.id}}"
+            data-act="{{ac.key}}"
+            loading="{{busyId === item.id && busyAct === ac.key}}"
             catchtap="onAction"
-          >{{item.actionText}}</button>
-          <text wx:else class="own-tag">{{item.actionText}}</text>
+          >{{ac.text}}</button>
         </view>
       </view>
     </block>

@@ -188,14 +188,17 @@
   border-radius: 999rpx;
 }
 
-/* 报名 / 取消报名 */
+/* 报名 / 取消报名 / 关闭 / 重新招募 / 删除。
+   一张卡可能同时有两个按钮（自己发的：关闭 + 删除），所以左边留 12rpx 间距，
+   组右边缘仍然贴着卡片右边。 */
 .action-row {
   margin-top: 16rpx;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 .act {
-  margin: 0;
+  margin: 0 0 0 12rpx;
   padding: 0 28rpx;
   height: 60rpx;
   line-height: 60rpx;
@@ -212,9 +215,11 @@
   color: var(--text-2);
   border: 1px solid var(--border);
 }
-.own-tag {
-  font-size: 22rpx;
-  color: var(--text-3);
+/* 删除是不可逆操作，用描边红而不是实心红，别跟「报名」抢注意力 */
+.act.is-danger {
+  background: var(--bg-card);
+  color: var(--brand);
+  border: 1px solid var(--brand-border);
 }
 
 /* 已过期折叠条：默认收起，点一下展开下面的过期卡片 */

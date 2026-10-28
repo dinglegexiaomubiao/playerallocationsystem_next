@@ -31,7 +31,8 @@ Page({
     loading: true,
     error: '',
     emptyText: '',
-    busyId: ''
+    busyId: '',
+    busyAct: ''
   },
 
   onLoad() {
@@ -42,9 +43,17 @@ Page({
     this.load();
   },
 
-  // 从登录页返回时页面不会重建，只有 onShow 会再跑。
-  // 登录态变了（登录/退出/过期被清）就重拉一次 —— isMine / iJoined 是服务端按会话算的。
+  // 从登录页 / 发布页返回时页面不会重建，只有 onShow 会再跑。
   onShow() {
+    const app = getApp();
+    // 刚发完开黑回来：立刻重拉。原来这里只认「登录态变了」，所以发起的招募
+    // 要等用户自己下拉刷新才出现 —— 看着像「没发成功」。
+    if (app && app.globalData && app.globalData.partyListDirty) {
+      app.globalData.partyListDirty = false;
+      this.load(true);
+      return;
+    }
+    // 登录态变了（登录/退出/过期被清）也要重拉 —— isMine / iJoined 是服务端按会话算的
     if (this.tokenSeen !== undefined && this.tokenSeen !== getToken()) this.load();
   },
 
@@ -55,9 +64,11 @@ Page({
     );
   },
 
-  load() {
+  // quiet=true 时不切「加载中」骨架：发布完返回、删除完刷新都走这条，
+  // 否则整页先闪一下「加载中…」再出列表，看着像页面重载了。
+  load(quiet) {
     this.tokenSeen = getToken();
-    this.setData({ loading: true, error: '' });
+    this.setData(quiet ? { error: '' } : { loading: true, error: '' });
     return request('/api/party', null, { method: 'GET' })
       .then((res) => {
         const posts = (res && res.posts) || [];
@@ -75,30 +86,24 @@ Page({
           const isMine = !!p.isMine;
           const iJoined = !!p.iJoined;
 
-          // 按钮语义只在这里算一次，WXML 里不再写条件表达式
-          let actionText = '';
-          let actionKey = '';
-          if (isExpired) {
-            // 过期的卡片不给报名入口：局都打完了，报名按钮点了也没意义。
-            // 已经报了名的人仍然可以取消（把自己的记录清掉）。
-            if (iJoined) {
-              actionText = '取消报名';
-              actionKey = 'cancel';
-            } else if (isMine) {
-              actionText = '我发起的 · 已结束';
+          // 按钮语义只在这里算一次，WXML 里不再写条件表达式。
+          // 用数组是因为「自己发起的」要同时给「关闭/重新招募」和「删除」两个动作 ——
+          // 网页端 PartyCard 一直是两个按钮（关闭招募 / 重新招募 + 删除卡片），
+          // 小程序之前只做了一个「关闭招募」，等于发起人没法删掉自己发错的卡。
+          const actions = [];
+          if (isMine) {
+            if (isOpen) {
+              actions.push({ key: 'close', text: '关闭招募', ghost: true });
+            } else if (!isExpired) {
+              // 已关闭 → 还能重新开；已过期的重新开也没意义（开局时间是死的）
+              actions.push({ key: 'reopen', text: '重新招募', ghost: true });
             }
-          } else if (isMine && isOpen) {
-            // 自己发的、还在招募 → 给一个关闭入口（关掉后别人就报不了名）
-            actionText = '关闭招募';
-            actionKey = 'close';
-          } else if (isMine) {
-            actionText = '我发起的';
+            // 招募中 / 已关闭 / 已过期，发起人都能删
+            actions.push({ key: 'delete', text: '删除', danger: true });
           } else if (iJoined) {
-            actionText = '取消报名';
-            actionKey = 'cancel';
+            actions.push({ key: 'cancel', text: '取消报名', ghost: true });
           } else if (isOpen) {
-            actionText = '报名';
-            actionKey = 'join';
+            actions.push({ key: 'join', text: '报名', primary: true });
           }
 
           // 报名者名单：接口本来就带回（网页端 PartyCard 平铺展示），这里做轻量映射。
@@ -122,8 +127,7 @@ Page({
             isExpired: isExpired,
             isMine: isMine,
             iJoined: iJoined,
-            actionText: actionText,
-            actionKey: actionKey,
+            actions: actions,
             playTime: p.play_time || '',
             startText: p.start_at ? fmtDateTime(p.start_at) : '',
             peopleText: peopleText,
@@ -229,7 +233,7 @@ Page({
     this.setData(patch);
   },
 
-  // 报名 / 取消报名
+  // 报名 / 取消报名 / 关闭 / 重新招募 / 删除
   onAction(e) {
     const ds = e.currentTarget.dataset;
     const id = String(ds.id || '');
@@ -242,6 +246,20 @@ Page({
     }
     if (this.data.busyId) return;
 
+    if (act === 'delete') {
+      wx.showModal({
+        title: '删除这张招募',
+        content:
+          '删除后卡片和已有的报名记录都会消失，不能恢复。只是想停止接受报名的话，用「关闭招募」。',
+        confirmText: '删除',
+        confirmColor: '#b02b25',
+        success: (r) => {
+          if (r.confirm) this.doDelete(id);
+        }
+      });
+      return;
+    }
+
     if (act === 'close') {
       wx.showModal({
         title: '关闭招募',
@@ -249,9 +267,14 @@ Page({
         confirmText: '关闭',
         confirmColor: '#b02b25',
         success: (r) => {
-          if (r.confirm) this.closePost(id);
+          if (r.confirm) this.doPatch(id, 'closed');
         }
       });
+      return;
+    }
+
+    if (act === 'reopen') {
+      this.doPatch(id, 'open');
       return;
     }
 
@@ -262,49 +285,60 @@ Page({
         confirmText: '取消报名',
         confirmColor: '#b02b25',
         success: (r) => {
-          if (r.confirm) this.doAction(id, 'DELETE', {});
+          if (r.confirm) this.doJoin(id, 'DELETE');
         }
       });
       return;
     }
-    this.doAction(id, 'POST', {});
+    this.doJoin(id, 'POST');
   },
 
-  closePost(id) {
-    this.setData({ busyId: id });
-    request('/api/party/' + id, { status: 'closed' }, { method: 'PATCH' })
+  // 关闭 / 重新招募（PATCH status）
+  doPatch(id, status) {
+    this.setData({ busyId: id, busyAct: status === 'closed' ? 'close' : 'reopen' });
+    request('/api/party/' + id, { status: status }, { method: 'PATCH' })
       .then(() => {
-        this.setData({ busyId: '' });
-        wx.showToast({ title: '已关闭', icon: 'success' });
-        this.load();
+        this.setData({ busyId: '', busyAct: '' });
+        wx.showToast({ title: status === 'closed' ? '已关闭' : '已重新招募', icon: 'success' });
+        this.load(true);
       })
-      .catch((err) => {
-        this.setData({ busyId: '' });
-        wx.showModal({
-          title: '没能关闭',
-          content: (err && err.message) || '稍后再试',
-          showCancel: false
-        });
-      });
+      .catch((err) => this.fail('没能完成', err));
   },
 
-  doAction(id, method, body) {
-    this.setData({ busyId: id });
-    request('/api/party/' + id + '/join', body, { method: method })
+  // 删除卡片（DELETE /api/party/{id}）。服务端会先清报名再删卡，只有发起人能删。
+  doDelete(id) {
+    this.setData({ busyId: id, busyAct: 'delete' });
+    request('/api/party/' + id, null, { method: 'DELETE' })
       .then(() => {
-        this.setData({ busyId: '' });
+        this.setData({ busyId: '', busyAct: '' });
+        // 删掉的卡片还摊在名单里会很怪，把展开状态一起清掉
+        delete this.expandedIds[id];
+        wx.showToast({ title: '已删除', icon: 'success' });
+        this.load(true);
+      })
+      .catch((err) => this.fail('没能删除', err));
+  },
+
+  doJoin(id, method) {
+    this.setData({ busyId: id, busyAct: method === 'DELETE' ? 'cancel' : 'join' });
+    request('/api/party/' + id + '/join', {}, { method: method })
+      .then(() => {
+        this.setData({ busyId: '', busyAct: '' });
         wx.showToast({ title: method === 'DELETE' ? '已取消报名' : '报名成功', icon: 'success' });
-        this.load();
+        this.load(true);
       })
-      .catch((err) => {
-        this.setData({ busyId: '' });
-        // 409 = 已报过名 / 已停止招募；400 = 自己发起的 / 已满。原样把服务端的话显示出来
-        wx.showModal({
-          title: '没能完成',
-          content: (err && err.message) || '稍后再试',
-          showCancel: false
-        });
-      });
+      .catch((err) => this.fail('没能完成', err));
+  },
+
+  fail(title, err) {
+    this.setData({ busyId: '', busyAct: '' });
+    // 409 = 已报过名 / 已停止招募 / 开局时间已过；400 = 自己发起的 / 已满。
+    // 原样把服务端的话显示出来，别在前端猜原因。
+    wx.showModal({
+      title: title,
+      content: (err && err.message) || '稍后再试',
+      showCancel: false
+    });
   },
 
   onShareAppMessage() {
