@@ -92,7 +92,7 @@
           value="{{form.heroes}}"
           data-key="heroes"
           bindinput="onInput"
-          placeholder="逗号分隔，按顺序排，如：影魔, 伐木机"
+          placeholder="逗号分隔，按顺序排"
         />
         <view class="hint">群友卡片只展示前 4 个，顺序就是这里的顺序</view>
       </view>
