@@ -49,7 +49,14 @@ const sinceArg = (args.find((a) => a.startsWith('--since=')) || '').slice('--sin
 const force = args.includes('--force');
 
 function stamp() {
-  return new Date().toISOString().replace('T', ' ').slice(0, 19);
+  // 用服务器本地时间（东八区），好跟 pm2 日志前缀那一列对上；
+  // toISOString() 是 UTC，同一行会出现两个差 8 小时的时间，排查时特别容易看错。
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ` +
+    `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+  );
 }
 
 (async () => {
