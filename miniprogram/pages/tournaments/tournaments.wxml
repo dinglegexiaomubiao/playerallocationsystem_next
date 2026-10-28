@@ -1,20 +1,46 @@
 <view class="page-wrap">
+  <view class="tabs">
+    <text
+      wx:for="{{tabs}}"
+      wx:key="key"
+      class="tab {{group === item.key ? 'is-on' : ''}}"
+      data-key="{{item.key}}"
+      bindtap="onStatusTab"
+    >{{item.label}}</text>
+  </view>
+
+  <view class="search">
+    <input
+      class="input"
+      value="{{q}}"
+      bindinput="onSearch"
+      placeholder="搜赛事名 / 冠军 / 赞助"
+      confirm-type="search"
+    />
+    <text wx:if="{{q}}" class="clear" bindtap="clearSearch">×</text>
+  </view>
+
   <view wx:if="{{loading}}" class="center">加载中…</view>
   <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!shown.length}}" class="center">{{emptyText}}</view>
 
-  <view
-    wx:for="{{list}}"
-    wx:key="id"
-    class="surface row"
-    data-id="{{item.id}}"
-    bindtap="onOpen"
-  >
-    <view class="line1">
-      <text class="name">{{item.name}}</text>
-      <text class="status">{{item.statusText}}</text>
+  <block wx:else>
+    <view
+      wx:for="{{shown}}"
+      wx:key="id"
+      class="surface row"
+      data-id="{{item.id}}"
+      bindtap="onOpen"
+    >
+      <view class="line1">
+        <text class="name">{{item.name}}</text>
+        <text class="status">{{item.statusText}}</text>
+      </view>
+      <view wx:if="{{item.sponsor}}" class="muted">{{item.sponsor}}</view>
+      <view wx:if="{{item.timeText}}" class="muted">{{item.timeText}}</view>
+      <view wx:if="{{item.champion}}" class="champ">冠军：{{item.champion}}</view>
     </view>
-    <view wx:if="{{item.sponsor}}" class="muted">{{item.sponsor}}</view>
-    <view wx:if="{{item.timeText}}" class="muted">{{item.timeText}}</view>
-    <view wx:if="{{item.champion}}" class="champ">冠军：{{item.champion}}</view>
-  </view>
+
+    <view class="foot">共 {{shown.length}} 届<text wx:if="{{group || q}}">（已筛选）</text></view>
+  </block>
 </view>

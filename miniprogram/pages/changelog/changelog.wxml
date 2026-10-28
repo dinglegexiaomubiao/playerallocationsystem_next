@@ -1,0 +1,39 @@
+<view class="page-wrap">
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{!groups.length}}" class="center">还没有更新记录</view>
+
+  <block wx:else>
+    <view class="head">
+      <text class="head-ver">最新 v{{latest}}</text>
+      <text class="head-tip">按版本倒序，最新在上</text>
+    </view>
+
+    <view wx:for="{{groups}}" wx:key="version" class="surface card">
+      <view class="card-head">
+        <text class="ver">v{{item.version}}</text>
+        <text class="date">{{item.dateText}}</text>
+        <text class="count">{{item.items.length}} 条</text>
+      </view>
+      <view wx:if="{{item.title}}" class="card-title">{{item.title}}</view>
+
+      <view
+        wx:for="{{item.items}}"
+        wx:for-item="it"
+        wx:key="uid"
+        class="item"
+      >
+        <view class="dot"></view>
+        <view class="item-body">
+          <text class="item-text">{{it.title}}</text>
+          <view class="item-meta">
+            <text wx:if="{{it.adminOnly}}" class="tag">管理</text>
+            <text wx:if="{{it.timeText}}" class="time">{{it.timeText}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="foot">下拉可刷新。网页端「更新日志」页有每条对应功能的直达链接。</view>
+  </block>
+</view>

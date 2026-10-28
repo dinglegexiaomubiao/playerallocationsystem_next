@@ -1,0 +1,92 @@
+.head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.head-ver {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--brand);
+}
+.head-tip {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+
+.card {
+  padding: 22rpx;
+  margin-bottom: 16rpx;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+}
+.ver {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text);
+  margin-right: 12rpx;
+}
+.date {
+  font-size: 24rpx;
+  color: var(--text-3);
+}
+.count {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.card-title {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.item {
+  display: flex;
+  margin-top: 14rpx;
+}
+.dot {
+  width: 8rpx;
+  height: 8rpx;
+  margin: 14rpx 14rpx 0 0;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--brand-border);
+}
+.item-body {
+  flex: 1;
+  min-width: 0;
+}
+.item-text {
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.item-meta {
+  display: flex;
+  align-items: center;
+  margin-top: 4rpx;
+}
+.tag {
+  font-size: 20rpx;
+  color: var(--gold);
+  background: var(--gold-soft);
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx;
+}
+.time {
+  font-size: 20rpx;
+  color: var(--text-3);
+}
+
+.foot {
+  margin: 8rpx 4rpx 24rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: var(--text-3);
+}

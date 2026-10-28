@@ -50,6 +50,12 @@ Page({
     wx.navigateTo({ url: '/pages/feedback/feedback' });
   },
 
+  // 站点更新日志（网页端 /changelog 的小程序版）。放在「我的」而不是首页，
+  // 是因为它属于「关于这个站」的一类信息，跟个人信息、反馈摆在一起
+  goChangelog() {
+    wx.navigateTo({ url: '/pages/changelog/changelog' });
+  },
+
   logout() {
     wx.showModal({
       title: '退出登录',

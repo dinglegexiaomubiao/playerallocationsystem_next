@@ -413,7 +413,7 @@ Page({
   onShareAppMessage() {
     const g = this.data.guild;
     return {
-      title: (g && g.name ? g.name : 'LaRoja 帮派') + ' · LaRoja',
+      title: (g && g.name ? g.name : 'DoDo 帮派') + ' · DoDo',
       path: '/pages/guild/guild'
     };
   }

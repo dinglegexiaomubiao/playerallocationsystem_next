@@ -40,6 +40,12 @@
       <text class="link-arrow">›</text>
     </view>
 
+    <view class="surface link" bindtap="goChangelog">
+      <text class="link-text">更新日志</text>
+      <text class="link-sub">这个站改了什么，按版本倒序</text>
+      <text class="link-arrow">›</text>
+    </view>
+
     <view class="surface link" bindtap="goPassword">
       <text class="link-text">修改密码</text>
       <text class="link-sub">原密码 + 新密码，改完不用重新登录</text>
@@ -59,6 +65,12 @@
     <view class="surface link" bindtap="goFeedback">
       <text class="link-text">意见反馈</text>
       <text class="link-sub">不登录也能提</text>
+      <text class="link-arrow">›</text>
+    </view>
+
+    <view class="surface link" bindtap="goChangelog">
+      <text class="link-text">更新日志</text>
+      <text class="link-sub">不登录也能看</text>
       <text class="link-arrow">›</text>
     </view>
   </block>

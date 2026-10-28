@@ -39,4 +39,50 @@
       </view>
     </view>
   </view>
+
+  <!-- 他人帮派详情（只读）。
+       网页端 /guild/[id] 对所有人公开、成员列表全量渲染；小程序原来点一下只弹一句
+       「不能自己申请加入」，看不到口号/首领/成员。这里用弹层把信息补齐，
+       数据全部来自已在手的 /api/guilds 列表，不再拉接口。 -->
+  <view wx:if="{{detail}}" class="mask" bindtap="closeDetail" catchtouchmove="noop"></view>
+  <view wx:if="{{detail}}" class="sheet">
+    <view class="sheet-stripe" style="background: {{detail.color}}"></view>
+    <view class="sheet-body">
+      <view class="sheet-line1">
+        <text class="sheet-name">{{detail.name}}</text>
+        <text class="count">{{detail.memberText}}</text>
+      </view>
+      <view wx:if="{{detail.slogan}}" class="sheet-slogan">{{detail.slogan}}</view>
+
+      <view class="kv">
+        <text class="k">首领</text>
+        <text
+          class="v link"
+          data-id="{{detail.leaderPlayerId}}"
+          bindtap="goMember"
+        >{{detail.leaderText || '未命名'}} ›</text>
+      </view>
+      <view wx:if="{{detail.createdText}}" class="kv">
+        <text class="k">成立</text>
+        <text class="v">{{detail.createdText}}</text>
+      </view>
+
+      <view wx:if="{{detail.heads.length}}" class="sheet-heads">
+        <block wx:for="{{detail.heads}}" wx:for-item="h" wx:key="playerId">
+          <view class="head-cell" data-id="{{h.playerId}}" bindtap="goMember">
+            <image wx:if="{{h.avatar}}" class="head" src="{{h.avatar}}" mode="aspectFill"></image>
+            <view wx:else class="head placeholder">{{h.initial}}</view>
+            <text class="head-name">{{h.nickname}}</text>
+          </view>
+        </block>
+      </view>
+
+      <view class="hint">帮派不能自己申请加入，只能被首领邀请。想进这个帮，点上面的首领看名片联系他。</view>
+
+      <view class="sheet-actions">
+        <view class="btn ghost" bindtap="closeDetail">关闭</view>
+        <view class="btn" bindtap="copyName">复制帮派名</view>
+      </view>
+    </view>
+  </view>
 </view>

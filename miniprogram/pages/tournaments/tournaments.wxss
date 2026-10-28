@@ -1,3 +1,45 @@
+@import "../../styles/form.wxss";
+
+/* 状态筛选：跟活动页共用一套 tab 视觉语言 */
+.tabs {
+  display: flex;
+  margin-bottom: 14rpx;
+}
+.tab {
+  font-size: 26rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+}
+.tab.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* 搜索：结构照抄群友页（.input 来自 styles/form.wxss） */
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+.search .input {
+  flex: 1;
+  min-width: 0;
+  padding-right: 60rpx;
+}
+.clear {
+  position: absolute;
+  right: 8rpx;
+  padding: 0 16rpx;
+  font-size: 32rpx;
+  color: var(--text-3);
+}
+
 .row {
   padding: 24rpx;
   margin-bottom: 16rpx;
@@ -29,4 +71,9 @@
   margin-top: 8rpx;
   font-size: 24rpx;
   color: var(--text-2);
+}
+.foot {
+  margin: 4rpx 4rpx 24rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
 }

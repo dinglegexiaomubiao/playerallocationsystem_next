@@ -1,8 +1,18 @@
 const { request, getBase } = require('../../utils/api');
-const { fullUrl } = require('../../utils/format');
+const { fullUrl, fmtDate } = require('../../utils/format');
 
 Page({
-  data: { list: [], total: 0, mineCount: 0, loading: true, error: '' },
+  data: {
+    list: [],
+    total: 0,
+    mineCount: 0,
+    loading: true,
+    error: '',
+    // 他人帮派详情（底部弹层）。网页端 /guild/[id] 是公开页，小程序原来只弹一句
+    // 「不能自己申请加入」，看不到口号/首领/成员，跟网页端不齐。
+    // 这里不新拉接口：/api/guilds 已经把口号、首领、成员数、前 5 位成员头像都返回了。
+    detail: null
+  },
 
   onLoad() {
     this.load();
@@ -40,7 +50,12 @@ Page({
             // ⚠ color 是对象 {key,label,solid}，不是色值字符串；直接塞进 style 会变成 [object Object]
             color: (g.color && g.color.solid) || 'var(--brand)',
             leaderText: g.leaderName || '',
+            // 17 位雪花号，全程字符串；空值保持空串，别塞 null 进 dataset
+            leaderPlayerId: g.leaderPlayerId ? String(g.leaderPlayerId) : '',
             memberText: (g.memberCount || 0) + '/' + (g.maxMembers || 0) + ' 人',
+            memberCount: Number(g.memberCount || 0),
+            maxMembers: Number(g.maxMembers || 0),
+            createdText: fmtDate(g.createdAt),
             isMine: !!g.isMine,
             heads: heads.slice(0, 5).map((h) => ({
               playerId: String(h.playerId || ''),
@@ -74,21 +89,42 @@ Page({
       wx.navigateTo({ url: '/pages/guild/guild' });
       return;
     }
-    // 别人的帮派：小程序没有公开详情页（成员列表只给本帮成员看），
-    // 说清楚加入方式比给一个空白页强
-    wx.showModal({
-      title: ds.name || '帮派',
-      content: '帮派不能自己申请加入，只能被帮主邀请。需要的话让他进帮派页邀请你。',
-      showCancel: false,
-      confirmText: '知道了'
+    // 别人的帮派 → 展开只读详情，对齐网页端 /guild/[id]（那一页对所有人公开）
+    const g = this.data.list.filter((x) => x.id === String(ds.id))[0];
+    if (g) this.setData({ detail: g });
+  },
+
+  closeDetail() {
+    this.setData({ detail: null });
+  },
+
+  // 遮罩上的 catchtouchmove 要有个真函数，否则弹层开着时手指滑动会滚动底下的列表
+  noop() {},
+
+  // 弹层里点首领 / 成员头像 → 该群友的名片（网页端成员列表同样是每人都能点）
+  goMember(e) {
+    const id = String((e.currentTarget.dataset && e.currentTarget.dataset.id) || '');
+    if (!id) return;
+    this.setData({ detail: null });
+    wx.navigateTo({ url: '/pages/member/member?id=' + id });
+  },
+
+  // 帮派不能自己申请加入（服务端就没有这个接口），只能被帮主邀请。
+  // 这句提示原来放在弹窗里，现在挪到详情底部，别删——删了就没人知道怎么进帮。
+  copyName() {
+    const d = this.data.detail;
+    if (!d) return;
+    wx.setClipboardData({
+      data: d.name,
+      success: () => wx.showToast({ title: '帮派名已复制', icon: 'none' })
     });
   },
 
   onShareAppMessage() {
-    return { title: 'LaRoja 帮派 · 阵营与成员', path: '/pages/guilds/guilds' };
+    return { title: 'DoDo 帮派 · 阵营与成员', path: '/pages/guilds/guilds' };
   },
 
   onShareTimeline() {
-    return { title: 'LaRoja 帮派' };
+    return { title: 'DoDo 帮派' };
   }
 });

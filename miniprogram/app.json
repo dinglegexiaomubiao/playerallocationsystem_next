@@ -20,6 +20,7 @@
     "pages/food-review/food-review",
     "pages/quote-new/quote-new",
     "pages/feedback/feedback",
+    "pages/changelog/changelog",
     "pages/profile/profile",
     "pages/my-tournaments/my-tournaments",
     "pages/password/password"
