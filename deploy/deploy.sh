@@ -151,6 +151,7 @@ tar -czf "$TAR" \
   --exclude=miniprogram \
   --exclude=.next-build --exclude=.next-prev \
   --exclude=.git --exclude=.workbuddy --exclude=.env.local \
+  --exclude=.deploy-version \
   --exclude=logs --exclude='*.log' \
   --exclude='./测试的数据.json' --exclude='./测试的数据.txt' --exclude='./测试的数据.xlsx' \
   . 2>/dev/null
@@ -243,10 +244,28 @@ if [ -d .next ]; then
 fi
 
 # 3) 元信息
+# ⚠ commit 的语义必须说清（2026-10-28 修）：它指的是「快照里装的到底是哪一版」。
+#   早先这里写的是 $COMMIT —— 也就是「马上要部署的那一版」，和快照内容差了一版，
+#   于是 `rollback.sh --list` 每个版本的 commit 号都是偏新的、手动挑版本会挑错。
+#   现在改从线上目录的 .deploy-version（5.5.5 落地时写入）读真实版本，
+#   本次要部署的版本另记在 deploying 行，两个值都在，谁也不会误读。
+#
+#   .deploy-version 在 2026-10-28 之前不存在，那之前的快照只能记 unknown，
+#   --list 会给这类旧快照单独标注，不至于把人骗过去。
+LIVE_COMMIT=$(cat .deploy-version 2>/dev/null | tr -d '[:space:]' || true)
+if [ -z "$LIVE_COMMIT" ]; then
+  LIVE_COMMIT="unknown"
+  LIVE_NOTE="note:        快照早于 .deploy-version 引入，真实版本未知（commit 行不可信时以本行为准）"
+else
+  LIVE_NOTE=""
+fi
+
 RESTARTS=$(pm2 jlist 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const a=JSON.parse(s);const p=a.find(x=>x.name==="laroja-site");console.log(p?p.pm2_env.restart_time:"?")}catch(e){console.log("?")}})' 2>/dev/null || echo '?')
 {
   echo "time:        $TS"
-  echo "commit:      $COMMIT"
+  echo "commit:      $LIVE_COMMIT"
+  echo "deploying:   $COMMIT"
+  if [ -n "$LIVE_NOTE" ]; then echo "$LIVE_NOTE"; fi
   echo "source:      $(du -sh "$SNAP/source.tar.gz" | cut -f1)"
   echo "next:        $(du -sh "$SNAP/.next" 2>/dev/null | cut -f1 || echo '-')"
   echo "pm2_restarts:$RESTARTS"
@@ -274,9 +293,9 @@ else
 fi
 
 ssh $SSH_OPTS "$HOST" \
-  "bash -s -- '$REMOTE_DIR' '$SNAP_ROOT' '$PM2_APP' '$TAR_NAME' '$WITH_DEPS' '$BUILD_MODE' '$NEXT_TAR_NAME'" <<'REMOTE'
+  "bash -s -- '$REMOTE_DIR' '$SNAP_ROOT' '$PM2_APP' '$TAR_NAME' '$WITH_DEPS' '$BUILD_MODE' '$NEXT_TAR_NAME' '$COMMIT'" <<'REMOTE'
 set -e
-REMOTE_DIR="$1"; SNAP_ROOT="$2"; PM2_APP="$3"; TAR_NAME="$4"; WITH_DEPS="$5"; BUILD_MODE="$6"; NEXT_TAR_NAME="$7"
+REMOTE_DIR="$1"; SNAP_ROOT="$2"; PM2_APP="$3"; TAR_NAME="$4"; WITH_DEPS="$5"; BUILD_MODE="$6"; NEXT_TAR_NAME="$7"; COMMIT="$8"
 cd "$REMOTE_DIR"
 
 SNAP=""
@@ -432,6 +451,12 @@ done
 
 if [ "$CODE" = "200" ]; then
   echo "  ✓ 站点返回 200"
+  # 5.5.5 落地「线上到底是哪一版」的标记。
+  # 下一次部署做快照时，靠它把 meta.txt 的 commit 写成快照的真实内容版本
+  # （而不是又不小心写成本次要部署的版本）。也必须等健康检查通过后再写：
+  # 站点起不来就走回滚分支，那时这个标记应该保持回滚后的值。
+  echo "$COMMIT" > .deploy-version
+  echo "  → 版本标记 .deploy-version = $COMMIT"
 else
   echo "  ✗ 站点返回 $CODE"
   # 切换后仍不健康 = 新产物在运行时炸了（外部模块没指回 node_modules、缺环境变量、
@@ -443,6 +468,18 @@ else
     rm -rf .next
     cp -a "$SNAP/.next" .next
     tar -xzf "$SNAP/source.tar.gz"
+    # 回滚后版本标记必须跟着退回去，否则下次快照会把旧内容标成这次的 commit。
+    # 旧格式快照的 commit 行记的是「快照之后那次部署」的版本，不能拿来用 —— 那种情况
+    # meta.txt 里有 note 行且 commit=unknown。此时必须把标记删掉：留着一个「这次的」
+    # 错值会让下次快照记错版本，删掉的后果只是下次记 unknown（诚实），不会误导。
+    SNAP_CMT=$(awk '/^commit:/{print $2; exit}' "$SNAP/meta.txt" 2>/dev/null || true)
+    if [ -n "$SNAP_CMT" ] && [ "$SNAP_CMT" != "unknown" ]; then
+      echo "$SNAP_CMT" > .deploy-version
+      echo "  → 版本标记退回 $SNAP_CMT"
+    else
+      rm -f .deploy-version
+      echo "  → 该快照不知道真实版本，已清除版本标记（下次快照会记 unknown）"
+    fi
     pm2 restart "$PM2_APP" --update-env > /dev/null 2>&1 || pm2 start "$PM2_APP" > /dev/null 2>&1 || true
     sleep 4
     echo "  ✓ 已回滚，站点返回 $(health)"

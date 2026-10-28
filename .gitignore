@@ -12,6 +12,8 @@
 .next-local/
 out/
 !.next/static/
+# 只在服务器上存在，记录线上真实部署的 commit（供 deploy.sh 快照 / rollback.sh 使用）
+.deploy-version
 .next/static/chunks/
 .next/static/css/
 .next/static/media/

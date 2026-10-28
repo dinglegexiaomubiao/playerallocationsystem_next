@@ -40,11 +40,23 @@ for d in $(ls -1dt "$SNAP_ROOT"/*/ 2>/dev/null); do
   [ "$TS" = "$LAST" ] && MARK="→ "
   SRC=$(du -sh "$d/source.tar.gz" 2>/dev/null | cut -f1 || echo '-')
   NXT=$(du -sh "$d/.next" 2>/dev/null | cut -f1 || echo '无')
-  CMT=$(grep '^commit:' "$d/meta.txt" 2>/dev/null | awk '{print $2}' || echo '?')
-  printf '%s%s  源码 %-6s 产物 %-6s commit %s\n' "$MARK" "$TS" "$SRC" "$NXT" "$CMT"
+  CMT=$(awk '/^commit:/{print $2; exit}' "$d/meta.txt" 2>/dev/null || echo '?')
+  DEP=$(awk '/^deploying:/{print $2; exit}' "$d/meta.txt" 2>/dev/null || true)
+  if [ -n "$DEP" ]; then
+    # 新格式：commit = 快照内容真实版本，可以直接信
+    CMT_TXT="commit $CMT"
+  elif [ "$CMT" = "unknown" ] || [ -z "$CMT" ]; then
+    CMT_TXT="commit 未知（旧格式快照）"
+  else
+    # 旧格式（2026-10-28 之前）：commit 行记的是「快照之后那次部署」的版本，
+    # 和快照内容差一版。显示成 ~ 前缀，避免照着挑版本挑错。
+    CMT_TXT="commit ~$CMT（旧格式，实际内容比它早一版）"
+  fi
+  printf '%s%s  源码 %-6s 产物 %-6s %s\n' "$MARK" "$TS" "$SRC" "$NXT" "$CMT_TXT"
 done
 echo ""
 echo "→ 表示 ./deploy/rollback.sh 不带参数时会回到的版本"
+echo "~ 表示该快照的 commit 号不可信（部署脚本早期版本留下的），按时间挑更稳"
 LIST
   exit 0
 fi
@@ -100,6 +112,19 @@ fi
 
 tar -xzf "$SNAP/source.tar.gz"
 echo "  → 已恢复源码"
+
+# 版本标记跟着退回快照对应的版本，否则下次部署做快照时会把旧内容记成新 commit
+# （2026-10-28 修：之前 meta.txt 的 commit 一直差一版，就是没人维护这个标记）。
+# 旧格式快照无 deploying 行、commit=unknown，此时宁可删掉标记也不写错值。
+SNAP_CMT=$(awk '/^commit:/{print $2; exit}' "$SNAP/meta.txt" 2>/dev/null || true)
+SNAP_DEP=$(awk '/^deploying:/{print $2; exit}' "$SNAP/meta.txt" 2>/dev/null || true)
+if [ -n "$SNAP_CMT" ] && [ "$SNAP_CMT" != "unknown" ] && [ -n "$SNAP_DEP" ]; then
+  echo "$SNAP_CMT" > .deploy-version
+  echo "  → 版本标记 .deploy-version = $SNAP_CMT"
+else
+  rm -f .deploy-version
+  echo "  ⚠ 该快照不知道真实版本，已清除 .deploy-version（下次快照会记 unknown）"
+fi
 
 if [ ! -d .next ]; then
   echo "  → 重新构建（约 30 秒）"
