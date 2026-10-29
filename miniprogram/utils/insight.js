@@ -8,8 +8,20 @@
 // 所以这个文件只做算术和分档：不推断、不预测、不写「可能 / 倾向 / 建议练」这类模型口气。
 // 想加新维度，先问自己：这条结论背后的数字是哪一个？指不出来就别加。
 //
+// ---- 样本口径（2026-10-29 改，别改回去）----
+// 输入换成了 /api/player-matches 的那份数据，也就是**最多 200 场**，
+// 与网页成员页「最近比赛」的默认「全部」tab 完全同源。
+// 之前用的是 /api/player-stats 的 recentMatches（最近 20 场），
+// 结果同一个人的胜率在小程序和网页能差 35 个百分点（实测账号 124801257：25% vs 60%）。
+// 20 场里一波连胜就能把胜率抬高 15 个点，样本太薄，不作为结论基础。
+//
+// 唯一的例外是 GPM 和英雄伤害：只有 recentMatches 这个窗口给这两个字段，
+// 所以它们单独标注「近 20 场」，绝不和 200 场的胜率混在一句话里。
+//
 // 输出结构与页面 wx:for 直接对接：
-//   { blocks: [{ k, type:'item', num, segs:[{k,b,t}] }], items: n }
+//   { blocks: [{ k, type:'item', num, segs:[{k,b,t}] }], items, note }
+
+const stat = require('./match-stat.js');
 
 // ---- 分档阈值（改这里就等于改结论，别在下面写魔法数字） ----
 const KDA_TIERS = [
@@ -36,7 +48,7 @@ const DMG_TIERS = [
 // 自报胜率与实际胜率的「吻合」区间：差 8 个百分点以内不评价
 const WINRATE_GAP = 8;
 
-// 绝活判定：累计场次够多且胜率过半，缺一不可
+// 绝活判定：累计场次够多且胜率过半，缺一不可。用的是生涯数据，不是这 200 场。
 const SIGNATURE_MIN_MATCHES = 100;
 const SIGNATURE_MIN_WINRATE = 51;
 
@@ -84,20 +96,6 @@ function line(num, head, body) {
   };
 }
 
-/** 从最近一场往前数，连续同结果的场次。recentMatches 约定最新在前。 */
-function streakOf(matches) {
-  const list = Array.isArray(matches) ? matches : [];
-  if (!list.length) return null;
-  const first = !!list[0].isWin;
-  let n = 0;
-  for (let i = 0; i < list.length; i++) {
-    if (!!list[i].isWin !== first) break;
-    n++;
-  }
-  if (n < STREAK_MIN) return null;
-  return { isWin: first, n: n };
-}
-
 /** 英雄名列表（自报擅长）与近期常用英雄的重合 */
 function overlapHeroes(selfHeroes, topHeroes) {
   const self = Array.isArray(selfHeroes) ? selfHeroes : [];
@@ -118,12 +116,14 @@ function overlapHeroes(selfHeroes, topHeroes) {
 }
 
 /**
- * @param {object} stats  /api/player-stats 返回的 stats（可能为 null）
+ * @param {object} data  /api/player-matches 返回体（至少要有 matches）
  * @param {object} player 名片区已有字段：nickname / score / positions / heroes / win_rate
- * @returns {{blocks: Array, items: number, empty: boolean, emptyText: string}}
+ * @returns {{blocks: Array, items: number, note: string, empty: boolean, emptyText: string, summary: object|null}}
  */
-function buildInsight(stats, player) {
+function buildInsight(data, player) {
   const p = player || {};
+  const d = data || {};
+  const matches = Array.isArray(d.matches) ? d.matches : [];
   const blocks = [];
   let num = 0;
   const push = (head, body) => {
@@ -131,32 +131,42 @@ function buildInsight(stats, player) {
     blocks.push(line(num, head, body));
   };
 
-  if (!stats || !stats.recentTotal) {
+  if (!matches.length) {
     return {
       blocks: [],
       items: 0,
+      note: '',
+      summary: null,
       empty: true,
       emptyText:
-        '拉不到这位群友的公开战绩（没填 SteamID，或 OpenDota 上没有近 20 场记录），暂时没有可统计的数据。'
+        '拉不到这位群友的公开对局（没填 SteamID，或 OpenDota 上没有近 200 场记录），暂时没有可统计的数据。'
     };
   }
 
-  const total = Number(stats.recentTotal) || 0;
-  const winRate = Number(stats.recentWinRate) || 0;
-  // 接口给了 recentWins 就用它；老版本没这个字段时才由胜率反推
-  const wins = isFinite(Number(stats.recentWins)) && stats.recentWins !== undefined && stats.recentWins !== null
-    ? Number(stats.recentWins)
-    : Math.round((total * winRate) / 100);
-  const losses = Math.max(0, total - wins);
+  const sum = stat.summarize(matches);
+  const total = sum.total;
+  const wins = sum.wins;
+  const losses = sum.losses;
+  const winRate = sum.winRate;
+  const totals = stat.totalsOf(matches);
+  const per = (n) => (total ? (n / total).toFixed(1) : '0.0');
 
   // 1. 样本与胜负：先说清「这堆结论是基于多少场比赛」，避免被当成全期评价
-  push(
-    '近期战绩',
-    '近 ' + total + ' 场 ' + wins + ' 胜 ' + losses + ' 负，胜率 ' + winRate + '%' +
-      (p.score ? '（当前天梯 ' + p.score + ' 分 · ' + tierOf(p.score) + '）' : '')
-  );
+  let first = '近 ' + total + ' 场 ' + wins + ' 胜 ' + losses + ' 负，胜率 ' + winRate + '%';
+  if (p.score) first += '（当前天梯 ' + p.score + ' 分 · ' + tierOf(p.score) + '）';
+  push('近期战绩', first);
 
-  // 2. 自报胜率对照：只在本人填过胜率时才有意义
+  // 2. 生涯对照：网页上也有这一行，两边数字同源（都来自 /wl）
+  const life = d.lifetime;
+  if (life && Number(life.total) > 0) {
+    push(
+      '生涯对照',
+      '生涯 ' + Number(life.win) + ' 胜 ' + Number(life.lose) + ' 负，胜率 ' + Number(life.winRate) + '%' +
+        '；近 ' + total + ' 场' + (winRate > Number(life.winRate) ? '高于' : winRate < Number(life.winRate) ? '低于' : '持平于') + '生涯水平'
+    );
+  }
+
+  // 3. 自报胜率对照：只在本人填过胜率时才有意义
   const selfWin = Number(p.win_rate) || 0;
   if (selfWin > 0) {
     const gap = winRate - selfWin;
@@ -164,38 +174,37 @@ function buildInsight(stats, player) {
     if (gap >= WINRATE_GAP) verdict = '明显高于自报值';
     else if (gap <= -WINRATE_GAP) verdict = '明显低于自报值';
     else verdict = '与自报值基本一致';
-    push('自报胜率对照', '自报 ' + selfWin + '%，近期实际 ' + winRate + '%，' + verdict);
+    push('自报胜率对照', '自报 ' + selfWin + '%，近 ' + total + ' 场实际 ' + winRate + '%，' + verdict);
   }
 
-  // 3. KDA：三个分项都摆出来，用户在别处能自己复核
-  const kda = Number(stats.avgKda) || 0;
+  // 4. KDA：三个分项都摆出来，用户在别处能自己复核
+  const kda = Number(sum.kda) || 0;
   if (kda > 0) {
-    const k = Number(stats.avgKills) || 0;
-    const d = Number(stats.avgDeaths) || 0;
-    const a = Number(stats.avgAssists) || 0;
     push(
       '场均 KDA',
-      kda + '（' + k + ' / ' + d + ' / ' + a + '），在常见分档里属「' + pickTier(KDA_TIERS, kda) + '」'
+      sum.kda + '（' + per(totals.kills) + ' / ' + per(totals.deaths) + ' / ' + per(totals.assists) + '）' +
+        '，在常见分档里属「' + pickTier(KDA_TIERS, kda) + '」'
     );
   }
 
-  // 4. 经济与输出：GPM 和英雄伤害一起说，单看一个容易被辅助位误伤
-  const gpm = Number(stats.avgGpm) || 0;
-  const dmg = Number(stats.avgHeroDamage) || 0;
-  if (gpm > 0 || dmg > 0) {
+  // 5. 经济与输出：只有近 20 场那个窗口有 GPM / 伤害，标题和句子里都写明，
+  //    否则用户会拿它去对上面 200 场的胜率。
+  const r20 = d.recent20;
+  if (r20 && (Number(r20.avgGpm) > 0 || Number(r20.avgHeroDamage) > 0)) {
     const parts = [];
-    if (gpm > 0) parts.push('场均 GPM ' + gpm + '（' + pickTier(GPM_TIERS, gpm) + '）');
-    if (dmg > 0) parts.push('场均英雄伤害 ' + dmg + '（' + pickTier(DMG_TIERS, dmg) + '）');
-    push('经济与输出', parts.join('，'));
+    if (Number(r20.avgGpm) > 0) parts.push('场均 GPM ' + r20.avgGpm + '（' + pickTier(GPM_TIERS, r20.avgGpm) + '）');
+    if (Number(r20.avgHeroDamage) > 0) {
+      parts.push('场均英雄伤害 ' + r20.avgHeroDamage + '（' + pickTier(DMG_TIERS, r20.avgHeroDamage) + '）');
+    }
+    push('经济与输出（近 ' + Number(r20.total) + ' 场）', parts.join('，'));
   }
 
-  // 5. 常用英雄：只列前三，多了页面放不下。
-  //    口径是「近 100 场」（接口统计窗口），跟第 1 条的近 20 场不同，标题里写清楚，
-  //    否则用户会拿 25 场去对 20 场，觉得数字对不上。
-  const top = (Array.isArray(stats.mostPlayedHeroes) ? stats.mostPlayedHeroes : []).slice(0, 3);
+  // 6. 常用英雄：只列前三，多了页面放不下。窗口与上面几条一致（近 N 场）。
+  const heroes = stat.heroStatsOf(matches);
+  const top = heroes.slice(0, 3);
   if (top.length) {
     push(
-      '常用英雄（近 100 场）',
+      '常用英雄（近 ' + total + ' 场）',
       top
         .map(function (h) {
           return h.name + '(' + h.matches + ' 场 / ' + h.winRate + '% 胜率)';
@@ -204,9 +213,9 @@ function buildInsight(stats, player) {
     );
   }
 
-  // 6. 绝活：按「累计场次 + 胜率」两个硬条件筛，不做主观判断
-  const life = Array.isArray(stats.heroesLifetime) ? stats.heroesLifetime : [];
-  const signature = life
+  // 7. 绝活：按「生涯场次 + 胜率」两个硬条件筛，不做主观判断
+  const lifeHeroes = Array.isArray(d.heroesLifetime) ? d.heroesLifetime : [];
+  const signature = lifeHeroes
     .filter(function (h) {
       return Number(h.matches) >= SIGNATURE_MIN_MATCHES && Number(h.winRate) > SIGNATURE_MIN_WINRATE;
     })
@@ -216,34 +225,53 @@ function buildInsight(stats, player) {
     .slice(0, 3);
   if (signature.length) {
     push(
-      '高熟练度英雄',
+      '高熟练度英雄（生涯）',
       signature
         .map(function (h) {
           return h.name + '(' + h.matches + ' 场 / ' + h.winRate + '% 胜率)';
         })
         .join('、') +
-        ' —— 累计 ' + SIGNATURE_MIN_MATCHES + ' 场以上且胜率过 ' + SIGNATURE_MIN_WINRATE + '%'
+        ' —— 生涯 ' + SIGNATURE_MIN_MATCHES + ' 场以上且胜率过 ' + SIGNATURE_MIN_WINRATE + '%'
     );
   }
 
-  // 7. 连胜 / 连败：短于 STREAK_MIN 不提，否则「两连胜」这种噪音太多
-  const streak = streakOf(stats.recentMatches);
+  // 8. 连胜 / 连败：短于 STREAK_MIN 不提，否则「两连胜」这种噪音太多
+  const streak = stat.streakOf(matches, STREAK_MIN);
   if (streak) {
     push('近期走势', '最近 ' + streak.n + ' 场' + (streak.isWin ? '连胜' : '连败'));
   }
 
-  // 8. 自报擅长与实际常用的重合：给一个可核对的事实，不评价「该练什么」
+  // 9. 自报擅长与实际常用的重合：给一个可核对的事实，不评价「该练什么」
   const hit = overlapHeroes(p.heroes, top);
   if (hit.length) {
     push('自报与实操重合', '自报擅长的英雄里，' + hit.join('、') + ' 正好进了近期常用前三');
   }
 
-  return { blocks: blocks, items: blocks.length, empty: false, emptyText: '' };
+  // 页脚口径：把「哪一段是哪个窗口」写在用户看得见的地方
+  let note = '口径：近 ' + total + ' 场公开对局';
+  if (r20 && Number(r20.total) > 0) note += ' · GPM/伤害取近 ' + Number(r20.total) + ' 场';
+  note += ' · 不含预测';
+
+  return {
+    blocks: blocks,
+    items: blocks.length,
+    note: note,
+    summary: {
+      total: total,
+      wins: wins,
+      losses: losses,
+      winRate: winRate,
+      kda: sum.kda,
+      avgDuration: sum.avgDuration
+    },
+    empty: false,
+    emptyText: ''
+  };
 }
 
 module.exports = {
   buildInsight: buildInsight,
   tierOf: tierOf,
-  streakOf: streakOf,
+  streakOf: stat.streakOf,
   pickTier: pickTier
 };

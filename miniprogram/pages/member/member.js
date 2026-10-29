@@ -1,6 +1,7 @@
 const { request, getBase } = require('../../utils/api');
 const { fullUrl, regionShort, fmtMonthDay } = require('../../utils/format');
 const { buildInsight } = require('../../utils/insight');
+const stat = require('../../utils/match-stat');
 const session = require('../../utils/session');
 
 // 名次徽标：1/2/3 用品牌色系，其余中性
@@ -12,7 +13,7 @@ const rankText = (n) => {
 // 战绩解读是本地按规则算的（utils/insight.js），毫秒级返回，所以不设缓存：
 // 之前那套 30 分钟 storage 缓存是给服务端大模型分析用的，现在没有等待成本了。
 const EMPTY_STATS = { status: 'idle', error: '', data: null };
-const EMPTY_INSIGHT = { status: 'idle', error: '', blocks: [], items: 0, emptyText: '' };
+const EMPTY_INSIGHT = { status: 'idle', error: '', blocks: [], items: 0, note: '', emptyText: '' };
 
 Page({
   data: {
@@ -50,7 +51,15 @@ Page({
 
   load() {
     const base = getBase();
-    this.setData({ loading: true, error: '' });
+    // 下拉刷新会把名片重读一遍，战绩也得跟着重来（SteamID 可能刚改过），
+    // 否则上面是新人、下面还是旧人的战绩。
+    this._stats = null;
+    this.setData({
+      loading: true,
+      error: '',
+      stats: Object.assign({}, EMPTY_STATS),
+      insight: Object.assign({}, EMPTY_INSIGHT)
+    });
     // 没有 /api/players/{id}，和网页详情页一样拉全量再按 id 找。
     // ⚠ 两边都按字符串比：雪花号转 Number 会丢最后一位，找出来是另一个人。
     return request('/api/players', null, { method: 'GET' })
@@ -67,6 +76,18 @@ Page({
           this._nameMap[String(x.id)] = x.nickname || x.group_nickname || '';
         });
 
+        // 一个人可能有多个 Steam 号（主号 + 小号），对局是按账号分开的。
+        // 网页端给的是切换器，这里不重复那套 UI，只按「主号优先」自动挑一个能拉到数据的，
+        // 页面标题上标出用的是哪个号——否则主号没数据的人在小程序里会显示成「没有战绩」。
+        const accounts = (Array.isArray(raw.steamIds) ? raw.steamIds : [])
+          .map((a) => (a && typeof a === 'object' ? a : { accountId: a }))
+          .map((a) => ({ accountId: String(a.accountId || '').trim(), isPrimary: !!a.isPrimary }))
+          .filter((a) => a.accountId);
+        if (!accounts.length && raw.game_id) {
+          accounts.push({ accountId: String(raw.game_id), isPrimary: true });
+        }
+        this._accounts = accounts;
+
         const records = (Array.isArray(raw.records) ? raw.records : []).slice()
           .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
 
@@ -76,7 +97,7 @@ Page({
         this.setData({
           loading: false,
           // SteamID 是拉 OpenDota 战绩的唯一钥匙，也是战绩解读的前置条件
-          gameId: raw.game_id ? String(raw.game_id) : '',
+          gameId: accounts.length ? accounts[0].accountId : '',
           p: {
             nickname: name,
             initial: name.charAt(0),
@@ -116,28 +137,86 @@ Page({
   },
 
   // ---------------- 近期战绩（OpenDota，下面的战绩解读复用这份数据） ----------------
+  //
+  // 数据源与网页成员页「最近比赛」同一个接口、同一个窗口（最多 200 场），
+  // 这样两边的场次/胜率/KDA 才是同一个数字。
+  // 之前用的是 /api/player-stats 的 recentMatches（最近 20 场），实测同一个号
+  // 能差 35 个百分点（25% vs 60%），属于「看着都在算战绩，其实算的不是一回事」。
+  //
+  // GPM 和英雄伤害只有近 20 场那个窗口有，接口把它们单独打包成 recent20，
+  // 页面上必须标「近 20 场」，不能和 200 场的胜率并排放在一起不看口径。
+
+  /**
+   * 按顺序试每个 Steam 号，第一个能拉到对局的胜出。
+   * 全都没有（或全失败）时把最后一个错误抛出去。
+   */
+  fetchMatchesByAccounts(accounts, i) {
+    const idx = i || 0;
+    if (idx >= accounts.length) return Promise.resolve(null);
+    const acc = accounts[idx];
+    return request('/api/player-matches?accountId=' + encodeURIComponent(acc.accountId), null, {
+      method: 'GET'
+    }).then(
+      (res) => {
+        if (res && res.success !== false && Array.isArray(res.matches) && res.matches.length) {
+          return { res: res, acc: acc };
+        }
+        return this.fetchMatchesByAccounts(accounts, idx + 1);
+      },
+      (e) => {
+        // 主号挂了（未公开数据 / OpenDota 超时）不该让整个块报错，先试下一个号
+        if (idx + 1 < accounts.length) return this.fetchMatchesByAccounts(accounts, idx + 1);
+        throw e;
+      }
+    );
+  },
 
   loadStats() {
-    const gid = this.data.gameId;
-    if (!gid) return Promise.reject(new Error('这位群友没填 SteamID'));
+    const accounts = this._accounts || [];
+    if (!accounts.length) return Promise.reject(new Error('这位群友没填 SteamID'));
     if (this.data.stats.status === 'loading') return Promise.reject(new Error('正在拉取'));
     this.setData({ stats: { status: 'loading', error: '', data: null } });
 
-    return request('/api/player-stats?playerId=' + encodeURIComponent(gid), null, { method: 'GET' })
-      .then((res) => {
-        const s = (res && res.stats) || null;
-        if (!s) throw new Error('接口没返回战绩');
-        // 接口一次给几十场明细，这里只挑页面要显示的几项，别把整个 stats 塞进 setData
+    return this.fetchMatchesByAccounts(accounts, 0)
+      .then((hit) => {
+        if (!hit) {
+          // 号是有的，但 OpenDota 上一场都没抓到（未公开比赛数据是最常见的原因）
+          this._stats = null;
+          this.setData({
+            stats: {
+              status: 'empty',
+              error: '',
+              data: null
+            }
+          });
+          return null;
+        }
+        const s = hit.res;
+        const sum = stat.summarize(s.matches);
+        const best = stat.bestOf(s.matches);
+        const r20 = s.recent20 || null;
+        // 接口一次给 200 场明细，这里只挑页面要显示的几项，别把整个响应塞进 setData
         const data = {
-          total: s.recentTotal || 0,
-          winRate: s.recentWinRate || 0,
-          gpm: s.avgGpm || 0,
-          kda: s.avgKda || '0',
-          dmg: s.avgHeroDamage || 0,
-          heroes: (s.mostPlayedHeroes || []).slice(0, 5).map((h) => ({
-            name: h.name,
-            text: h.matches + ' 场 · ' + h.winRate + '%'
-          }))
+          total: sum.total,
+          wins: sum.wins,
+          losses: sum.losses,
+          winRate: sum.winRate,
+          kda: sum.kda,
+          durationText: stat.fmtDuration(sum.avgDuration),
+          bestText: '击杀 ' + best.kills + ' / 助攻 ' + best.assists + ' / KDA ' + best.kda,
+          // GPM 与伤害是近 20 场口径，单独一行显示
+          gpm: r20 ? r20.avgGpm : 0,
+          dmg: r20 ? r20.avgHeroDamage : 0,
+          gpmTotal: r20 ? r20.total : 0,
+          lifetimeText: s.lifetime
+            ? s.lifetime.win + ' 胜 / ' + s.lifetime.lose + ' 负 · ' + s.lifetime.winRate + '%'
+            : '',
+          // 多号时标出这是哪个号，避免和网页上主号的数字对不上时说不清
+          accountLabel:
+            accounts.length > 1
+              ? (hit.acc.isPrimary ? '主号 ' : '小号 ') + hit.acc.accountId
+              : '',
+          heroes: stat.heroStatsOf(s.matches).slice(0, 5)
         };
         this._stats = s;
         this.setData({ stats: { status: 'loaded', error: '', data: data } });
@@ -172,9 +251,9 @@ Page({
   runInsight() {
     this.setData({ insight: Object.assign({}, EMPTY_INSIGHT, { status: 'running' }) });
 
-    const compute = (stats) => {
+    const compute = (matchesData) => {
       const raw = this._raw || {};
-      const out = buildInsight(stats, {
+      const out = buildInsight(matchesData, {
         score: raw.score || 0,
         heroes: Array.isArray(raw.heroes) ? raw.heroes : [],
         win_rate: raw.win_rate || 0,
@@ -186,6 +265,7 @@ Page({
           error: '',
           blocks: out.blocks,
           items: out.items,
+          note: out.note,
           emptyText: out.emptyText
         }
       });
@@ -195,18 +275,28 @@ Page({
       compute(this._stats);
       return Promise.resolve();
     }
-    // 拉战绩失败时上面的战绩块自己会报错，这里只把解读区标成空，不重复喊
-    return this.loadStats().then(compute, () => {
+    // 拉战绩失败时上面的战绩块自己会报错，这里只把解读区标成空，不重复喊。
+    // 注意 loadStats 在「号有、但对局是 0 场」时是 resolve(null) 而不是 reject，
+    // 这种情况也要落到空态，否则解读区会一直停在「正在统计…」。
+    const fallback = (msg) => {
       this.setData({
         insight: {
           status: 'empty',
           error: '',
           blocks: [],
           items: 0,
-          emptyText: '没能拉到公开战绩，暂时没有可统计的数据。'
+          note: '',
+          emptyText: msg
         }
       });
-    });
+    };
+    return this.loadStats().then(
+      (s) => {
+        if (s) compute(s);
+        else fallback('这位群友的账号在 OpenDota 上没有对局记录，暂时没有可统计的数据。');
+      },
+      () => fallback('没能拉到公开战绩，暂时没有可统计的数据。')
+    );
   },
 
   onShareAppMessage() {

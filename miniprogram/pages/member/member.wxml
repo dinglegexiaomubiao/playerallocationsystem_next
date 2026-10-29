@@ -86,9 +86,10 @@
       </view>
     </view>
 
-    <!-- 近期战绩（OpenDota）：纯公开数据展示，下面「战绩解读」也吃这份数据 -->
+    <!-- 近期战绩（OpenDota）：纯公开数据展示，下面「战绩解读」也吃这份数据。
+         样本窗口与网页成员页「最近比赛」一致（最多 200 场），别改回 20 场。 -->
     <view class="block">
-      <view class="sec-title">近期战绩<text class="sec-note">近 20 场 · OpenDota</text></view>
+      <view class="sec-title">近期战绩<text class="sec-note">OpenDota</text></view>
 
       <view wx:if="{{!gameId}}" class="surface empty-tip">
         这位群友没填 SteamID，拉不到战绩，也没法做战绩解读。
@@ -108,25 +109,43 @@
         <text class="act-btn" bindtap="onTapStats">重试</text>
       </view>
 
+      <view wx:elif="{{stats.status === 'empty'}}" class="surface empty-tip">
+        OpenDota 上没有这个账号的对局记录。常见原因：游戏内未开启「公开比赛数据」，或 OpenDota 还没抓取过这个账号。
+      </view>
+
       <view wx:else class="surface stats">
         <view class="cell">
           <text class="cell-num">{{stats.data.winRate}}%</text>
           <text class="cell-label">近 {{stats.data.total}} 场胜率</text>
         </view>
         <view class="cell">
-          <text class="cell-num">{{stats.data.gpm}}</text>
-          <text class="cell-label">场均 GPM</text>
+          <text class="cell-num">{{stats.data.wins}} / {{stats.data.losses}}</text>
+          <text class="cell-label">胜 / 负</text>
         </view>
         <view class="cell">
           <text class="cell-num">{{stats.data.kda}}</text>
           <text class="cell-label">场均 KDA</text>
         </view>
         <view class="cell">
-          <text class="cell-num">{{stats.data.dmg}}</text>
-          <text class="cell-label">场均伤害</text>
+          <text class="cell-num">{{stats.data.durationText}}</text>
+          <text class="cell-label">平均时长</text>
         </view>
+
+        <view class="stats-meta">
+          <text wx:if="{{stats.data.accountLabel}}" class="stats-meta-i">{{stats.data.accountLabel}}</text>
+          <text wx:if="{{stats.data.lifetimeText}}" class="stats-meta-i">生涯 {{stats.data.lifetimeText}}</text>
+          <text class="stats-meta-i">近 20 场最高 {{stats.data.bestText}}</text>
+        </view>
+
+        <!-- GPM / 伤害只有近 20 场这个窗口有，单独一行标清口径，不和 200 场的胜率并排看 -->
+        <view wx:if="{{stats.data.gpm || stats.data.dmg}}" class="stats-window">
+          <text class="stats-window-t">近 {{stats.data.gpmTotal}} 场</text>
+          <text wx:if="{{stats.data.gpm}}" class="stats-window-i">GPM {{stats.data.gpm}}</text>
+          <text wx:if="{{stats.data.dmg}}" class="stats-window-i">场均伤害 {{stats.data.dmg}}</text>
+        </view>
+
         <view wx:if="{{stats.data.heroes.length}}" class="stats-heroes">
-          <text wx:for="{{stats.data.heroes}}" wx:key="name" class="stats-hero">{{item.name}} {{item.text}}</text>
+          <text wx:for="{{stats.data.heroes}}" wx:key="name" class="stats-hero">{{item.name}} {{item.matches}} 场 · {{item.winRate}}%</text>
         </view>
       </view>
     </view>
@@ -164,7 +183,7 @@
             </view>
           </view>
           <view class="ai-foot">
-            <text class="ai-foot-hint">口径：近期公开战绩 · 不含预测</text>
+            <text class="ai-foot-hint">{{insight.note}}</text>
             <text class="ai-rerun" bindtap="onTapInsight">重新统计</text>
           </view>
         </view>
