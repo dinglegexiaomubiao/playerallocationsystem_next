@@ -4,7 +4,7 @@ import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 import { tierOf } from '../../lib/tier.mjs';
 import { PARTY_MODES, modeLabel, PARTY_STATUS } from '../../lib/options.mjs';
 import { checkInput, LIMITS, moderationMessage } from '../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../lib/ai-moderate.mjs';
 
 const toList = (v) =>
   Array.isArray(v)
@@ -242,7 +242,7 @@ export default async function handler(req, res) {
       if (!chk.ok) return res.status(400).json({ success: false, error: moderationMessage(chk) });
       Object.assign(b, chk.cleaned);
       // AI 复审（DeepSeek）：词表拦不到的变体这里拦，超时/出错自动放行
-      const ai = await aiModerate({ 标题: b.title, 我的段位: b.my_rank, 期望段位: b.want_rank, 备注: b.note });
+      const ai = await aiModerate({ 标题: b.title, 我的段位: b.my_rank, 期望段位: b.want_rank, 备注: b.note }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
       const mode = String(b.mode || '');
       if (!MODE_KEYS.includes(mode)) {

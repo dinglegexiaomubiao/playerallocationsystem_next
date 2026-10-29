@@ -2,7 +2,7 @@ import { pool } from '../../lib/db';
 import { denyIfNotLoggedIn, isAdmin } from '../../lib/auth';
 import { parseRegion } from '../../lib/regions';
 import { checkText } from '../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../lib/ai-moderate.mjs';
 
 // 美食 UGC 合规初筛：店名/菜系/地址/特色/推荐人/附近地标，命中违禁即拒绝
 const checkFoodBody = (body) => {
@@ -16,13 +16,14 @@ const checkFoodBody = (body) => {
 };
 
 // AI 复审（DeepSeek）：超时/出错自动放行
-const aiCheckFoodBody = async (body) => {
+// openid 一路往下传：服务端要拿它调微信 msgSecCheck（官方那边强制要求）
+const aiCheckFoodBody = async (body, openid) => {
   const fields = {};
   for (const key of ['name', 'cuisine', 'address', 'feature', 'recommender', 'nearby']) {
     if (typeof body[key] === 'string' && body[key].trim()) fields[key] = body[key];
   }
   if (Object.keys(fields).length === 0) return null;
-  const ai = await aiModerate(fields);
+  const ai = await aiModerate(fields, { openid });
   return ai.ok ? null : ai;
 };
 
@@ -140,7 +141,7 @@ export default async function handler(req, res) {
         }
         const bad = checkFoodBody(body);
         if (bad) return res.status(400).json({ success: false, error: `美食信息里检测到不合适的内容（${bad.category}），请修改后再提交` });
-        const aiBad = await aiCheckFoodBody(body);
+        const aiBad = await aiCheckFoodBody(body, openidOf(req));
         if (aiBad) return res.status(400).json({ success: false, error: aiModerationMessage(aiBad) });
         const row = await client.query(
           `INSERT INTO public.foods (name, cuisine, area, region, address, feature, recommender, nearby, avg_price, rating, lat, lng)
@@ -174,7 +175,7 @@ export default async function handler(req, res) {
         }
         const bad = checkFoodBody(body);
         if (bad) return res.status(400).json({ success: false, error: `美食信息里检测到不合适的内容（${bad.category}），请修改后再提交` });
-        const aiBad = await aiCheckFoodBody(body);
+        const aiBad = await aiCheckFoodBody(body, openidOf(req));
         if (aiBad) return res.status(400).json({ success: false, error: aiModerationMessage(aiBad) });
         const row = await client.query(
           `UPDATE public.foods

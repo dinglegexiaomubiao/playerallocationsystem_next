@@ -282,11 +282,11 @@ Page({
       return;
     }
     if (!st.bound) {
-      toast('账号还没绑选手资料，先去网页端个人信息页补填');
+      toast('账号还没绑选手资料，请先补填选手资料');
       return;
     }
     if (st.isCaptain) {
-      toast('你是队长，退赛要先在网页端卸任队长');
+      toast('你是队长，退赛要先解除队长身份');
       return;
     }
     if (st.signedUp) {

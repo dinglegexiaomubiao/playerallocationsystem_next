@@ -8,7 +8,7 @@
 
   <view wx:elif="{{!bound}}" class="center">
     <view>这个账号还没绑定选手资料</view>
-    <view class="muted small">去网页端「个人信息」补填一次，之后这里就能改了</view>
+    <view class="muted small">需要先补填一次选手资料，之后这里就能改了</view>
   </view>
 
   <block wx:else>
@@ -24,7 +24,7 @@
         群昵称 {{info.groupNicknames[0]}}
       </view>
       <view wx:if="{{info.steamIds.length > 1 || info.groupNicknames.length > 1}}" class="muted small">
-        还有多个身份没显示，多值身份请在网页端「个人信息」里管理
+        还有多个身份没显示，多值身份请到「资料」里管理
       </view>
     </view>
 

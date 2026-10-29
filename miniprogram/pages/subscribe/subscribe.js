@@ -204,7 +204,7 @@ Page({
         const code = (err && err.errCode) || 0;
         let msg = (err && err.errMsg) || '授权失败';
         if (code === 20004) msg = '你在微信里把「订阅消息」总开关关掉了，去 小程序右上角 → 设置 里打开';
-        else if (code === 20001) msg = '模板 id 不对，请联系管理员检查配置';
+        else if (code === 20001) msg = '模板配置有误，请联系开发者检查';
         else if (code === 20002) msg = '模板数量超过上限';
         wx.showModal({ title: '没授权成功', content: msg, showCancel: false });
       }

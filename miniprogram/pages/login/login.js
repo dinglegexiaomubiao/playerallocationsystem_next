@@ -74,7 +74,7 @@ Page({
         if (res.mustChangePassword) {
           wx.showModal({
             title: '密码需要修改',
-            content: '当前是管理员重置的临时密码，请先到网页端「个人信息」里改成自己的密码。',
+            content: '当前是临时密码，请先到「我的 → 修改密码」设置自己的密码。',
             showCancel: false
           });
         }
@@ -88,13 +88,13 @@ Page({
         const code = (e && e.code) || '';
         let hint = '';
         if (code === 'USER_NOT_FOUND') {
-          hint = '账号由网页端注册，小程序暂不支持注册。';
+          hint = '账号不存在，请确认用户名或联系开发者开通。';
         } else if (code === 'PASSWORD_NOT_SET') {
-          hint = '这个账号还没有密码，请联系管理员在后台重置。';
+          hint = '这个账号还没有密码，请联系开发者重置。';
         } else if (e && e.statusCode === 429) {
           hint = '连续输错太多次会被锁一段时间，等一会儿再试。';
         } else if (e && e.code === 'NETWORK') {
-          hint = '连不上服务器，检查网络或「我的 → 开发者设置」里的后端地址。';
+          hint = '连不上服务器，请检查网络后重试。';
         }
         this.setData({
           submitting: false,

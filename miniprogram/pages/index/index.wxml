@@ -29,5 +29,5 @@
     </view>
   </view>
 
-  <view class="foot">数据与网页端同源，登录后逐步开放</view>
+  <view class="foot">数据实时同步，登录后开放更多功能</view>
 </view>

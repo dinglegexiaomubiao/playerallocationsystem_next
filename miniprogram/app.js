@@ -21,5 +21,13 @@ App({
       this.globalData.accountName = wx.getStorageSync('accountName') || '';
       this.globalData.isAdmin = !!wx.getStorageSync('isAdmin');
     }
+
+    // 静默换一次 openid，供服务端调微信内容安全接口（msgSecCheck 强制要求 openid）。
+    // 不阻塞启动、失败静默：它是审核基础设施，不是功能前置条件。
+    try {
+      require('./utils/wxopenid').ensure();
+    } catch (e) {
+      /* 拿不到就算了，服务端会跳过官方那道，只走词表 + AI */
+    }
   }
 });

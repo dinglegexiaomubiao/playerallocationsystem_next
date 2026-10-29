@@ -34,6 +34,6 @@
       </view>
     </view>
 
-    <view class="foot">下拉可刷新。网页端「更新日志」页有每条对应功能的直达链接。</view>
+    <view class="foot">下拉可刷新。</view>
   </block>
 </view>
