@@ -33,6 +33,46 @@
   border-color: var(--brand);
 }
 
+/* 推荐人 picker + 清空（地区/价格用 chips，推荐人可能很多，用滚动选择器） */
+.filter-row {
+  display: flex;
+  align-items: center;
+  margin-top: 16rpx;
+}
+.pick {
+  display: flex;
+  align-items: center;
+  height: 60rpx;
+  padding: 0 18rpx;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+}
+.pick.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.pick-label {
+  font-size: 22rpx;
+  opacity: 0.7;
+  margin-right: 8rpx;
+}
+.pick-val {
+  font-size: 24rpx;
+  max-width: 280rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.clear-btn {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--brand);
+  padding: 6rpx 12rpx;
+}
+
 .food {
   padding: 24rpx;
   margin-bottom: 16rpx;

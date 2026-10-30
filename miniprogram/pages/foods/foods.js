@@ -4,12 +4,30 @@ const session = require('../../utils/session');
 
 const ALL = '全部';
 
+// 人均价格区间（对齐网页端 pages/food/index.js 的 PRICE_RANGES，单位元；min/max 为 null 表示该侧不设限）
+const PRICE_RANGES = [
+  { value: 'all', label: '不限', min: null, max: null },
+  { value: '0-50', label: '¥50 以下', min: null, max: 50 },
+  { value: '50-100', label: '¥50-100', min: 50, max: 100 },
+  { value: '100-200', label: '¥100-200', min: 100, max: 200 },
+  { value: '200-500', label: '¥200-500', min: 200, max: 500 },
+  { value: '500+', label: '¥500 以上', min: 500, max: null }
+];
+
 Page({
   data: {
     list: [],
     cuisines: [ALL],
     cuisine: ALL,
     keyword: '',
+    // 地区 / 推荐人 / 人均价格（对齐网页端 pages/food/index.js 的多维筛选）
+    areas: [ALL],
+    area: ALL,
+    recommenders: [ALL],
+    recommenderIndex: 0,
+    recommender: ALL,
+    priceRanges: PRICE_RANGES,
+    price: 'all',
     total: 0,
     loading: true,
     error: '',
@@ -92,6 +110,7 @@ Page({
             rating: Number(f.rating) || 0,
             ratingStars: stars(f.rating),
             priceText: f.avg_price ? '人均 ¥' + f.avg_price : '',
+            avgPrice: Number(f.avg_price) || 0,
             reviewCount: reviews.length,
             reviewText: reviews.length ? reviews.length + ' 条评价' : '暂无评价',
             hasMap: f.lat !== null && f.lng !== null && f.lat !== undefined && f.lng !== undefined
@@ -115,10 +134,26 @@ Page({
           .sort((a, b) => counter[b] - counter[a])
           .slice(0, 10);
 
+        // 地区 / 推荐人 也按出现次数聚合，做筛选项（对齐网页端 facets）
+        const areaCounter = {};
+        const recCounter = {};
+        for (const r of rows) {
+          if (r.area) areaCounter[r.area] = (areaCounter[r.area] || 0) + 1;
+          if (r.recommender) recCounter[r.recommender] = (recCounter[r.recommender] || 0) + 1;
+        }
+        const areas = Object.keys(areaCounter)
+          .sort((a, b) => areaCounter[b] - areaCounter[a])
+          .slice(0, 15);
+        const recommenders = Object.keys(recCounter).sort(
+          (a, b) => recCounter[b] - recCounter[a]
+        );
+
         this.setData(
           {
             loading: false,
             cuisines: [ALL].concat(cuisines),
+            areas: [ALL].concat(areas),
+            recommenders: [ALL].concat(recommenders),
             total: rows.length
           },
           () => this.apply()
@@ -132,10 +167,26 @@ Page({
   apply() {
     const kw = String(this.data.keyword || '').trim().toLowerCase();
     const cuisine = this.data.cuisine;
+    const area = this.data.area;
+    const recommender = this.data.recommender;
+    const price = this.data.price;
     const rows = this.all.filter((f) => {
       if (cuisine !== ALL && f.cuisine !== cuisine) return false;
+      if (area !== ALL && f.area !== area) return false;
+      if (recommender !== ALL && f.recommender !== recommender) return false;
+      if (price !== 'all') {
+        const pr = PRICE_RANGES.find((x) => x.value === price);
+        if (pr) {
+          if (pr.min !== null && f.avgPrice < pr.min) return false;
+          if (pr.max !== null && f.avgPrice > pr.max) return false;
+        }
+      }
       if (!kw) return true;
-      const hay = (f.name + ' ' + f.cuisine + ' ' + f.area + ' ' + f.address + ' ' + f.feature).toLowerCase();
+      // 搜索范围对齐网页端 buildHaystack：店名 / 菜系 / 地区 / 地址 / 特色 / 推荐人 / 附近
+      const hay = (
+        f.name + ' ' + f.cuisine + ' ' + f.area + ' ' + f.address + ' ' +
+        f.feature + ' ' + f.recommender + ' ' + f.nearby
+      ).toLowerCase();
       return hay.indexOf(kw) >= 0;
     });
     // 展开状态按 id 记在外面，筛选/刷新后重新套用，不会因为重建数组就收起来
@@ -198,12 +249,32 @@ Page({
     this.setData({ cuisine: v }, () => this.apply());
   },
 
+  onArea(e) {
+    const v = e.currentTarget.dataset.v || ALL;
+    this.setData({ area: v }, () => this.apply());
+  },
+
+  onRecommender(e) {
+    // picker 的 range 是字符串数组时，bindchange 返回的是「下标」而非字符串本身
+    const idx = Number(e.detail.value) || 0;
+    const v = this.data.recommenders[idx] || ALL;
+    this.setData({ recommender: v, recommenderIndex: idx }, () => this.apply());
+  },
+
+  onPrice(e) {
+    const v = e.currentTarget.dataset.v || 'all';
+    this.setData({ price: v }, () => this.apply());
+  },
+
   onKeyword(e) {
     this.setData({ keyword: e.detail.value }, () => this.apply());
   },
 
   onClear() {
-    this.setData({ keyword: '', cuisine: ALL }, () => this.apply());
+    this.setData(
+      { keyword: '', cuisine: ALL, area: ALL, recommender: ALL, recommenderIndex: 0, price: 'all' },
+      () => this.apply()
+    );
   },
 
   onShareAppMessage() {

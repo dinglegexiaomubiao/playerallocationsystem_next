@@ -12,58 +12,117 @@
     <text class="new-btn" bindtap="goNew">＋ 发活动</text>
   </view>
 
-  <view wx:if="{{loading}}" class="center">加载中…</view>
-  <view wx:elif="{{error}}" class="center">{{error}}</view>
-  <view wx:elif="{{!list.length}}" class="center">这个分类下还没有活动</view>
-
-  <view wx:for="{{list}}" wx:key="id" class="surface post" data-index="{{index}}" bindtap="onTap">
-    <view class="line1">
-      <text class="title">{{item.title}}</text>
-      <text class="status {{item.isOpen ? 'is-open' : 'is-closed'}}">{{item.statusLabel}}</text>
+  <!-- 筛选条：对齐网页端 pages/activities/index.js（搜索 / 类型 / 地区 / 日期 / 只看招募中） -->
+  <view class="filters">
+    <input
+      class="search"
+      type="text"
+      value="{{q}}"
+      placeholder="搜活动名 / 昵称 / 地点 / 备注"
+      placeholder-class="search-ph"
+      confirm-type="search"
+      bindinput="onKeyword"
+    />
+    <view class="chips">
+      <text
+        wx:for="{{typeOptions}}"
+        wx:key="key"
+        class="chip {{typeFilter === item.key ? 'is-on' : ''}}"
+        data-v="{{item.key}}"
+        bindtap="onType"
+      >{{item.label}}</text>
     </view>
-
-    <view class="tags">
-      <text wx:if="{{item.typeLabel}}" class="tag is-type">{{item.typeLabel}}</text>
-      <text wx:if="{{item.regionText}}" class="tag">{{item.regionText}}</text>
-      <text wx:if="{{item.costText}}" class="tag">{{item.costText}}</text>
-      <text wx:if="{{item.iJoined}}" class="tag is-mine">已报名</text>
+    <view class="chips">
+      <text
+        wx:for="{{regionOptions}}"
+        wx:key="value"
+        class="chip {{regionFilter === item.value ? 'is-on' : ''}}"
+        data-v="{{item.value}}"
+        bindtap="onRegion"
+      >{{item.label}}</text>
     </view>
-
-    <view class="meta">集合：{{item.meetText}}<text wx:if="{{item.locationText}}"> · {{item.locationText}}</text></view>
-    <view class="meta">{{item.peopleText}}</view>
-
-    <view wx:if="{{item.note}}" class="note {{item.expanded ? 'is-full' : ''}}">{{item.note}}</view>
-
-    <view wx:if="{{item.expanded && item.signups.length}}" class="signups">
-      <view class="su-head">已报名 {{item.signups.length}}<text wx:if="{{item.needText}}" class="su-need">{{item.needText}}</text></view>
-      <view wx:for="{{item.signups}}" wx:for-item="su" wx:key="idx" class="su-row">
-        <text class="su-av">{{su.initial}}</text>
-        <view class="su-main">
-          <view class="su-line">
-            <text class="su-name">{{su.nickname}}</text>
-            <text class="su-rank">{{su.guestsText}}</text>
-          </view>
-          <text wx:if="{{su.note}}" class="su-note">{{su.note}}</text>
-          <text wx:if="{{su.dayText}}" class="su-meta">{{su.dayText}}</text>
+    <view class="filter-row">
+      <picker mode="date" value="{{dateFilter}}" end="2100-12-31" bindchange="onDate">
+        <view class="date-pick {{dateFilter ? 'is-on' : ''}}">
+          <text class="date-label">日期</text>
+          <text class="date-val">{{dateFilter || '全部日期'}}</text>
         </view>
-      </view>
-    </view>
-
-    <view class="foot">
-      <text class="muted">{{item.creatorText}} 发起</text>
-      <text class="muted">已报名 {{item.signupCount}} 人</text>
-    </view>
-
-    <view wx:if="{{item.actionText}}" class="action-row">
-      <button
-        wx:if="{{item.actionKey}}"
-        class="act {{item.actionKey === 'cancel' ? 'is-ghost' : ''}}"
-        data-id="{{item.id}}"
-        data-act="{{item.actionKey}}"
-        loading="{{busyId === item.id}}"
-        catchtap="onAction"
-      >{{item.actionText}}</button>
-      <text wx:else class="own-tag">{{item.actionText}}</text>
+      </picker>
+      <view class="chip {{openOnly ? 'is-on' : ''}}" bindtap="onToggleOpenOnly">只看招募中</view>
+      <text class="clear-btn" bindtap="onClearFilters">清空</text>
     </view>
   </view>
+
+  <view wx:if="{{loading}}" class="center">加载中…</view>
+  <view wx:elif="{{error}}" class="center">{{error}}</view>
+  <view wx:elif="{{emptyText}}" class="center">{{emptyText}}</view>
+
+  <block wx:else>
+    <block wx:for="{{list}}" wx:key="id">
+      <!-- 过期活动折叠条：默认收起，点一下展开 -->
+      <view wx:if="{{item.__fold}}" class="fold-bar" bindtap="toggleExpired">
+        <text class="fold-arrow">{{showExpired ? '▾' : '▸'}}</text>
+        <text class="fold-text">{{item.foldText}}</text>
+        <text class="fold-hint">{{showExpired ? '收起' : '展开'}}</text>
+      </view>
+
+      <view
+        wx:else
+        class="surface post {{item.isExpired ? 'is-expired' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onTap"
+      >
+        <view class="line1">
+          <text class="title">{{item.title}}</text>
+          <text class="status {{item.isOpen ? 'is-open' : 'is-closed'}}">{{item.statusLabel}}</text>
+        </view>
+
+        <view class="tags">
+          <text wx:if="{{item.typeLabel}}" class="tag is-type">{{item.typeLabel}}</text>
+          <text wx:if="{{item.regionText}}" class="tag">{{item.regionText}}</text>
+          <text wx:if="{{item.costText}}" class="tag">{{item.costText}}</text>
+          <text wx:if="{{item.iJoined}}" class="tag is-mine">已报名</text>
+        </view>
+
+        <view class="meta">集合：{{item.meetText}}<text wx:if="{{item.locationText}}"> · {{item.locationText}}</text></view>
+        <view class="meta">{{item.peopleText}}</view>
+
+        <view wx:if="{{item.note}}" class="note {{item.expanded ? 'is-full' : ''}}">{{item.note}}</view>
+
+        <view wx:if="{{item.expanded && item.signups.length}}" class="signups">
+          <view class="su-head">已报名 {{item.signups.length}}<text wx:if="{{item.needText}}" class="su-need">{{item.needText}}</text></view>
+          <view wx:for="{{item.signups}}" wx:for-item="su" wx:key="idx" class="su-row">
+            <text class="su-av">{{su.initial}}</text>
+            <view class="su-main">
+              <view class="su-line">
+                <text class="su-name">{{su.nickname}}</text>
+                <text class="su-rank">{{su.guestsText}}</text>
+              </view>
+              <text wx:if="{{su.note}}" class="su-note">{{su.note}}</text>
+              <text wx:if="{{su.dayText}}" class="su-meta">{{su.dayText}}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="foot">
+          <text class="muted">{{item.creatorText}} 发起</text>
+          <text class="muted">已报名 {{item.signupCount}} 人</text>
+        </view>
+
+        <view wx:if="{{item.actions.length}}" class="action-row">
+          <button
+            wx:for="{{item.actions}}"
+            wx:for-item="ac"
+            wx:key="key"
+            class="act {{ac.ghost ? 'is-ghost' : ''}} {{ac.danger ? 'is-danger' : ''}}"
+            data-id="{{item.id}}"
+            data-act="{{ac.key}}"
+            loading="{{busyId === item.id && busyAct === ac.key}}"
+            catchtap="onAction"
+          >{{ac.text}}</button>
+        </view>
+        <text wx:else class="own-tag stopped">{{item.stoppedText}}</text>
+      </view>
+    </block>
+  </block>
 </view>

@@ -211,3 +211,106 @@
   font-size: 22rpx;
   color: var(--text-3);
 }
+.own-tag.stopped {
+  display: block;
+  text-align: right;
+  margin-top: 14rpx;
+}
+
+/* 筛选条：对齐网页端 filter-bar（搜索 / 类型 / 地区 / 日期 / 只看招募中） */
+.filters {
+  margin-bottom: 18rpx;
+}
+.search {
+  height: 72rpx;
+  padding: 0 22rpx;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 26rpx;
+  color: var(--text);
+}
+.search-ph {
+  color: var(--text-3);
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+}
+.chip {
+  font-size: 24rpx;
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 6rpx 18rpx;
+  border-radius: 999rpx;
+  margin: 0 12rpx 12rpx 0;
+}
+.chip.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.filter-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10rpx;
+}
+.date-pick {
+  display: flex;
+  align-items: center;
+  height: 60rpx;
+  padding: 0 18rpx;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999rpx;
+  margin-right: 12rpx;
+}
+.date-pick.is-on {
+  color: #ffffff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+.date-label {
+  font-size: 22rpx;
+  opacity: 0.7;
+  margin-right: 8rpx;
+}
+.date-val {
+  font-size: 24rpx;
+}
+.clear-btn {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: var(--brand);
+  padding: 6rpx 12rpx;
+}
+
+/* 已过期折叠条：默认收起，点一下展开下面的过期活动 */
+.fold-bar {
+  display: flex;
+  align-items: center;
+  margin: 8rpx 0 16rpx;
+  padding: 18rpx 22rpx;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.fold-arrow {
+  flex: 0 0 auto;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+  color: var(--text-3);
+}
+.fold-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24rpx;
+  color: var(--text-2);
+}
+.fold-hint {
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  color: var(--brand);
+}

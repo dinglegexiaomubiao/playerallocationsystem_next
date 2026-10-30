@@ -1,11 +1,21 @@
 const { request, getToken } = require('../../utils/api');
-const { fmtDateTime } = require('../../utils/format');
+const { fmtDateTime, dateKeyOf } = require('../../utils/format');
 const session = require('../../utils/session');
 
 const TABS = [
   { key: 'all', label: '全部' },
   { key: 'open', label: '招募中' },
   { key: 'joined', label: '我参与' }
+];
+
+// 开黑模式（对齐网页端 lib/options.mjs 的 PARTY_MODES）。小程序 require 不了 .mjs，手抄一份。
+const MODES = [
+  { key: 'all', label: '全部模式' },
+  { key: 'ranked', label: '天梯' },
+  { key: 'normal', label: '普通匹配' },
+  { key: 'single_draft', label: '单一征召' },
+  { key: 'turbo', label: '加速' },
+  { key: 'vs', label: '对黑' }
 ];
 
 const rangeText = (min, max) => {
@@ -21,6 +31,11 @@ Page({
   data: {
     tabs: TABS,
     tab: 'all',
+    modeOptions: MODES,
+    modeFilter: 'all',
+    q: '',
+    dateFilter: '',
+    openOnly: false,
     // list 是「最终渲染行」：未过期的卡片 + 一条合成折叠条（__fold）+ 展开后的过期卡片。
     // 这么设计是为了卡片模板只写一遍 —— 项目里没用过 WXML template，
     // 而复制 45 行卡片两处维护迟早改漏。
@@ -117,9 +132,27 @@ Page({
             note: s.note || ''
           }));
 
+          // 搜索 haystack（对齐网页端 pages/party/index.js：名称 / 昵称 / SteamID / 时间 / 段位 / 备注 / 模式 / 位置）
+          const hay = [
+            p.title,
+            p.creator && p.creator.nickname,
+            p.game_id,
+            p.play_time,
+            p.my_rank,
+            p.want_rank,
+            p.note,
+            p.modeLabel,
+            (p.want_positions || []).join(' '),
+            (p.my_positions || []).join(' ')
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
           return {
             id: String(p.id),
             title: p.title || '未命名组队',
+            mode: p.mode || '',
             modeLabel: p.modeLabel || '',
             // 过期优先：服务端已改口径，这里再兜一层，免得接口没更新时又显示「招募中」
             statusLabel: isExpired ? '已过期' : p.statusLabel || '',
@@ -140,6 +173,8 @@ Page({
             signupCount: p.signupCount || 0,
             needText: p.need_players ? ' / 需要 ' + p.need_players + ' 人' : '',
             signups: signups,
+            hay: hay,
+            dateKey: dateKeyOf(p.start_at),
             expanded: !!this.expandedIds[String(p.id)]
           };
         });
@@ -153,13 +188,27 @@ Page({
       );
   },
 
-  // 把「未过期 / 已过期」分成两拨：未过期正常铺开，过期的一律折到底部折叠区
+  // 把 tab + 筛选条件算完，再按「未过期 / 已过期」分成两拨：未过期正常铺开，过期的一律折到底部折叠区
   // （网页端 pages/party/index.js 的 activePosts / expiredPosts 就是这个口径）
   apply() {
     const tab = this.data.tab;
+    const q = (this.data.q || '').trim().toLowerCase();
+    const modeFilter = this.data.modeFilter;
+    const dateFilter = this.data.dateFilter;
+    const openOnly = this.data.openOnly;
+
     let src = this.all;
     if (tab === 'open') src = src.filter((p) => p.isOpen);
-    if (tab === 'joined') src = src.filter((p) => p.iJoined);
+    else if (tab === 'joined') src = src.filter((p) => p.iJoined);
+
+    const filtered = src.filter((p) => {
+      if (modeFilter !== 'all' && p.mode !== modeFilter) return false;
+      if (dateFilter && p.dateKey !== dateFilter) return false;
+      // 不看日期时，「只看招募中」= 状态 open 且没过期
+      if (!dateFilter && openOnly && !p.isOpen) return false;
+      if (!q) return true;
+      return p.hay.indexOf(q) >= 0;
+    });
 
     // 展开态以 expandedIds 为准，每次重算都刷一遍；
     // 只在 onTap 里打补丁的话，切 tab 回来会退回加载时的旧值。
@@ -167,16 +216,21 @@ Page({
 
     const active = [];
     const expired = [];
-    for (const p of src) {
+    for (const p of filtered) {
       if (p.isExpired) expired.push(p);
       else active.push(p);
     }
 
     const rows = active.slice();
     if (expired.length) {
-      // 合成折叠条。key 单独给，避免和卡片 id 撞车
-      rows.push({ __fold: true, id: '__fold', foldText: '已过期招募（' + expired.length + '）' });
-      if (this.data.showExpired) rows.push.apply(rows, expired);
+      if (dateFilter) {
+        // 按日期查记录：平铺当天全部卡片（含已过期 / 已关闭），不做折叠
+        rows.push.apply(rows, expired);
+      } else {
+        // 合成折叠条。key 单独给，避免和卡片 id 撞车
+        rows.push({ __fold: true, id: '__fold', foldText: '已过期招募（' + expired.length + '）' });
+        if (this.data.showExpired) rows.push.apply(rows, expired);
+      }
     }
 
     let emptyText = '';
@@ -189,6 +243,29 @@ Page({
 
   toggleExpired() {
     this.setData({ showExpired: !this.data.showExpired }, () => this.apply());
+  },
+
+  onMode(e) {
+    this.setData({ modeFilter: e.currentTarget.dataset.v || 'all' }, () => this.apply());
+  },
+
+  onKeyword(e) {
+    this.setData({ q: e.detail.value }, () => this.apply());
+  },
+
+  onDate(e) {
+    this.setData({ dateFilter: e.detail.value || '' }, () => this.apply());
+  },
+
+  onToggleOpenOnly() {
+    this.setData({ openOnly: !this.data.openOnly }, () => this.apply());
+  },
+
+  onClearFilters() {
+    this.setData(
+      { modeFilter: 'all', q: '', dateFilter: '', openOnly: false },
+      () => this.apply()
+    );
   },
 
   onTab(e) {

@@ -4,7 +4,7 @@
       class="search"
       type="text"
       value="{{keyword}}"
-      placeholder="搜店名 / 菜系 / 地址"
+      placeholder="搜店名 / 菜系 / 地区 / 推荐人"
       placeholder-class="search-ph"
       confirm-type="search"
       bindinput="onKeyword"
@@ -17,6 +17,33 @@
         data-v="{{item}}"
         bindtap="onCuisine"
       >{{item}}</text>
+    </view>
+    <view class="chips">
+      <text
+        wx:for="{{areas}}"
+        wx:key="*this"
+        class="chip {{area === item ? 'is-on' : ''}}"
+        data-v="{{item}}"
+        bindtap="onArea"
+      >{{item}}</text>
+    </view>
+    <view class="filter-row">
+      <picker range="{{recommenders}}" value="{{recommenderIndex}}" bindchange="onRecommender">
+        <view class="pick {{recommender !== '全部' ? 'is-on' : ''}}">
+          <text class="pick-label">推荐人</text>
+          <text class="pick-val">{{recommender}}</text>
+        </view>
+      </picker>
+      <text class="clear-btn" bindtap="onClear">清空筛选</text>
+    </view>
+    <view class="chips">
+      <text
+        wx:for="{{priceRanges}}"
+        wx:key="value"
+        class="chip {{price === item.value ? 'is-on' : ''}}"
+        data-v="{{item.value}}"
+        bindtap="onPrice"
+      >{{item.label}}</text>
     </view>
   </view>
 

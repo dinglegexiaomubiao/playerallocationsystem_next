@@ -12,6 +12,38 @@
     <text class="new-btn" bindtap="goNew">＋ 发组队</text>
   </view>
 
+  <!-- 筛选条：对齐网页端 pages/party/index.js（搜索 / 模式 / 日期 / 只看招募中） -->
+  <view class="filters">
+    <input
+      class="search"
+      type="text"
+      value="{{q}}"
+      placeholder="搜卡片名 / 昵称 / SteamID / 段位 / 备注"
+      placeholder-class="search-ph"
+      confirm-type="search"
+      bindinput="onKeyword"
+    />
+    <view class="chips">
+      <text
+        wx:for="{{modeOptions}}"
+        wx:key="key"
+        class="chip {{modeFilter === item.key ? 'is-on' : ''}}"
+        data-v="{{item.key}}"
+        bindtap="onMode"
+      >{{item.label}}</text>
+    </view>
+    <view class="filter-row">
+      <picker mode="date" value="{{dateFilter}}" end="2100-12-31" bindchange="onDate">
+        <view class="date-pick {{dateFilter ? 'is-on' : ''}}">
+          <text class="date-label">日期</text>
+          <text class="date-val">{{dateFilter || '全部日期'}}</text>
+        </view>
+      </picker>
+      <view class="chip {{openOnly ? 'is-on' : ''}}" bindtap="onToggleOpenOnly">只看招募中</view>
+      <text class="clear-btn" bindtap="onClearFilters">清空</text>
+    </view>
+  </view>
+
   <view wx:if="{{loading}}" class="center">加载中…</view>
   <view wx:elif="{{error}}" class="center">{{error}}</view>
 

@@ -97,6 +97,36 @@ function stars(n) {
   return s;
 }
 
+/**
+ * ISO / 时间戳 → 本地 'YYYY-MM-DD'。对齐网页端 pages/party|activities/index.js 的
+ * dateKeyOf()，按日期查历史记录时用。用本地年月日拆，避免 UTC 零点跨时区跳日。
+ */
+function dateKeyOf(v) {
+  if (!v) return '';
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d.getTime())) return '';
+  return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+}
+
+/**
+ * 集合 / 开黑时间段：'M月D日 HH:mm ~ HH:mm'（跨天带日期）。对齐网页端
+ * components/ActivityCard.js 与 PartyCard.js 的 fmtRange()，卡片顶部展示「开始 ~ 结束」。
+ */
+function fmtRange(startAt, durationMin) {
+  if (!startAt) return '';
+  const d = startAt instanceof Date ? startAt : new Date(startAt);
+  if (isNaN(d.getTime())) return '';
+  const head = fmtDateTime(startAt);
+  if (!durationMin) return head;
+  const e = new Date(d.getTime() + Number(durationMin) * 60000);
+  const sameDay =
+    e.getFullYear() === d.getFullYear() &&
+    e.getMonth() === d.getMonth() &&
+    e.getDate() === d.getDate();
+  const tail = sameDay ? pad2(e.getHours()) + ':' + pad2(e.getMinutes()) : fmtDateTime(e);
+  return head + ' ~ ' + tail;
+}
+
 module.exports = {
   fullUrl,
   regionShort,
@@ -104,6 +134,8 @@ module.exports = {
   fmtMonthDay,
   fmtMD,
   fmtDateTime,
+  fmtRange,
+  dateKeyOf,
   monthLabel,
   stars,
   tourStatusText,
