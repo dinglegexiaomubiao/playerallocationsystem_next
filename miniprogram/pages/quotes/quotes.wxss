@@ -15,7 +15,7 @@
   color: #ffffff;
   background: var(--brand);
   padding: 8rpx 20rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 .bar-sep {
   margin: 0 8rpx;
@@ -54,7 +54,7 @@
 .who-avatar {
   width: 40rpx;
   height: 40rpx;
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
   background: var(--bg-subtle);
   margin-right: 10rpx;
   flex: 0 0 auto;
@@ -95,22 +95,22 @@
   margin-right: 12rpx;
   font-size: 22rpx;
   color: var(--text-3);
-  border: 1px solid var(--border);
-  border-radius: 6rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-sm);
 }
 .del {
   padding: 4rpx 16rpx;
   font-size: 22rpx;
   color: var(--brand);
-  border: 1px solid var(--brand-border);
-  border-radius: 6rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-sm);
 }
 
 /* ---------------- 评价区 ---------------- */
 .rv {
   margin-top: 16rpx;
   padding-top: 16rpx;
-  border-top: 1px solid var(--border);
+  border-top: var(--stroke) solid var(--border);
 }
 .rv-tip {
   font-size: 22rpx;
@@ -140,7 +140,7 @@
   padding: 14rpx 16rpx;
   margin-bottom: 12rpx;
   background: var(--bg-subtle);
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
 }
 .rv-login-text {
   font-size: 22rpx;
@@ -151,7 +151,7 @@
   color: #ffffff;
   background: var(--brand);
   padding: 6rpx 18rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 
 .rv-form {
@@ -163,7 +163,7 @@
   padding: 14rpx 16rpx;
   margin-bottom: 10rpx;
   background: var(--bg-subtle);
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
 }
 .rv-pick-label {
   font-size: 24rpx;
@@ -190,7 +190,7 @@
   line-height: 1.6;
   color: var(--text);
   background: var(--bg-subtle);
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
 }
 .rv-ph {
   color: var(--text-3);
@@ -211,7 +211,7 @@
   color: #ffffff;
   background: var(--brand);
   padding: 8rpx 24rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 .rv-submit.is-busy {
   opacity: 0.55;
@@ -226,8 +226,8 @@
   margin-top: 8rpx;
 }
 .rv-item {
-  padding: 14rpx 0;
-  border-top: 1px dashed var(--border);
+  padding: 16rpx 0;
+  border-top: var(--stroke) dashed var(--border);
 }
 .rv-head {
   display: flex;
@@ -246,8 +246,8 @@
   padding: 0 8rpx;
   font-size: 18rpx;
   color: var(--brand);
-  border: 1px solid var(--brand-border);
-  border-radius: 4rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-xs);
 }
 .rv-stars {
   margin-left: 10rpx;

@@ -10,12 +10,12 @@
 }
 /* 有帮派时说「我的帮派」，没有时引导去创建 —— 文案在 js 里算，模板不做判断 */
 .bar-btn {
-  padding: 8rpx 20rpx;
+  padding: 8rpx 24rpx;
   font-size: 24rpx;
   color: var(--brand);
   background: var(--bg-card);
-  border: 1px solid var(--brand-border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-pill);
   flex: 0 0 auto;
 }
 .card {
@@ -31,7 +31,7 @@
 .body {
   flex: 1;
   min-width: 0;
-  padding: 22rpx;
+  padding: 24rpx;
 }
 .line1 {
   display: flex;
@@ -48,7 +48,7 @@
   color: var(--gold);
   background: var(--gold-soft);
   padding: 2rpx 10rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin-right: 12rpx;
 }
 .count {
@@ -72,7 +72,7 @@
 .head {
   width: 52rpx;
   height: 52rpx;
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   margin-right: 10rpx;
   flex: 0 0 auto;
@@ -104,7 +104,7 @@
   display: flex;
   overflow: hidden;
   background: var(--bg-card);
-  border-radius: 20rpx 20rpx 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   /* 底部安全区：全面屏手机不给这行，弹层按钮会被小白条压住 */
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 }
@@ -115,7 +115,7 @@
 .sheet-body {
   flex: 1;
   min-width: 0;
-  padding: 28rpx 26rpx 8rpx;
+  padding: 24rpx 24rpx 8rpx;
 }
 .sheet-line1 {
   display: flex;
@@ -183,24 +183,17 @@
   line-height: 1.6;
   color: var(--text-2);
   background: var(--bg-subtle);
-  border-radius: 12rpx;
+  border-radius: var(--radius-sm);
 }
 .sheet-actions {
   display: flex;
   margin-top: 22rpx;
 }
+/* 弹层底部两个按钮平分一行；视觉属性见 app.wxss 的 .btn */
 .btn {
   flex: 1;
-  height: 76rpx;
-  line-height: 76rpx;
   text-align: center;
-  font-size: 28rpx;
-  color: #fff;
-  background: var(--brand);
-  border-radius: 12rpx;
 }
 .btn.ghost {
   margin-right: 16rpx;
-  color: var(--text-2);
-  background: var(--bg-subtle);
 }

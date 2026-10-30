@@ -6,7 +6,7 @@
 }
 
 .head {
-  padding: 22rpx 24rpx;
+  padding: 16rpx 24rpx;
   margin-bottom: 8rpx;
 }
 /* 昵称和帮派名都是用户自己填的，可能是很长的英文/数字串；这一行是 flex 且不换行，
@@ -34,7 +34,7 @@
   font-size: 21rpx;
   color: var(--text-3);
   background: var(--bg-subtle);
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -44,15 +44,10 @@
   font-size: 21rpx;
 }
 
-.sec-title {
-  margin: 24rpx 0 10rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 1rpx;
-}
+/* 区块标题、卡片内边距都用全局的 .sec-title / .card（app.wxss），
+   这里只补本页特有的东西：表单字段多，卡片底部留白比其他页紧一点 */
 .card {
-  padding: 20rpx 24rpx 4rpx;
+  padding: 24rpx 24rpx 8rpx;
 }
 
 /* 位置多选 */
@@ -66,8 +61,8 @@
   font-size: 25rpx;
   color: var(--text-2);
   background: var(--bg-page);
-  border: 1px solid var(--border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-pill);
 }
 .chip.on {
   color: #ffffff;
@@ -95,27 +90,18 @@
   padding-bottom: calc(16rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   background: var(--bg-card);
-  border-top: 1px solid var(--border);
+  border-top: var(--stroke) solid var(--border);
 }
 .bar-info {
   flex: 1;
   min-width: 0;
 }
+/* 底栏保存按钮：视觉属性见 app.wxss 的 .btn，这里只管「别被压扁」 */
 .btn {
   flex: 0 0 auto;
-  margin: 0;
   min-width: 180rpx;
-  height: 76rpx;
-  line-height: 76rpx;
-  padding: 0 34rpx;
-  font-size: 28rpx;
-  color: #ffffff;
-  background: var(--brand);
-  border-radius: var(--radius);
 }
-.btn::after {
-  border: 0;
-}
+
 .link-btn {
   margin-top: 20rpx;
   padding: 0 40rpx;

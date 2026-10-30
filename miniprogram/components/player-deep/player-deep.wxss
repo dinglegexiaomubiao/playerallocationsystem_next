@@ -7,7 +7,7 @@
 
 .surface {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
 }
 
@@ -56,7 +56,7 @@
 .act-row {
   display: flex;
   align-items: center;
-  padding: 22rpx 24rpx;
+  padding: 16rpx 24rpx;
   margin-top: 16rpx;
 }
 .act-hint {
@@ -76,7 +76,7 @@
   font-size: 24rpx;
   color: #ffffff;
   background: var(--brand);
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 
 .empty-tip {
@@ -94,8 +94,8 @@
   display: flex;
   flex-wrap: wrap;
   margin-top: 18rpx;
-  padding: 14rpx 24rpx 0;
-  border-top: 1rpx solid var(--border);
+  padding: 16rpx 24rpx 0;
+  border-top: var(--stroke) solid var(--border);
 }
 .stats-meta-i {
   font-size: 21rpx;
@@ -121,8 +121,8 @@
   font-size: 20rpx;
   color: var(--text-3);
   background: var(--bg-subtle);
-  padding: 2rpx 10rpx;
-  border-radius: 4rpx;
+  padding: 2rpx 8rpx;
+  border-radius: var(--radius-xs);
   margin-right: 14rpx;
 }
 .stats-window-i {
@@ -146,7 +146,7 @@
   color: var(--text-3);
   background: var(--bg-subtle);
   padding: 2rpx 10rpx;
-  border-radius: 4rpx;
+  border-radius: var(--radius-xs);
   margin-right: 14rpx;
 }
 .stats-best-i {
@@ -167,9 +167,9 @@
 .stats-mode {
   font-size: 21rpx;
   color: var(--text-2);
-  border: 1rpx solid var(--border);
+  border: var(--stroke) solid var(--border);
   padding: 4rpx 14rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin: 0 10rpx 10rpx 0;
 }
 
@@ -186,7 +186,7 @@
   color: var(--text-2);
   background: var(--bg-subtle);
   padding: 4rpx 14rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin: 0 10rpx 10rpx 0;
 }
 
@@ -199,16 +199,16 @@
   display: flex;
   flex-wrap: wrap;
   margin-top: 16rpx;
-  padding: 14rpx 24rpx 0;
-  border-top: 1rpx solid var(--border);
+  padding: 16rpx 24rpx 0;
+  border-top: var(--stroke) solid var(--border);
 }
 .tile {
   box-sizing: border-box;
   width: calc(25% - 12rpx);
   margin: 0 16rpx 12rpx 0;
-  padding: 10rpx 8rpx;
-  border-radius: 8rpx;
-  border: 1rpx solid var(--border);
+  padding: 8rpx;
+  border-radius: var(--radius-xs);
+  border: var(--stroke) solid var(--border);
   border-left-width: 6rpx;
   background: var(--bg-card);
   display: flex;
@@ -256,8 +256,8 @@
   padding: 8rpx 24rpx 0;
 }
 .mrow {
-  padding: 14rpx 0;
-  border-bottom: 1rpx solid var(--border);
+  padding: 16rpx 0;
+  border-bottom: var(--stroke) solid var(--border);
 }
 .mrow:last-child {
   border-bottom: 0;
@@ -305,8 +305,8 @@
   font-size: 19rpx;
   color: var(--text-3);
   background: var(--bg-subtle);
-  padding: 2rpx 10rpx;
-  border-radius: 4rpx;
+  padding: 2rpx 8rpx;
+  border-radius: var(--radius-xs);
   margin: 0 10rpx 4rpx 0;
 }
 .mrow-ago {
@@ -321,7 +321,7 @@
   font-size: 23rpx;
   color: var(--brand);
   background: var(--bg-subtle);
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
 }
 
 /* ---------------- 战绩解读 ---------------- */
@@ -387,7 +387,7 @@
   align-items: center;
   margin-top: 18rpx;
   padding-top: 16rpx;
-  border-top: 1px dashed var(--border);
+  border-top: var(--stroke) dashed var(--border);
 }
 .ai-foot-hint {
   flex: 1;
@@ -398,6 +398,6 @@
   font-size: 22rpx;
   color: var(--brand);
   padding: 4rpx 14rpx;
-  border: 1px solid var(--brand-border);
-  border-radius: 6rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-sm);
 }

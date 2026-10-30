@@ -1,7 +1,26 @@
 /* 设计令牌：对齐网页 styles/tokens.css（浅色主题，网页默认观感）
    小程序是独立前端，无法复用网页 CSS，这里手动同步关键令牌：
    --bg-page #f5f6f8 / --bg-card #ffffff / --brand #b02b25 / --text #15181c / --border #dee2e7
-   注意：令牌值只用 px / 颜色，不放 rpx（自定义属性里的 rpx 不被编译期转换）。 */
+
+   ⚠ 令牌值只用 px / 颜色，**不放 rpx**（自定义属性里的 rpx 不会被编译期转成 px，
+     用了就是不生效甚至整条声明作废）。间距这类需要随屏宽缩放的，继续在规则里写
+     rpx 字面量，但只允许下面这几档：
+       2rpx / 4rpx（贴边内缩，徽标文字）  8rpx(4px) / 16rpx(8px) / 24rpx(12px)
+       32rpx(16px) / 48rpx(24px)（区块间距）
+       28rpx —— **只给页面左右留白用**（.page-wrap 的横向 padding、fixed 底栏的横向
+       padding），全仓库就这一个值，别再往别处写。
+     中间值（10/12/14/18/20/22/26rpx…）一律不再新增 —— 之前全仓库有 84 种 padding、
+     17 种圆角、12 份各自为政的 .btn，观感上就是「卡片边缘对不齐、按钮大小不一」。
+
+   落地口径（新页面照这个来，不要再自己造）：
+     卡片   = .surface（底色+1px 描边+8px 圆角）+ .card / .card-tight（内边距）
+     列表卡 = .surface 不带 .card，行自己写 padding: 16rpx 24rpx，分割线铺满卡片
+     标题   = .sec-title（上 32 / 下 12）
+     按钮   = .btn + .ghost / .sm / .xs / .block / .pill，页面只写布局（margin/flex/min-width）
+     小按钮 = 组件或页面里自绘的 button（如 guild 的 .act / .mini-btn）必须自带
+              .xxx::after { border: none }，否则 <button> 默认那层 1px 灰边会叠上来
+     描边   = var(--stroke)（永远 1px，不要 1rpx —— 2x 屏上只有半个物理像素，淡一半）
+     圆角   = var(--radius-xs/sm/radius/lg/pill) 五档，不要写 rpx 字面量 */
 page {
   --bg-page: #f5f6f8;
   --bg-card: #ffffff;
@@ -23,8 +42,18 @@ page {
   --ok-soft: rgba(26, 114, 64, 0.10);
   --danger: #c02a22;
   --danger-soft: rgba(192, 42, 34, 0.09);
-  --radius: 8px;
-  --radius-lg: 12px;
+
+  /* 圆角阶梯：只这四档 + 胶囊。历史代码里的 4/5/8/10/12/14/17rpx 都该往这上面收 */
+  --radius-xs: 4px; /* 8rpx：标签、徽标 */
+  --radius-sm: 6px; /* 12rpx：小元件（输入框、chip） */
+  --radius: 8px; /* 16rpx：卡片（历史名称，全仓库都在用，别删） */
+  --radius-lg: 12px; /* 24rpx：大卡片、弹层 */
+  --radius-pill: 999px;
+
+  /* 描边：统一 1px。**不要写 1rpx** —— 2x 屏上只有 0.5 物理像素，比 1px 淡一半，
+     同一个页面里两种粗细的线放一起会显得「脏」 */
+  --stroke: 1px;
+
   --shadow: 0 2px 7px rgba(21, 24, 28, 0.06);
 
   background: var(--bg-page);
@@ -34,15 +63,39 @@ page {
   line-height: 1.6;
 }
 
-/* 通用工具类 */
+/* ---------------- 通用工具类 ---------------- */
+
+/* 页面容器：左右 28rpx，底部留出安全距离（有 fixed 底栏的页面自己再加 .bar-space） */
 .page-wrap {
   padding: 24rpx 28rpx 48rpx;
 }
+
+/* 卡片：底色 + 1px 描边 + 8px 圆角。内边距不在 .surface 上，
+   因为有的卡片要「内容顶到边」（列表用 padding: 0 24rpx，分割线自己铺满） */
 .surface {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
 }
+
+/* 标准卡片内边距。新页面直接用这两个，别再写 20/22rpx */
+.card {
+  padding: 24rpx;
+}
+.card-tight {
+  padding: 16rpx 24rpx;
+}
+
+/* 区块标题：比正文小一号、灰、字重 600。margin 统一「上 32 / 下 12」，
+   之前各页是 24/28/32 混着来，一屏里几个标题的呼吸感不一样 */
+.sec-title {
+  margin: 32rpx 0 12rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 1rpx;
+}
+
 .muted {
   color: var(--text-3);
   font-size: 24rpx;
@@ -52,4 +105,59 @@ page {
   text-align: center;
   color: var(--text-3);
   font-size: 26rpx;
+}
+
+/* ---------------- 按钮 ----------------
+   之前 12 个页面各写一份 .btn：高度 72/76/80/84rpx、字号 27/28/29/30rpx、
+   圆角两种 —— 同一屏里两个按钮差 4rpx 高就看得出「不齐」。统一到这里：
+   页面样式只需保留布局（margin / flex / min-width），视觉属性不要再写。 */
+.btn {
+  height: 80rpx;
+  line-height: 80rpx;
+  padding: 0 40rpx;
+  margin: 0;
+  font-size: 30rpx;
+  font-weight: 500;
+  color: #ffffff;
+  background: var(--brand);
+  border: 0;
+  border-radius: var(--radius);
+}
+/* 小程序 button 自带一条 1px 的 ::after 描边，不去掉会有灰边 */
+.btn::after {
+  border: 0;
+}
+.btn.is-busy {
+  opacity: 0.7;
+}
+/* 次要按钮：白底 + 灰边 + 正文色。之前 guilds 用灰底、messages 用白底描边，
+   同一产品里两种「次要按钮」不像一套，统一成白底描边 */
+.btn.ghost {
+  color: var(--text-2);
+  background: var(--bg-card);
+  border: var(--stroke) solid var(--border);
+}
+/* 小号按钮：列表行尾、卡片里的小操作 */
+.btn.sm {
+  height: 64rpx;
+  line-height: 64rpx;
+  padding: 0 28rpx;
+  font-size: 26rpx;
+}
+/* 迷你按钮：和标题挤在同一行时用（页头「全部已读」这类） */
+.btn.xs {
+  height: 56rpx;
+  line-height: 56rpx;
+  padding: 0 20rpx;
+  font-size: 22rpx;
+}
+/* 撑满一行 */
+.btn.block {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* 胶囊按钮：和 chip 同一观感 */
+.btn.pill {
+  border-radius: var(--radius-pill);
 }

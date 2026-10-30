@@ -5,7 +5,7 @@
   height: 72rpx;
   padding: 0 22rpx;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
   font-size: 26rpx;
   color: var(--text);
@@ -22,9 +22,9 @@
   font-size: 24rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   padding: 6rpx 18rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   margin: 0 12rpx 12rpx 0;
 }
 .chip.is-on {
@@ -45,8 +45,8 @@
   height: 60rpx;
   padding: 0 18rpx;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-pill);
   margin-right: 12rpx;
 }
 .pick.is-on {
@@ -111,7 +111,7 @@
   color: var(--text-2);
   background: var(--bg-subtle);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin: 4rpx 8rpx 0 0;
 }
 .feature {
@@ -146,8 +146,8 @@
   margin-left: 12rpx;
   font-size: 22rpx;
   color: var(--brand-on-soft);
-  border: 1px solid var(--brand-border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-pill);
   padding: 4rpx 18rpx;
 }
 
@@ -155,7 +155,7 @@
 .review-toggle {
   margin-top: 12rpx;
   padding-top: 12rpx;
-  border-top: 1px dashed var(--border);
+  border-top: var(--stroke) dashed var(--border);
   font-size: 23rpx;
   color: var(--brand);
 }
@@ -164,7 +164,7 @@
 }
 .review {
   padding: 12rpx 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--stroke) solid var(--border);
 }
 .review:last-child {
   border-bottom: none;
@@ -194,8 +194,8 @@
   font-size: 21rpx;
   color: var(--brand);
   padding: 2rpx 10rpx;
-  border: 1px solid var(--brand-border);
-  border-radius: 5rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-xs);
 }
 .review-text {
   margin-top: 6rpx;

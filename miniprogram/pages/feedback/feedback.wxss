@@ -11,7 +11,7 @@
   font-size: 26rpx;
   color: var(--text-3);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
 }
 .tab:first-child {
   border-radius: var(--radius) 0 0 var(--radius);
@@ -37,7 +37,7 @@
   font-size: 26rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
 }
 .kind:first-child {
@@ -50,7 +50,7 @@
 }
 
 .item {
-  padding: 20rpx;
+  padding: 16rpx 24rpx;
   margin-bottom: 16rpx;
 }
 .item-head {
@@ -61,7 +61,7 @@
 .badge {
   font-size: 20rpx;
   padding: 2rpx 10rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin-right: 10rpx;
   background: var(--bg-subtle);
   color: var(--text-2);

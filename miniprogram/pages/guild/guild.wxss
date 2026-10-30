@@ -34,7 +34,7 @@
 .body {
   flex: 1;
   min-width: 0;
-  padding: 22rpx;
+  padding: 24rpx;
 }
 .line1 {
   display: flex;
@@ -51,7 +51,7 @@
   color: var(--gold);
   background: var(--gold-soft);
   padding: 2rpx 10rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin-right: 12rpx;
   flex: 0 0 auto;
 }
@@ -72,22 +72,28 @@
 
 /* ---------- 动作按钮 ---------- */
 /* 小程序 button 默认 100% 宽 + 有伪边框，这里统一压平 */
+/* ---------- 小动作按钮 ----------
+   .act（卡片头部的主操作：邀请/改名/解散）与 .mini-btn（行尾的撤回等）是同一档
+   尺寸：高 56rpx，和全局 .btn.xs 一致。之前 60 / 52 两种高度挨在一起看着歪。
+   视觉属性只留颜色，尺寸与描边都按令牌来。 */
 .acts {
   display: flex;
   flex-wrap: wrap;
-  margin-top: 18rpx;
+  margin-top: 16rpx;
 }
 .act {
   margin: 0 12rpx 0 0;
-  padding: 0 22rpx;
-  height: 60rpx;
-  line-height: 60rpx;
+  padding: 0 20rpx;
+  height: 56rpx;
+  line-height: 56rpx;
   font-size: 24rpx;
   color: var(--brand);
   background: var(--bg-card);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
   border-radius: var(--radius);
 }
+/* <button> 自带一层 1px 灰描边（::after），自绘边框的按钮都必须关掉它。
+   注意这条不能删：全局只在 .btn::after 上关了，.act / .mini-btn 不是 .btn */
 .act::after {
   border: none;
 }
@@ -103,26 +109,21 @@
   opacity: 0.6;
 }
 
+/* 视觉属性统一在 app.wxss 的 .btn，这里只留本页间距 */
 .btn {
-  margin-top: 20rpx;
-  height: 76rpx;
-  line-height: 76rpx;
-  font-size: 28rpx;
-}
-.btn::after {
-  border: none;
+  margin-top: 24rpx;
 }
 
 .mini-btn {
-  margin: 0 0 0 10rpx;
+  margin: 0 0 0 8rpx;
   padding: 0 16rpx;
-  height: 52rpx;
-  line-height: 52rpx;
+  height: 56rpx;
+  line-height: 56rpx;
   font-size: 22rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 6rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-sm);
   flex: 0 0 auto;
 }
 .mini-btn::after {
@@ -137,8 +138,8 @@
 .row {
   display: flex;
   align-items: center;
-  padding: 16rpx 20rpx;
-  border-bottom: 1px solid var(--border);
+  padding: 16rpx 24rpx;
+  border-bottom: var(--stroke) solid var(--border);
 }
 .row:last-child {
   border-bottom: none;
@@ -146,7 +147,7 @@
 .avatar {
   width: 64rpx;
   height: 64rpx;
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   margin-right: 16rpx;
   flex: 0 0 auto;
@@ -179,7 +180,7 @@
   color: var(--gold);
   background: var(--gold-soft);
   padding: 1rpx 8rpx;
-  border-radius: 5rpx;
+  border-radius: var(--radius-xs);
   margin-right: 8rpx;
   flex: 0 0 auto;
 }
@@ -222,8 +223,8 @@
   padding: 8rpx 16rpx;
   margin: 0 12rpx 12rpx 0;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-pill);
 }
 .color.is-on {
   border-color: var(--brand);

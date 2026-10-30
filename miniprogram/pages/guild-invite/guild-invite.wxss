@@ -27,7 +27,7 @@
   font-size: 26rpx;
   color: var(--brand);
   background: var(--bg-card);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
   border-radius: var(--radius);
   flex: 0 0 auto;
 }
@@ -41,8 +41,8 @@
 .row {
   display: flex;
   align-items: center;
-  padding: 14rpx 16rpx;
-  border: 1px solid transparent;
+  padding: 16rpx 24rpx;
+  border: var(--stroke) solid transparent;
   border-radius: var(--radius);
   background: var(--bg-card);
   margin-bottom: 8rpx;
@@ -57,7 +57,7 @@
 .avatar {
   width: 60rpx;
   height: 60rpx;
-  border-radius: 10rpx;
+  border-radius: var(--radius-sm);
   background: var(--bg-subtle);
   margin-right: 14rpx;
   flex: 0 0 auto;
@@ -94,7 +94,7 @@
   padding: 14rpx 16rpx;
   margin-bottom: 18rpx;
   background: rgba(176, 43, 37, 0.05);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
   border-radius: var(--radius);
 }
 .picked-label {
@@ -112,15 +112,7 @@
   color: var(--brand);
 }
 
+/* 视觉属性（含 .btn::after 的默认灰边）统一在 app.wxss，这里只留本页间距 */
 .btn {
-  margin-top: 8rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-  font-size: 29rpx;
-}
-.btn::after {
-  border: none;
-}
-.btn.is-busy {
-  opacity: 0.6;
+  margin-top: 16rpx;
 }

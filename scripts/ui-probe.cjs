@@ -10,6 +10,8 @@
  *   node scripts/ui-probe.cjs --pages      # 26 个页面全量扫一遍（结构级）
  *   node scripts/ui-probe.cjs --stress     # 同上，但把纯数据插值换成长英文串，测「长昵称/长标题会不会顶宽」
  *   node scripts/ui-probe.cjs --components # 两个自定义组件各测一遍
+ *   node scripts/ui-probe.cjs --shot        # 截图，肉眼复核卡片/描边/按钮（默认 profile/member/mine）
+ *   node scripts/ui-probe.cjs --shot=pages/guild/guild   # 指定页面，可逗号分隔
  *
  * 退出码：0 = 干净；1 = 有页面/元素横向溢出（会列出可疑元素）。
  *
@@ -116,6 +118,7 @@ const MEASURE = (vw) => `
   });
   var out = {
     scrollWidth: document.body.scrollWidth,
+    bodyHeight: document.body.scrollHeight,
     tilesPerRow: Object.keys(rowsMap).map(function (k) { return rowsMap[k]; }),
     overflow: over.slice(0, 10)
   };
@@ -352,6 +355,56 @@ async function probeComponents() {
   return code;
 }
 
+// ---------------------------------------------------------------- 模式四：截图
+
+/**
+ * 把页面渲染成 PNG，用来「肉眼复核」卡片留白、描边粗细、按钮高度是否一致。
+ * 探针只量数值，量不出「两张卡片的内边距差 2rpx」这种观感问题。
+ * 页面里 wx:for 只渲染一份、数据是占位文本，所以看的是骨架而非真实内容。
+ */
+async function shotPages(names) {
+  const app = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8'));
+  const list = names.length ? names : ['pages/profile/profile', 'pages/member/member', 'pages/mine/mine'];
+  const outDir = path.join(TMP, 'shots');
+  fs.mkdirSync(outDir, { recursive: true });
+  const saved = [];
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    const wxml = fs.readFileSync(path.join(MP, p + '.wxml'), 'utf8');
+    const wxssPath = path.join(MP, p + '.wxss');
+    const pageCss = fs.existsSync(wxssPath) ? inlineImports(fs.readFileSync(wxssPath, 'utf8'), path.dirname(wxssPath), 0) : '';
+    let using = {};
+    try {
+      using = JSON.parse(fs.readFileSync(path.join(MP, p + '.json'), 'utf8')).usingComponents || {};
+    } catch (e) {
+      /* 无所谓 */
+    }
+    const file = path.join(TMP, 'shot' + i + '.html');
+    fs.writeFileSync(file, buildDoc(buildCss(pageCss), wxmlToHtml(wxml, using, {}), MEASURE(VIEWPORT)), 'utf8');
+    const r = await render(file);
+    const png = path.join(outDir, p.replace(/[/\\]/g, '_').replace('pages_', '') + '.png');
+    await run(
+      chrome,
+      [
+        '--headless=new',
+        '--disable-gpu',
+        '--no-sandbox',
+        '--hide-scrollbars',
+        '--virtual-time-budget=3000',
+        // 高度按实测内容给，宽度会被无头 Chrome 抬到最小 500（右边多一条白，不影响判断）
+        '--window-size=' + VIEWPORT + ',' + Math.min(r.bodyHeight + 20, 4000),
+        '--screenshot=' + png,
+        'file:///' + file.replace(/\\/g, '/'),
+      ],
+      { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }
+    );
+    saved.push(png);
+    console.log('  ' + p + '  →  ' + png);
+  }
+  console.log('\n截图目录：' + outDir + '（探针不自动删，看完可随手删）');
+  return 0;
+}
+
 // ---------------------------------------------------------------- 入口
 
 (async () => {
@@ -361,9 +414,11 @@ async function probeComponents() {
   }
   const arg = process.argv.slice(2);
   let code = 0;
+  const shotArg = arg.find((a) => a === '--shot' || a.startsWith('--shot='));
   if (arg.includes('--pages')) code = await probePages(false);
   else if (arg.includes('--stress')) code = await probePages(true);
   else if (arg.includes('--components')) code = await probeComponents();
+  else if (shotArg) code = await shotPages(shotArg.includes('=') ? shotArg.split('=')[1].split(',') : []);
   else code = await probeComponent();
   process.exit(code);
 })().catch((e) => {

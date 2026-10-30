@@ -14,7 +14,7 @@
   <block wx:elif="{{error}}">
     <view class="surface err">
       <text class="err-text">{{error}}</text>
-      <button class="btn ghost small" bindtap="load">重试</button>
+      <button class="btn ghost sm" bindtap="load">重试</button>
     </view>
   </block>
 
@@ -27,11 +27,11 @@
         <block wx:if="{{missingText}}">还缺模板 id：{{missingText}}。</block>
         这段时间里，「消息」页的站内信照常能用，只是不会有微信服务通知。
       </view>
-      <button class="btn ghost small" bindtap="goMessages">先去看消息</button>
+      <button class="btn ghost sm" bindtap="goMessages">先去看消息</button>
     </view>
 
     <!-- 1. 绑微信 -->
-    <view class="section-title">第一步 · 绑定微信</view>
+    <view class="sec-title">第一步 · 绑定微信</view>
     <view class="surface card">
       <block wx:if="{{linked}}">
         <view class="row">
@@ -49,7 +49,7 @@
     </view>
 
     <!-- 2. 关注类别 -->
-    <view class="section-title">第二步 · 想看什么</view>
+    <view class="sec-title">第二步 · 想看什么</view>
     <view class="surface card">
       <view wx:for="{{categories}}" wx:key="key" class="sw-row">
         <view class="sw-main">
@@ -67,7 +67,7 @@
     </view>
 
     <!-- 3. 领额度 -->
-    <view class="section-title">第三步 · 领取提醒次数</view>
+    <view class="sec-title">第三步 · 领取提醒次数</view>
     <view class="surface card">
       <view wx:for="{{templates}}" wx:key="key" class="tpl-row">
         <view class="tpl-main">

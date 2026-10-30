@@ -2,7 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8rpx 4rpx 20rpx;
+  padding: 8rpx 0 24rpx;
 }
 .msg-head-main {
   display: flex;
@@ -43,7 +43,7 @@
   font-size: 20rpx;
   color: var(--brand-on-soft);
   background: rgba(176, 43, 37, 0.08);
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   padding: 2rpx 10rpx;
 }
 .msg-time {
@@ -103,34 +103,7 @@
   line-height: 1.7;
 }
 
-/* .btn 没有全局定义（每个页面各写一份），这里补上本页需要的三档 */
-.btn {
-  background: var(--brand);
-  color: #ffffff;
-  border-radius: var(--radius);
-  font-size: 30rpx;
-  font-weight: 500;
-}
-.btn::after {
-  border: none;
-}
-.btn.ghost {
-  background: var(--bg-card);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn.small {
-  margin-top: 18rpx;
-  font-size: 26rpx;
-  height: 72rpx;
-  line-height: 72rpx;
-}
-/* 页头那两个按钮要跟标题在同一行，所以比 small 还紧一档 */
-.btn.tiny {
-  display: inline-block;
-  margin: 0;
-  padding: 0 20rpx;
-  height: 56rpx;
-  line-height: 56rpx;
-  font-size: 22rpx;
+/* 按钮视觉属性统一在 app.wxss（.btn / .ghost / .sm / .xs），这里只留本页间距 */
+.btn.sm {
+  margin-top: 24rpx;
 }

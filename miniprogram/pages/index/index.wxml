@@ -23,9 +23,9 @@
   </view>
 
   <view class="grid">
-    <view wx:for="{{modules}}" wx:key="key" class="card" data-name="{{item.name}}" data-path="{{item.path}}" bindtap="onModule">
-      <view class="card-name">{{item.name}}</view>
-      <view class="card-desc">{{item.desc}}</view>
+    <view wx:for="{{modules}}" wx:key="key" class="surface mod-card" data-name="{{item.name}}" data-path="{{item.path}}" bindtap="onModule">
+      <view class="mod-name">{{item.name}}</view>
+      <view class="mod-desc">{{item.desc}}</view>
     </view>
   </view>
 

@@ -14,8 +14,8 @@
         <text class="msg-count-label">条未读</text>
       </view>
       <view class="msg-head-acts">
-        <button wx:if="{{unread > 0}}" class="btn ghost tiny" bindtap="markAll" loading="{{marking}}">全部已读</button>
-        <button class="btn ghost tiny" bindtap="goSubscribe">提醒设置</button>
+        <button wx:if="{{unread > 0}}" class="btn ghost xs" bindtap="markAll" loading="{{marking}}">全部已读</button>
+        <button class="btn ghost xs" bindtap="goSubscribe">提醒设置</button>
       </view>
     </view>
 
@@ -23,14 +23,14 @@
 
     <view wx:elif="{{error}}" class="surface err">
       <text class="err-text">{{error}}</text>
-      <button class="btn ghost small" bindtap="load">重试</button>
+      <button class="btn ghost sm" bindtap="load">重试</button>
     </view>
 
     <block wx:elif="{{items.length === 0}}">
       <view class="surface guest">
         <view class="guest-title">还没有消息</view>
         <view class="muted guest-desc">有人报名你发起的组队、或者你关注的类别有新内容时，会出现在这里。</view>
-        <button class="btn ghost small" bindtap="goParty">去看看组队</button>
+        <button class="btn ghost sm" bindtap="goParty">去看看组队</button>
       </view>
     </block>
 

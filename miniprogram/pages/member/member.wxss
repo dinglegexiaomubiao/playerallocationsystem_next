@@ -5,13 +5,13 @@
    要改战绩和解读的样子请改组件，改这里不生效。 */
 .hero {
   display: flex;
-  padding: 26rpx;
+  padding: 24rpx;
   align-items: flex-start;
 }
 .avatar {
   width: 128rpx;
   height: 128rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius);
   background: var(--bg-subtle);
   margin-right: 24rpx;
   flex: 0 0 auto;
@@ -99,13 +99,6 @@
 .block {
   margin-top: 28rpx;
 }
-.sec-title {
-  margin-bottom: 12rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 1rpx;
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -115,7 +108,7 @@
   color: var(--text-2);
   background: var(--bg-subtle);
   padding: 4rpx 16rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin: 0 10rpx 10rpx 0;
 }
 .text {
@@ -135,7 +128,7 @@
 }
 .rec {
   padding: 18rpx 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--stroke) solid var(--border);
 }
 .rec:last-child {
   border-bottom: none;
@@ -160,7 +153,7 @@
   color: var(--text-2);
   background: var(--bg-subtle);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
 }
 .rec-rank.is-gold {
   color: var(--gold);

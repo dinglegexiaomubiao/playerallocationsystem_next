@@ -1,14 +1,4 @@
-.section-title {
-  margin: 36rpx 6rpx 14rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 1rpx;
-}
 
-.card {
-  padding: 24rpx;
-}
 
 .row {
   display: flex;
@@ -56,7 +46,7 @@
   display: flex;
   align-items: center;
   padding: 16rpx 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--stroke) solid var(--border);
 }
 .sw-row:last-of-type {
   border-bottom: none;
@@ -76,7 +66,7 @@
   display: flex;
   align-items: flex-start;
   padding: 16rpx 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--stroke) solid var(--border);
 }
 .tpl-main {
   flex: 1;
@@ -127,25 +117,7 @@
   line-height: 1.7;
 }
 
-/* .btn 没有全局定义（每页各写一份），这里补本页用到的两档 */
+/* 按钮视觉属性统一在 app.wxss，这里只留本页间距 */
 .btn {
-  background: var(--brand);
-  color: #ffffff;
-  border-radius: var(--radius);
-  font-size: 30rpx;
-  font-weight: 500;
-  margin-top: 20rpx;
-}
-.btn::after {
-  border: none;
-}
-.btn.ghost {
-  background: var(--bg-card);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn.small {
-  font-size: 26rpx;
-  height: 72rpx;
-  line-height: 72rpx;
+  margin-top: 24rpx;
 }

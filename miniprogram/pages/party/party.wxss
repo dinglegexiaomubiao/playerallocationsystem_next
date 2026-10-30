@@ -6,9 +6,9 @@
   font-size: 26rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   padding: 8rpx 24rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   margin-right: 12rpx;
 }
 .tab.is-on {
@@ -44,7 +44,7 @@
   margin-left: 12rpx;
   font-size: 20rpx;
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
 }
 .status.is-open {
   color: var(--brand-on-soft);
@@ -65,7 +65,7 @@
   color: var(--text-2);
   background: var(--bg-subtle);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin: 4rpx 8rpx 0 0;
 }
 .tag.is-type {
@@ -103,7 +103,7 @@
 .signups {
   margin-top: 12rpx;
   padding-top: 12rpx;
-  border-top: 1px solid var(--border);
+  border-top: var(--stroke) solid var(--border);
 }
 .su-head {
   font-size: 24rpx;
@@ -166,7 +166,7 @@
   justify-content: space-between;
   margin-top: 14rpx;
   padding-top: 12rpx;
-  border-top: 1px solid var(--border);
+  border-top: var(--stroke) solid var(--border);
 }
 
 /* 顶部：筛选 + 发组队 */
@@ -185,7 +185,7 @@
   color: #ffffff;
   background: var(--brand);
   padding: 8rpx 20rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 
 /* 报名 / 取消报名 / 关闭 / 重新招募 / 删除。
@@ -213,13 +213,13 @@
 .act.is-ghost {
   background: var(--bg-card);
   color: var(--text-2);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
 }
 /* 删除是不可逆操作，用描边红而不是实心红，别跟「报名」抢注意力 */
 .act.is-danger {
   background: var(--bg-card);
   color: var(--brand);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
 }
 
 /* 已过期折叠条：默认收起，点一下展开下面的过期卡片 */
@@ -227,9 +227,9 @@
   display: flex;
   align-items: center;
   margin: 8rpx 0 16rpx;
-  padding: 18rpx 22rpx;
+  padding: 16rpx 24rpx;
   background: var(--bg-subtle);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
 }
 .fold-arrow {
@@ -258,7 +258,7 @@
   height: 72rpx;
   padding: 0 22rpx;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
   font-size: 26rpx;
   color: var(--text);
@@ -275,9 +275,9 @@
   font-size: 24rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   padding: 6rpx 18rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   margin: 0 12rpx 12rpx 0;
 }
 .chip.is-on {
@@ -296,8 +296,8 @@
   height: 60rpx;
   padding: 0 18rpx;
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 999rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-pill);
   margin-right: 12rpx;
 }
 .date-pick.is-on {

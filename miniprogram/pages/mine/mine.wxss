@@ -6,7 +6,7 @@
 .avatar {
   width: 96rpx;
   height: 96rpx;
-  border-radius: 14rpx;
+  border-radius: var(--radius-sm);
   background: var(--brand);
   color: #ffffff;
   font-size: 38rpx;
@@ -36,7 +36,7 @@
   color: var(--brand-on-soft);
   background: rgba(176, 43, 37, 0.08);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
 }
 
 .guest {
@@ -93,42 +93,18 @@
   line-height: 34rpx;
   padding: 0 8rpx;
   margin-right: 8rpx;
-  border-radius: 17rpx;
+  border-radius: var(--radius);
   background: var(--brand);
   color: #ffffff;
   font-size: 20rpx;
   text-align: center;
 }
 
-.btn {
-  background: var(--brand);
-  color: #ffffff;
-  border-radius: var(--radius);
-  font-size: 30rpx;
-  font-weight: 500;
-}
-.btn::after {
-  border: none;
-}
-.btn.ghost {
-  background: var(--bg-card);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn.small {
-  margin-top: 18rpx;
-  font-size: 26rpx;
-  height: 72rpx;
-  line-height: 72rpx;
+/* 按钮视觉属性统一在 app.wxss，这里只留本页间距 */
+.btn.sm {
+  margin-top: 24rpx;
 }
 
-.section-title {
-  margin: 40rpx 0 16rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 1rpx;
-}
 .dev {
   padding: 24rpx;
 }
@@ -141,7 +117,7 @@
   height: 76rpx;
   padding: 0 20rpx;
   background: var(--bg-page);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
   font-size: 26rpx;
   color: var(--text);

@@ -19,8 +19,8 @@
   line-height: 80rpx;
   padding: 0 14rpx;
   background: var(--bg-page, #f5f6f8);
-  border: 1px solid var(--border, #dee2e7);
-  border-radius: 8rpx;
+  border: var(--stroke) solid var(--border);
+  border-radius: var(--radius-xs);
   font-size: 26rpx;
   color: var(--text, #15181c);
   overflow: hidden;

@@ -30,7 +30,7 @@
       <view class="ov-hint">点区划可下钻，点人数看名单</view>
     </view>
 
-    <view class="section-title">人数排行</view>
+    <view class="sec-title">人数排行</view>
 
     <view class="surface board">
       <view wx:for="{{areas}}" wx:key="adcode" class="area">
@@ -71,7 +71,7 @@
 
     <!-- 未填地区：这是「热力图看起来少人」的真正原因，必须摆出来 -->
     <block wx:if="{{missingTotal}}">
-      <view class="section-title">
+      <view class="sec-title">
         未填地区
         <text class="section-note">{{missingTotal}} 位</text>
       </view>

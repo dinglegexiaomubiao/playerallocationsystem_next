@@ -91,12 +91,12 @@
   <!-- 后端地址只在开发版/体验版出现：正式版露出来等于告诉审核员「这是个可以指向任意
        服务器的调试壳」，而且让普通用户看到「开发者设置」本身就是扣分项。 -->
   <block wx:if="{{showDevTools}}">
-    <view class="section-title">开发者设置</view>
+    <view class="sec-title">开发者设置</view>
     <view class="surface dev">
       <view class="label">后端地址</view>
       <input class="input" value="{{base}}" bindinput="onBase" placeholder="https://..." />
       <view class="dev-tip">只在调试时改；正式环境用默认域名。</view>
-      <button class="btn ghost small" bindtap="save">保存地址</button>
+      <button class="btn ghost sm" bindtap="save">保存地址</button>
     </view>
   </block>
 

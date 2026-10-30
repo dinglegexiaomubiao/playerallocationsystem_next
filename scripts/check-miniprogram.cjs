@@ -234,6 +234,29 @@ for (const f of wxsss) {
       );
     }
   }
+
+  // 8d) 设计令牌护栏（2026-10-30 统一 UI 时立的规矩）：圆角只认 --radius-xs/sm/radius/
+  //     lg/pill 五档，描边只认 var(--stroke)=1px。之前全仓库攒了 17 种圆角、11 种边框
+  //     写法，还有 5 处 1rpx 描边 —— 1rpx 在 2x 屏只有半个物理像素，和旁边的 1px 放
+  //     一起看着就发虚。以后再写 rpx 圆角 / 1rpx 边框，这里直接红。
+  const radiusLit = stripped.match(/border-radius:\s*([^;]*rpx[^;]*);/);
+  if (radiusLit) {
+    bad(
+      path.relative(ROOT, f) +
+        ' border-radius 用了 rpx 字面量 → ' +
+        radiusLit[1].trim() +
+        '（改用 var(--radius-xs/sm/radius/lg/pill)）'
+    );
+  }
+  const thinBorder = stripped.match(/border(?:-[a-z]+)?(?:-width)?:\s*1rpx/);
+  if (thinBorder) {
+    bad(
+      path.relative(ROOT, f) +
+        ' 出现 1rpx 描边 → ' +
+        thinBorder[0].trim() +
+        '（改用 var(--stroke)，2x 屏上 1rpx 只有半个物理像素）'
+    );
+  }
 }
 
 // 9) 页面 / 组件 / utils 的 JS 不许碰浏览器 API，且语法必须能被解析

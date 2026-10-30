@@ -4,10 +4,10 @@
 
 .hero {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: 32rpx 28rpx;
+  padding: 32rpx 24rpx;
   margin-bottom: 20rpx;
 }
 .hero-title {
@@ -24,7 +24,7 @@
 
 .cta {
   background: rgba(176, 43, 37, 0.05);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
   border-radius: var(--radius-lg);
   padding: 28rpx 24rpx;
   margin-bottom: 20rpx;
@@ -54,7 +54,7 @@
   display: flex;
   align-items: center;
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
   padding: 16rpx 20rpx;
   margin-bottom: 20rpx;
@@ -65,7 +65,7 @@
   color: var(--brand-on-soft);
   background: rgba(176, 43, 37, 0.08);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin-right: 16rpx;
 }
 .ticker-swiper {
@@ -100,21 +100,19 @@
   flex-wrap: wrap;
   justify-content: space-between;
 }
-.card {
+/* 首页两列模块卡：底色/描边/圆角来自全局 .surface，这里只管栅格 */
+.mod-card {
   width: 48.5%;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24rpx 20rpx;
+  padding: 24rpx;
   margin-bottom: 16rpx;
   box-sizing: border-box;
 }
-.card-name {
+.mod-name {
   font-size: 30rpx;
   font-weight: 500;
   color: var(--text);
 }
-.card-desc {
+.mod-desc {
   margin-top: 6rpx;
   font-size: 22rpx;
   color: var(--text-3);

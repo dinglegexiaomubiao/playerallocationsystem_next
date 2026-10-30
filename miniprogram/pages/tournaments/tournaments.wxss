@@ -9,9 +9,9 @@
   font-size: 26rpx;
   color: var(--text-2);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   padding: 8rpx 24rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   margin-right: 12rpx;
 }
 .tab.is-on {
@@ -60,7 +60,7 @@
   color: var(--brand-on-soft);
   background: rgba(176, 43, 37, 0.08);
   padding: 2rpx 12rpx;
-  border-radius: 6rpx;
+  border-radius: var(--radius-sm);
   margin-left: 12rpx;
 }
 .muted {

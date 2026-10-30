@@ -28,20 +28,13 @@
   color: var(--text-3);
 }
 
-.section-title {
-  margin: 28rpx 0 14rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--text-3);
-  letter-spacing: 1rpx;
-}
 
 .board {
   padding: 8rpx 24rpx;
 }
 .bar-row {
-  padding: 18rpx 0;
-  border-bottom: 1px solid var(--border);
+  padding: 16rpx 0;
+  border-bottom: var(--stroke) solid var(--border);
 }
 .bar-row:last-child {
   border-bottom: none;
@@ -68,13 +61,13 @@
 .bar-track {
   margin-top: 10rpx;
   height: 12rpx;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
   background: var(--bg-subtle);
   overflow: hidden;
 }
 .bar-fill {
   height: 100%;
-  border-radius: 999rpx;
+  border-radius: var(--radius-pill);
 }
 /* 三档色阶：人越多越接近品牌红，别用透明度（浅底上看不出差别） */
 .bar-fill.lv1 {
@@ -136,7 +129,7 @@
 .ov-hint {
   margin-top: 16rpx;
   padding-top: 14rpx;
-  border-top: 1px dashed var(--border);
+  border-top: var(--stroke) dashed var(--border);
   font-size: 21rpx;
   color: var(--text-3);
 }
@@ -156,8 +149,8 @@
   padding: 0 8rpx;
   font-size: 18rpx;
   color: var(--brand);
-  border: 1px solid var(--brand-border);
-  border-radius: 4rpx;
+  border: var(--stroke) solid var(--brand-border);
+  border-radius: var(--radius-xs);
 }
 .drill-tag {
   flex: 0 0 auto;
@@ -174,12 +167,12 @@
 /* ---- 名单 ---- */
 .area-people {
   padding: 2rpx 0 8rpx 12rpx;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--stroke) solid var(--border);
 }
 .people-row {
   display: flex;
   align-items: center;
-  padding: 12rpx 0;
+  padding: 16rpx 0;
 }
 .people-initial {
   flex: 0 0 auto;
@@ -191,7 +184,7 @@
   font-size: 22rpx;
   color: var(--text-3);
   background: var(--bg-subtle);
-  border-radius: 8rpx;
+  border-radius: var(--radius-xs);
 }
 .people-name {
   flex: 1;
@@ -208,7 +201,7 @@
   color: var(--text-3);
 }
 .more-row {
-  padding: 18rpx 0;
+  padding: 16rpx 0;
   text-align: center;
   font-size: 23rpx;
   color: var(--brand);

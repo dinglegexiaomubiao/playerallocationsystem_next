@@ -1,5 +1,5 @@
 .card {
-  padding: 32rpx 28rpx;
+  padding: 24rpx;
 }
 .title {
   font-size: 36rpx;
@@ -25,7 +25,7 @@
   height: 80rpx;
   padding: 0 22rpx;
   background: var(--bg-page);
-  border: 1px solid var(--border);
+  border: var(--stroke) solid var(--border);
   border-radius: var(--radius);
   font-size: 28rpx;
   color: var(--text);
@@ -38,7 +38,7 @@
   margin-bottom: 18rpx;
   padding: 16rpx 18rpx;
   background: rgba(176, 43, 37, 0.06);
-  border: 1px solid var(--brand-border);
+  border: var(--stroke) solid var(--brand-border);
   border-radius: var(--radius);
   font-size: 24rpx;
   color: var(--brand-on-soft);
@@ -49,20 +49,11 @@
   color: var(--text-2);
 }
 
+/* 视觉属性（含 .btn::after 的默认灰边）统一在 app.wxss，这里只留本页间距 */
 .btn {
-  margin-top: 6rpx;
-  background: var(--brand);
-  color: #ffffff;
-  border-radius: var(--radius);
-  font-size: 30rpx;
-  font-weight: 500;
+  margin-top: 8rpx;
 }
-.btn::after {
-  border: none;
-}
-.btn.is-busy {
-  opacity: 0.7;
-}
+
 
 .tip {
   margin-top: 24rpx;
