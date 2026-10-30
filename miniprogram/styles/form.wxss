@@ -23,7 +23,12 @@
   color: var(--text-3);
 }
 
+/* ⚠ 小程序盒模型默认 content-box：只要给这些控件写了 width: 100%（或放进 flex
+   且 flex-basis 满宽），padding 和 1px 边框就会额外加在 100% 之外，把页面顶出
+   横向滚动条。textarea 早就写了 border-box，input / picker 补齐，保持一致 ——
+   将来谁给它们加 width 都不会再踩一次。 */
 .input {
+  box-sizing: border-box;
   height: 80rpx;
   padding: 0 22rpx;
   background: var(--bg-page);
@@ -49,8 +54,9 @@
   color: var(--text);
 }
 
-/* picker 外观做成跟 input 一样 */
+/* picker 外观做成跟 input 一样（同样要 border-box） */
 .picker {
+  box-sizing: border-box;
   height: 80rpx;
   line-height: 80rpx;
   padding: 0 22rpx;

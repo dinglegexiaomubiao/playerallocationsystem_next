@@ -90,6 +90,7 @@
 /* 口径备注：场次 / 生涯，一行放不下就换行，不与上面的数字抢注意力 */
 .stats-meta {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   margin-top: 18rpx;
@@ -109,6 +110,7 @@
 /* GPM / 场均伤害：唯一的近 20 场窗口，必须自带口径标签 */
 .stats-window {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -132,6 +134,7 @@
 /* 近 20 场最高：网页端是工具栏右侧一句，这里拆成三个并列小项 */
 .stats-best {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -155,6 +158,7 @@
 /* 模式分布：网页端那排可点筛选 tab 的静态版 */
 .stats-modes {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   margin-top: 12rpx;
@@ -171,6 +175,7 @@
 
 .stats-heroes {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   margin-top: 16rpx;
@@ -185,9 +190,12 @@
   margin: 0 10rpx 10rpx 0;
 }
 
-/* 近 20 场色块：胜绿败红，左侧色条 + 英雄名，一行 4 个 */
+/* 近 20 场色块：胜绿败红，左侧色条 + 英雄名，一行 4 个
+   ⚠ 小程序盒模型默认是 content-box：width 里不含 padding 和 border，
+   不写 border-box 的话每格实际宽 25%+，4 个凑不满一行（只出 3 列）并且整体右溢。 */
 .tiles {
   flex: 0 0 100%;
+  box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
   margin-top: 16rpx;
@@ -195,6 +203,7 @@
   border-top: 1rpx solid var(--border);
 }
 .tile {
+  box-sizing: border-box;
   width: calc(25% - 12rpx);
   margin: 0 16rpx 12rpx 0;
   padding: 10rpx 8rpx;
@@ -242,6 +251,7 @@
 /* 逐场明细 */
 .mlist {
   flex: 0 0 100%;
+  box-sizing: border-box;
   margin-top: 6rpx;
   padding: 8rpx 24rpx 0;
 }

@@ -210,6 +210,30 @@ for (const f of wxsss) {
   if (openBrace !== closeBrace) {
     bad(path.relative(ROOT, f) + ' 花括号不成对（{ ' + openBrace + ' 个，} ' + closeBrace + ' 个）');
   }
+
+  // 8c) 横向溢出：小程序盒模型默认 content-box，`width: 100%` / `flex: 0 0 100%` /
+  //     `width: calc(...)` 再叠左右 padding 或边框，实际宽度就超过父容器 ——
+  //     页面莫名其妙可以左右滑动、色块只排得下 3 列，都是这个（个人信息页 2026-10-30）。
+  //     这类规则必须显式写 box-sizing: border-box。
+  const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+  let rm;
+  while ((rm = ruleRe.exec(stripped))) {
+    const sel = rm[1].trim().replace(/\s+/g, ' ');
+    const body = rm[2];
+    const fullWidth =
+      /width\s*:\s*100%/.test(body) ||
+      /flex\s*:\s*0\s+0\s+100%/.test(body) ||
+      /width\s*:\s*calc\(/.test(body);
+    const spaced = /padding\s*:/.test(body) || /border\s*:[^;]*\d/.test(body);
+    if (fullWidth && spaced && !/box-sizing\s*:\s*border-box/.test(body)) {
+      bad(
+        path.relative(ROOT, f) +
+          ' ' +
+          sel +
+          ' 会横向溢出（满宽 + padding/border 却没写 box-sizing: border-box）'
+      );
+    }
+  }
 }
 
 // 9) 页面 / 组件 / utils 的 JS 不许碰浏览器 API，且语法必须能被解析
