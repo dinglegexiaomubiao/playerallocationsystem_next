@@ -450,7 +450,8 @@ const call = async (url, opts = {}) => {
     });
     ok(grantAgain.json && grantAgain.json.editors.length === 1, '重复加同一个人不会变成两条');
 
-    const grantList = await call('/api/memories');
+    // ⚠ 必须带 cookie：granted 是按「谁来问」算的，匿名请求恒为 false
+    const grantList = await call('/api/memories', { cookie: ck });
     const grantedRow = ((grantList.json && grantList.json.memories) || []).find(
       (m) => String(m.id) === String(mid)
     );
