@@ -32,6 +32,8 @@
   font-weight: 600;
   color: var(--text);
   line-height: 1.3;
+  /* 昵称是用户自己填的：中文让它换行，长英文/数字串必须能断，否则会压到右边的分数上 */
+  word-break: break-word;
 }
 .guild {
   display: flex;

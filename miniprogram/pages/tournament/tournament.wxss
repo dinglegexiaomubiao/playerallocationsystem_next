@@ -208,14 +208,31 @@
 .signup:last-of-type {
   border-bottom: 0;
 }
+/* 报名行：昵称 + 队长 + 队伍名 + 分数挤一行且不换行。昵称和队伍名都是用户自己填的，
+   不设 min-width:0 + 省略号的话，长英文名会把整行顶出屏幕（实测能到 549pt，页面右滑）。 */
 .signup-line {
   display: flex;
   align-items: baseline;
 }
 .signup-name {
   flex: 0 1 auto;
+  min-width: 0;
   font-size: 27rpx;
   color: var(--text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.signup-team {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+  margin-left: 10rpx;
+  font-size: 21rpx;
+  color: var(--brand);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .signup-group {
   margin-left: 10rpx;
@@ -705,11 +722,7 @@
   display: flex;
   flex-direction: column;
 }
-.signup-team {
-  margin-left: 10rpx;
-  font-size: 21rpx;
-  color: var(--brand);
-}
+/* .signup-team 的定义在报名行那一节（见 .signup-line 附近），这里别重复定义 */
 .signup-team.is-none {
   color: var(--text-3);
 }
