@@ -297,25 +297,25 @@
 
 /* ───────── 以下为本次补齐赛事页新增结构（Tab / 概览定义表 / 赛程阵容 / 队伍头像 / 报名头像） ───────── */
 
-/* ---- 顶部四 Tab（对齐网页端四个分区） ---- */
+/* ---- 顶部四 Tab（对齐网页端四个分区）：分段控件，四个 tab 同高同宽、始终一行 ---- */
 .tabs {
   display: flex;
+  align-items: stretch;
   margin: 18rpx 0 4rpx;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
+  background: var(--bg-subtle);
+  border-radius: 999rpx;
+  padding: 6rpx;
 }
 .tab {
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
   text-align: center;
-  padding: 18rpx 0;
+  padding: 14rpx 4rpx;
   font-size: 26rpx;
+  line-height: 1.2;
   color: var(--text-2);
-  border-right: 1px solid var(--border);
-}
-.tab:last-child {
-  border-right: 0;
+  border-radius: 999rpx;
 }
 .tab.is-on {
   color: #ffffff;
@@ -328,7 +328,7 @@
   margin-left: 6rpx;
   padding: 0 8rpx;
   font-size: 20rpx;
-  background: var(--bg-subtle);
+  background: var(--bg-card);
   color: var(--text-3);
   border-radius: 999rpx;
 }
