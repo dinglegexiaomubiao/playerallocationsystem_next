@@ -73,7 +73,7 @@ async function openPage(id) {
   const t0 = p.data.teams[0] || {};
   expect(!!t0.name && t0.memberCount >= 1, '首队「' + t0.name + '」有 ' + t0.memberCount + ' 名成员');
   expect(!!t0.captain, '首队队长：' + t0.captain);
-  expect(t0.open === false, '队伍成员默认折叠');
+  expect(t0.open === true, '队伍成员默认展开（对齐网页 TeamTable，方便一眼看到队里有哪些人）');
 
   expect(p.data.signupTotal === 51, '报名名单 51 人（实际 ' + p.data.signupTotal + '）');
   expect(p.data.signupList.length === 8, '首屏只渲染 8 条（实际 ' + p.data.signupList.length + '）');
@@ -106,15 +106,33 @@ async function openPage(id) {
 
   // ---------- 交互：折叠展开 ----------
   console.log('— 折叠与展开 —');
+  // 队伍默认展开，点一下收起；只动被点的那一队，别连坐其他队
+  expect(p.data.teams[0].open === true, '队伍成员默认展开');
   p.toggleTeam({ currentTarget: { dataset: { idx: 0 } } });
-  expect(p.data.teams[0].open === true, '点队伍后展开成员');
+  expect(p.data.teams[0].open === false, '点队伍后收起成员');
   expect(
     p.data.teams[0].members.length >= 1 && !!p.data.teams[0].members[0].name,
-    '展开后有成员：' + (p.data.teams[0].members[0] || {}).name
+    '收起前已有成员数据：' + (p.data.teams[0].members[0] || {}).name
   );
-  expect(p.data.teams[1].open === false, '只展开被点的那一队（没连坐）');
+  expect(p.data.teams[1].open === true, '只收起被点的那一队（没连坐）');
   p.toggleTeam({ currentTarget: { dataset: { idx: 0 } } });
-  expect(p.data.teams[0].open === false, '再点一次收起');
+  expect(p.data.teams[0].open === true, '再点一次展开');
+
+  // ---------- 阵容展开：验证 toggleMatch 真的把十人塞进 sides[].list ----------
+  console.log('— 阵容展开 —');
+  const scored2 = allItems.find((x) => x.finished);
+  if (scored2) {
+    const ri2 = p.data.rounds.findIndex((r) => r.items.indexOf(scored2) >= 0);
+    const mi2 = p.data.rounds[ri2].items.indexOf(scored2);
+    p.toggleMatch({ currentTarget: { dataset: { ri: ri2, mi: mi2 } } });
+    const node = p.data.rounds[ri2].items[mi2];
+    const totalP = node.sides[0].list.length + node.sides[1].list.length;
+    expect(node.open === true, '点开对阵后展开阵容');
+    expect(totalP === 10, '天辉 + 夜魇共 10 人阵容（实际 ' + totalP + '）');
+    expect(!!(node.sides[0].list[0] || {}).heroName, '阵容里带英雄名');
+  } else {
+    bad('没有已打完的对阵可展开阵容');
+  }
 
   p.toggleSignups();
   expect(p.data.signupList.length === 51, '展开全部后 51 条（实际 ' + p.data.signupList.length + '）');

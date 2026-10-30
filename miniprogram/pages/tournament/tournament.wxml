@@ -14,43 +14,186 @@
       <view wx:if="{{t.prizeText}}" class="prize">奖品：{{t.prizeText}}</view>
     </view>
 
-    <!-- 名次 -->
-    <block wx:if="{{places.length}}">
-      <view class="sec-title">名次</view>
-      <view class="surface">
-        <view wx:for="{{places}}" wx:key="key" wx:for-item="p" class="place">
-          <text class="place-label">{{p.label}}</text>
-          <text class="place-team">{{p.team}}</text>
-          <text wx:if="{{p.note}}" class="place-note">{{p.note}}</text>
-        </view>
-      </view>
-    </block>
+    <!-- 四个 Tab，对齐网页端：概览 / 赛程与对阵 / 参赛队伍 / 报名选手 -->
+    <view class="tabs">
+      <text class="tab {{tab === 'overview' ? 'is-on' : ''}}" data-key="overview" bindtap="onTab">概览</text>
+      <text class="tab {{tab === 'matches' ? 'is-on' : ''}}" data-key="matches" bindtap="onTab">
+        赛程<text wx:if="{{stats.matchCount}}" class="tab-n">{{stats.matchCount}}</text>
+      </text>
+      <text class="tab {{tab === 'teams' ? 'is-on' : ''}}" data-key="teams" bindtap="onTab">
+        队伍<text wx:if="{{stats.teamCount}}" class="tab-n">{{stats.teamCount}}</text>
+      </text>
+      <text class="tab {{tab === 'players' ? 'is-on' : ''}}" data-key="players" bindtap="onTab">
+        报名<text wx:if="{{stats.signupCount}}" class="tab-n">{{stats.signupCount}}</text>
+      </text>
+    </view>
 
-    <!-- 赛程：多数赛事没编对阵，这里为空就不显示整块 -->
-    <block wx:if="{{rounds.length}}">
-      <view class="sec-title">赛程</view>
-      <view wx:for="{{rounds}}" wx:key="id" wx:for-item="round" class="round">
-        <view class="round-name">{{round.name}}</view>
+    <!-- ==================== 概览 ==================== -->
+    <block wx:if="{{tab === 'overview'}}">
+      <block wx:if="{{places.length}}">
+        <view class="sec-title">最终名次</view>
         <view class="surface">
-          <view wx:for="{{round.items}}" wx:key="key" wx:for-item="m" class="match">
-            <view class="match-row">
-              <text class="team-a {{m.winner === m.a ? 'win' : ''}}">{{m.a}}</text>
-              <text class="score {{m.finished ? '' : 'dim'}}">{{m.scoreText}}</text>
-              <text class="team-b {{m.winner === m.b ? 'win' : ''}}">{{m.b}}</text>
-            </view>
-            <view class="match-meta">
-              <text class="muted">{{m.statusText}}</text>
-              <text wx:if="{{m.grudge}}" class="grudge">恩怨局</text>
-              <text wx:if="{{m.note}}" class="muted">{{m.note}}</text>
-            </view>
+          <view wx:for="{{places}}" wx:key="key" wx:for-item="p" class="place">
+            <text class="place-label">{{p.label}}</text>
+            <text class="place-team">{{p.team}}</text>
+            <text wx:if="{{p.note}}" class="place-note">{{p.note}}</text>
           </view>
         </view>
+      </block>
+
+      <view class="sec-title">赛事信息</view>
+      <view class="surface deflist">
+        <view class="def">
+          <text class="def-k">时间</text>
+          <text class="def-v">{{t.dateText || '待定'}}</text>
+        </view>
+        <view class="def">
+          <text class="def-k">报名选手</text>
+          <text class="def-v">{{stats.signupCount}} 人</text>
+        </view>
+        <view class="def">
+          <text class="def-k">参赛选手</text>
+          <text class="def-v">{{stats.playerCount}} 人（{{stats.teamCount}} 支队伍）</text>
+        </view>
+        <view class="def">
+          <text class="def-k">已组队</text>
+          <text class="def-v">{{stats.signedCount}} / {{stats.signupCount}} 人</text>
+        </view>
+        <view class="def">
+          <text class="def-k">对阵场次</text>
+          <text class="def-v">{{stats.matchCount}} 场</text>
+        </view>
+        <view wx:if="{{t.sponsor}}" class="def">
+          <text class="def-k">赞助</text>
+          <text class="def-v">{{t.sponsor}}</text>
+        </view>
+        <view wx:if="{{t.prizeText}}" class="def">
+          <text class="def-k">奖品</text>
+          <text class="def-v gold">{{t.prizeText}}</text>
+        </view>
+      </view>
+
+      <block wx:if="{{recentItems.length}}">
+        <view class="sec-title">
+          赛果<text class="sec-sub">{{recentRoundName}}</text>
+        </view>
+        <view class="surface">
+          <view
+            wx:for="{{recentItems}}"
+            wx:key="key"
+            wx:for-item="m"
+            class="brief"
+            data-key="matches"
+            bindtap="gotoMatches"
+          >
+            <text class="brief-a {{m.aWin ? 'win' : ''}}">{{m.a}}</text>
+            <text class="brief-s {{m.finished ? '' : 'dim'}}">{{m.scoreText}}</text>
+            <text class="brief-b {{m.bWin ? 'win' : ''}}">{{m.b}}</text>
+          </view>
+          <view class="more" bindtap="gotoMatches">查看全部 {{stats.matchCount}} 场赛程</view>
+        </view>
+      </block>
+    </block>
+
+    <!-- ==================== 赛程与对阵 ==================== -->
+    <block wx:elif="{{tab === 'matches'}}">
+      <view wx:if="{{!rounds.length}}" class="surface center">赛程还没排，等组织者发出来</view>
+
+      <view wx:for="{{rounds}}" wx:key="id" wx:for-item="round" wx:for-index="ri" class="round">
+        <view class="round-name">
+          {{round.name}}<text class="round-n">{{round.items.length}} 场</text>
+        </view>
+
+        <view
+          wx:for="{{round.items}}"
+          wx:key="key"
+          wx:for-item="m"
+          wx:for-index="mi"
+          class="surface match"
+        >
+          <view class="match-head">
+            <text class="match-round">{{m.orderNo ? '第 ' + m.orderNo + ' 局' : '本局'}}</text>
+            <text class="match-time">{{m.timeText}}{{m.timeText && m.durText ? ' · ' : ''}}{{m.durText}}</text>
+          </view>
+
+          <view class="match-row">
+            <text class="team-a {{m.aWin ? 'win' : ''}}">{{m.a}}</text>
+            <text class="score {{m.finished ? '' : 'dim'}}">{{m.scoreText}}</text>
+            <text class="team-b {{m.bWin ? 'win' : ''}}">{{m.b}}</text>
+          </view>
+
+          <view class="match-meta">
+            <text class="tag">{{m.statusText}}</text>
+            <text wx:if="{{m.grudge}}" class="grudge">恩怨局</text>
+            <text wx:if="{{m.mid}}" class="mid" data-mid="{{m.mid}}" catchtap="copyMatchId">对局 {{m.mid}}</text>
+            <text
+              wx:if="{{m.playerCount}}"
+              class="toggle"
+              data-ri="{{ri}}"
+              data-mi="{{mi}}"
+              catchtap="toggleMatch"
+            >{{m.open ? '收起阵容' : '阵容 ' + m.playerCount + ' 人'}}</text>
+          </view>
+
+          <view wx:if="{{m.note}}" class="match-note">{{m.note}}</view>
+
+          <!-- 阵容：两队上下堆叠（网页端同款），每队一条汇总带 + 每人一行 -->
+          <block wx:if="{{m.open}}">
+            <view wx:for="{{m.sides}}" wx:key="key" wx:for-item="side" class="side">
+              <view class="side-bar {{side.key}} {{side.lose ? 'is-lose' : ''}}">
+                <text class="side-tag {{side.key}}">{{side.tag}}</text>
+                <text class="side-name">{{side.name}}</text>
+                <text wx:if="{{side.win}}" class="side-win">胜利</text>
+                <text wx:if="{{side.standin}}" class="side-standin">替补 {{side.standin}}</text>
+                <text wx:if="{{side.parsed}}" class="side-stats">杀敌 {{side.kills}} · 经济 {{side.nwText}}</text>
+                <text wx:else class="side-nodata">回放已过期</text>
+              </view>
+
+              <view
+                wx:for="{{side.list}}"
+                wx:key="key"
+                wx:for-item="p"
+                class="prow"
+                data-pid="{{p.playerId}}"
+                catchtap="onTapPlayer"
+              >
+                <image wx:if="{{p.heroIcon}}" class="p-hero" src="{{p.heroIcon}}" mode="aspectFill"></image>
+                <view wx:else class="p-hero p-hero-txt">{{p.heroName}}</view>
+
+                <view class="p-main">
+                  <view class="p-line">
+                    <text class="p-name">{{p.name}}</text>
+                    <text wx:if="{{p.standin}}" class="p-flag">替补</text>
+                    <text wx:if="{{side.parsed}}" class="p-kda">{{p.kdaText}}</text>
+                  </view>
+                  <view class="p-line2">
+                    <text wx:if="{{side.parsed}}" class="p-num">经济 {{p.nwText}}</text>
+                    <text wx:if="{{side.parsed}}" class="p-num">伤害 {{p.dmgText}}</text>
+                    <text wx:if="{{p.aghs}}" class="p-badge">杖</text>
+                    <text wx:if="{{p.shard}}" class="p-badge">晶</text>
+                    <view wx:if="{{side.parsed && p.items.length}}" class="p-items">
+                      <image
+                        wx:for="{{p.items}}"
+                        wx:for-item="it"
+                        wx:key="key"
+                        class="p-item"
+                        src="{{it.icon}}"
+                        mode="aspectFit"
+                      ></image>
+                    </view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
       </view>
     </block>
 
-    <!-- 队伍：点一下展开成员 -->
-    <block wx:if="{{teams.length}}">
-      <view class="sec-title">队伍<text class="count">{{teams.length}}</text></view>
+    <!-- ==================== 参赛队伍 ==================== -->
+    <block wx:elif="{{tab === 'teams'}}">
+      <view wx:if="{{!teams.length}}" class="surface center">还没排队伍</view>
+
       <view
         wx:for="{{teams}}"
         wx:key="id"
@@ -66,55 +209,108 @@
           <text class="muted team-n">{{team.memberCount}} 人</text>
           <text class="toggle">{{team.open ? '收起' : '成员'}}</text>
         </view>
-        <view wx:if="{{team.captain}}" class="muted">队长 {{team.captain}}</view>
+
+        <view class="team-meta">
+          <text wx:if="{{team.totalScore}}" class="muted">天梯总分 {{team.totalScore}}</text>
+          <text wx:if="{{team.captain}}" class="muted">队长 {{team.captain}}</text>
+        </view>
+
+        <!-- 默认展开：网页端就是展开的，折叠起来会让人以为队里没人 -->
         <view wx:if="{{team.open}}" class="members">
-          <view wx:for="{{team.members}}" wx:key="id" wx:for-item="mem" class="member">
-            <text class="mem-name">{{mem.name}}</text>
-            <text wx:if="{{mem.group}}" class="mem-group">{{mem.group}}</text>
-            <text wx:if="{{mem.position}}" class="mem-pos">{{mem.position}}</text>
+          <view
+            wx:for="{{team.members}}"
+            wx:key="key"
+            wx:for-item="mem"
+            class="member"
+            data-pid="{{mem.playerId}}"
+            catchtap="onTapPlayer"
+          >
+            <image wx:if="{{mem.avatar}}" class="mem-ava" src="{{mem.avatar}}" mode="aspectFill"></image>
+            <view wx:else class="mem-ava mem-ava-txt">{{mem.initial}}</view>
+            <view class="mem-main">
+              <view class="mem-line">
+                <text class="mem-name">{{mem.name}}</text>
+                <text wx:if="{{mem.isCaptain}}" class="mem-cap">队长</text>
+              </view>
+              <text class="mem-pos">{{mem.positions || '位置未填'}}</text>
+            </view>
+            <text class="mem-score">{{mem.score ? mem.score : ''}}</text>
           </view>
-          <view wx:if="{{team.members.length === 0}}" class="muted">这队还没录成员</view>
+          <view wx:if="{{!team.members.length}}" class="muted">这队还没录成员</view>
+        </view>
+
+        <view class="vs">
+          <text class="vs-t">交战</text>
+          <text wx:if="{{!team.records.length}}" class="muted">未上场</text>
+          <text wx:for="{{team.records}}" wx:key="key" wx:for-item="r" class="vs-i">
+            {{r.opponent}}<text wx:if="{{r.win}}" class="vs-w">{{r.win}}胜</text><text wx:if="{{r.lose}}" class="vs-l">{{r.lose}}负</text><text wx:if="{{r.pending}}" class="vs-p">待赛</text>
+          </text>
         </view>
       </view>
     </block>
 
-    <!-- 报名名单：默认 8 条，可展开 -->
-    <view class="sec-title">报名名单<text class="count">{{signupTotal}}</text></view>
-    <view class="surface">
-      <block wx:if="{{signupList.length}}">
-        <view wx:for="{{signupList}}" wx:key="id" wx:for-item="s" class="signup">
-          <view class="signup-line">
-            <text class="signup-name">{{s.name}}</text>
-            <text wx:if="{{s.group}}" class="signup-group">{{s.group}}</text>
-            <text wx:if="{{s.captain}}" class="signup-cap">队长</text>
-            <text class="signup-score">{{s.score}} 分</text>
+    <!-- ==================== 报名选手 ==================== -->
+    <block wx:else>
+      <view class="sec-title">
+        报名名单<text class="count">{{signupTotal}}</text>
+        <text class="sec-sub">已组队 {{stats.signedCount}} 人 · 未组队 {{stats.signupCount - stats.signedCount}} 人</text>
+      </view>
+      <view class="surface">
+        <block wx:if="{{signupList.length}}">
+          <view
+            wx:for="{{signupList}}"
+            wx:key="id"
+            wx:for-item="s"
+            class="signup"
+            data-pid="{{s.id}}"
+            bindtap="onTapPlayer"
+          >
+            <image wx:if="{{s.avatar}}" class="signup-ava" src="{{s.avatar}}" mode="aspectFill"></image>
+            <view wx:else class="signup-ava signup-ava-txt">{{s.initial}}</view>
+            <view class="signup-main">
+              <view class="signup-line">
+                <text class="signup-name">{{s.name}}</text>
+                <text wx:if="{{s.captain}}" class="signup-cap">队长</text>
+                <text wx:if="{{s.teamName}}" class="signup-team">{{s.teamName}}</text>
+                <text wx:else class="signup-team is-none">未组队</text>
+                <text class="signup-score">{{s.score}} 分</text>
+              </view>
+              <view class="signup-sub">
+                <text>{{s.positionsText || '位置未填'}}</text>
+                <text wx:if="{{s.signedText}}" class="signup-time">{{s.signedText}}</text>
+              </view>
+            </view>
           </view>
-          <view wx:if="{{s.positionsText}}" class="muted">{{s.positionsText}}</view>
-        </view>
-        <view
-          wx:if="{{signupTotal > signupList.length || showAllSignups}}"
-          class="more"
-          bindtap="toggleSignups"
-        >
-          {{showAllSignups ? '收起' : '展开全部 ' + signupTotal + ' 人'}}
-        </view>
-      </block>
-      <view wx:else class="center">还没有人报名</view>
-    </view>
+          <view
+            wx:if="{{signupTotal > signupList.length || showAllSignups}}"
+            class="more"
+            bindtap="toggleSignups"
+          >
+            {{showAllSignups ? '收起' : '展开全部 ' + signupTotal + ' 人'}}
+          </view>
+        </block>
+        <view wx:else class="center">还没有人报名</view>
+      </view>
+    </block>
 
     <view class="bar-space"></view>
   </block>
 
-  <!-- 底部操作条：登录 / 报名 / 退赛 -->
+  <!-- 底部操作条：赛事已结束就只留一句说明，不给操作入口（网页端 SignupButton 同款） -->
   <view wx:if="{{!loading && !error}}" class="bar">
-    <view class="bar-info">
-      <text wx:if="{{state.signedUp}}" class="ok">你已报名本届</text>
-      <text wx:elif="{{state.loggedIn && !state.bound}}" class="warn">账号未绑定选手资料</text>
-      <text wx:elif="{{state.loggedIn}}" class="muted">{{profileText ? '用 ' + profileText + ' 报名' : '点右侧报名本届'}}</text>
-      <text wx:else class="muted">登录后可报名</text>
-    </view>
-    <button class="btn {{state.signedUp ? 'ghost' : ''}}" bindtap="onSignupTap" disabled="{{busy}}">
-      {{state.signedUp ? '退赛' : '报名'}}
-    </button>
+    <block wx:if="{{t.locked}}">
+      <text class="bar-locked">赛事已结束，报名通道已关闭</text>
+    </block>
+    <block wx:else>
+      <view class="bar-info">
+        <text wx:if="{{state.signedUp}}" class="ok">你已报名本届</text>
+        <text wx:elif="{{state.loggedIn && !state.bound}}" class="warn">账号未绑定选手资料</text>
+        <text wx:elif="{{state.loggedIn}}" class="muted">{{profileText ? '用 ' + profileText + ' 报名' : '点右侧报名本届'}}</text>
+        <text wx:else class="muted">登录后可报名</text>
+      </view>
+      <button class="btn {{state.signedUp ? 'ghost' : ''}}" bindtap="onSignupTap" disabled="{{busy}}">
+        {{state.signedUp ? '退赛' : '报名'}}
+      </button>
+    </block>
   </view>
 </view>
