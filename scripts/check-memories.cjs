@@ -255,7 +255,14 @@ const call = async (url, opts = {}) => {
       cookie: ck,
       body: { content: 'x'.repeat(900) },
     });
-    ok(longEdit.status === 400, '超过 800 字被拒（400）', 'status=' + longEdit.status);
+    ok(
+      longEdit.status === 200 &&
+        longEdit.json &&
+        longEdit.json.memory &&
+        [...longEdit.json.memory.content].length === 800,
+      '超过 800 字被截到 800（站内统一策略，不报错）',
+      'status=' + longEdit.status
+    );
 
     const badEdit = await call(`/api/memories/${mid}`, {
       method: 'PATCH',

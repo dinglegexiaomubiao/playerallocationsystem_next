@@ -337,10 +337,6 @@
   margin-left: 0;
 }
 
-.mem-drop.is-on {
-  color: var(--text);
-}
-
 /* 原地改文案：不弹窗、不跳页，眼睛还盯在照片上 */
 .mem-edit {
   margin: 0 0 12px;

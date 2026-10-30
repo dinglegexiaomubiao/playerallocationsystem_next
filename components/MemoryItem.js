@@ -156,13 +156,12 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted 
         </time>
         {canDelete && (
           <div className="mem-acts">
-            <button
-              type="button"
-              className={'mem-drop' + (editing ? ' is-on' : '')}
-              onClick={editing ? cancelEdit : startEdit}
-            >
-              {editing ? '取消' : '编辑'}
-            </button>
+            {/* 编辑态不重复给「取消」—— 输入框下面已经有一个，两个取消按钮会让人犹豫按哪个 */}
+            {!editing && (
+              <button type="button" className="mem-drop" onClick={startEdit}>
+                编辑
+              </button>
+            )}
             <button type="button" className="mem-drop" onClick={drop}>
               删除
             </button>
