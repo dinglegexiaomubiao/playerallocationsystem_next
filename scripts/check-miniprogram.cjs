@@ -181,6 +181,35 @@ for (const f of wxsss) {
     const target = path.resolve(path.dirname(f), im[1]);
     if (!fs.existsSync(target)) bad(path.relative(ROOT, f) + ' @import 找不到 → ' + im[1]);
   }
+
+  // 8b) 注释提前闭合（2026-10-30 真踩过）：注释正文里写了「星号 + 斜杠」，比如列举
+  //    「.act-*/.tile*」这种通配写法，那个斜杠会把注释就地结束，后面的中文说明
+  //    当成 CSS 选择器 → WXSS 编译报 unexpected `�`，整份样式不生效。
+  //    静态四件套检查看不出来，只能在这里守：注释去掉后不该再有中文散文。
+  const opens = (s.match(/\/\*/g) || []).length;
+  const closes = (s.match(/\*\//g) || []).length;
+  if (opens !== closes) {
+    bad(path.relative(ROOT, f) + ' 注释标记不成对（/* ' + opens + ' 个，*/ ' + closes + ' 个）');
+  }
+  const stripped = s.replace(/\/\*[\s\S]*?\*\//g, '');
+  const leaked = stripped
+    .split('\n')
+    .map((l, i) => ({ no: i + 1, text: l }))
+    .filter((x) => /[\u4e00-\u9fa5]/.test(x.text) && !/content\s*:/.test(x.text));
+  if (leaked.length) {
+    bad(
+      path.relative(ROOT, f) +
+        ' 注释外出现中文（多半是注释被提前闭合）→ 第 ' +
+        leaked[0].no +
+        ' 行: ' +
+        leaked[0].text.trim().slice(0, 50)
+    );
+  }
+  const openBrace = (stripped.match(/{/g) || []).length;
+  const closeBrace = (stripped.match(/}/g) || []).length;
+  if (openBrace !== closeBrace) {
+    bad(path.relative(ROOT, f) + ' 花括号不成对（{ ' + openBrace + ' 个，} ' + closeBrace + ' 个）');
+  }
 }
 
 // 9) 页面 / 组件 / utils 的 JS 不许碰浏览器 API，且语法必须能被解析
