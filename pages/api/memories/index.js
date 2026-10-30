@@ -30,10 +30,13 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
+      // viewer 只用来给每条回忆算「有没有被单独指定改这一条」，不是权限判断
+      const session = getSession(req);
       const data = await listMemories({
         limit: req.query.limit,
         before: req.query.before,
         tag: req.query.tag,
+        viewer: (session && session.name) || '',
       });
       return res.status(200).json({ success: true, ...data });
     } catch (e) {

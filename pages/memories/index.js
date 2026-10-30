@@ -221,10 +221,11 @@ export async function getServerSideProps(ctx) {
 
     // ?tag= 直接进 SSR：刷新、转发链接都要能落在同一个筛选上，
     // 只在客户端过滤的话，别人打开链接看到的是全量。
-    const data = await listMemories({ limit: 12, tag: ctx.query.tag });
     const session = getSession(ctx.req);
+    // viewer 让每条回忆带上「我被单独指定改这一条」的标记（granted）
+    const data = await listMemories({ limit: 12, tag: ctx.query.tag, viewer: (session && session.name) || '' });
     const mine = session ? await authorOfAccount(session.name) : null;
-    // 站长指定的「可以改别人文案」的人：前端据此把编辑入口放出来，服务端还会再判一次
+    // 站长指定的「哪条都能改」的校对名单：前端据此把编辑入口放出来，服务端还会再判一次
     const canEditAll = session ? await isMemoryEditor(session.name) : false;
 
     return {

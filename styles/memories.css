@@ -338,6 +338,103 @@
   color: var(--danger-ink);
 }
 
+/* ---------- 单条回忆的「谁能改」名单 ---------- */
+
+.mem-grants {
+  margin: 0 0 12px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line-hairline);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+}
+
+.mem-grants-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-bottom: 9px;
+}
+
+.mem-grants-title {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  letter-spacing: 0.02em;
+}
+
+.mem-grants-sub,
+.mem-grants-wait {
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+/* 名单里的人：昵称为主，账号挂在 title 上（同名不同号时靠它分辨） */
+.mem-grant {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-2);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  cursor: default;
+}
+
+.mem-grant-x {
+  border: 0;
+  background: transparent;
+  padding: 0 2px;
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1;
+  opacity: 0.55;
+  cursor: pointer;
+}
+
+.mem-grant-x:hover {
+  opacity: 1;
+  color: var(--danger-ink);
+}
+
+.mem-grant-input {
+  width: 154px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.76rem;
+}
+
+.mem-grant-input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.mem-grant-add {
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+}
+
+.mem-grant-add:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: var(--border);
+  color: var(--text-3);
+}
+
+/* 面板展开时作者行的那个按钮：不是链接了，是「你正打开的东西」 */
+.mem-acts .mem-drop.is-on {
+  color: var(--text);
+}
+
 /* ---------- 标签筛选条 ---------- */
 
 .mem-filter {

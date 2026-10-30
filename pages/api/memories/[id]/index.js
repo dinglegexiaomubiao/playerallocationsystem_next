@@ -18,7 +18,7 @@ import {
   checkTags,
   authorOfAccount,
   allowAction,
-  isMemoryEditor,
+  canEditMemoryText,
   TEXT_LIMIT,
 } from '../../../../lib/memories.mjs';
 
@@ -49,8 +49,9 @@ export default async function handler(req, res) {
       const admin = isAdmin(req);
       const me = await authorOfAccount(session && session.name);
       const mine = !!me.playerId && String(memory.author.playerId) === String(me.playerId);
-      // 名单里的人（站长指定的校对）也能改别人的文案；删除仍然是另一套判断，别混
-      const editor = !admin && !mine ? await isMemoryEditor(session && session.name) : false;
+      // 两种「代改」：全站名单（校对，哪条都能改）+ 这一条单独指定的（memory_grants）。
+      // 删除仍然是另一套判断 —— 能改字不等于能删内容，别混。
+      const editor = !admin && !mine ? await canEditMemoryText(id, session && session.name) : false;
       if (!admin && !mine && !editor) {
         return res.status(403).json({ success: false, error: '没有改这条文案的权限' });
       }

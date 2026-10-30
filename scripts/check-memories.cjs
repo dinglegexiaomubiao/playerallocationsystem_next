@@ -58,6 +58,19 @@ const cookie = () => {
   return `dd_session=${payload}.${sig}`;
 };
 
+/** 从 cookie 里解出登录账号名：给「按条授权」用，脚本要知道自己的账号叫什么。 */
+const sessionNameOf = (ck) => {
+  const m = /dd_session=([^;]+)/.exec(String(ck || ''));
+  if (!m) return '';
+  try {
+    const payload = m[1].split('.')[0];
+    const json = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return String((json && json.n) || '');
+  } catch {
+    return '';
+  }
+};
+
 const call = async (url, opts = {}) => {
   const res = await fetch(BASE + url, {
     method: opts.method || 'GET',
@@ -92,6 +105,7 @@ const call = async (url, opts = {}) => {
     'pages/api/memories/[id]/index.js',
     'pages/api/memories/[id]/comments.js',
     'pages/api/memories/[id]/comments/[cid].js',
+    'pages/api/memories/[id]/editors.js',
     'pages/api/media/[...path].js',
     'pages/api/admin/memories.js',
     'pages/api/admin/memory-editors.js',
@@ -99,11 +113,12 @@ const call = async (url, opts = {}) => {
     'pages/admin/memories.js',
     'components/MemoryComposer.js',
     'components/MemoryItem.js',
+    'components/MemoryGrants.js',
     'components/TagPicker.js',
     'styles/memories.css',
   ];
   const missing = files.filter((f) => !exists(f));
-  ok(missing.length === 0, '19 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
+  ok(missing.length === 0, '21 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
 
   ok(read('components/Layout.js').includes("href: '/memories'"), '主导航有「群友回忆」');
   ok(
@@ -115,10 +130,16 @@ const call = async (url, opts = {}) => {
   ok(read('.gitignore').includes('.uploads/'), '.gitignore 忽略了 .uploads');
 
   const cl = read('lib/changelog.js');
+  ok(cl.includes("version: '1.19.0'"), '更新日志有 1.19.0（单条授权）');
   ok(cl.includes("version: '1.18.0'"), '更新日志有 1.18.0（标签）');
   ok(cl.includes("version: '1.17.0'"), '更新日志有 1.17.0');
   const block = cl.slice(cl.indexOf("version: '1.17.0'"), cl.indexOf("version: '1.16.0'"));
   ok(block.includes('adminOnly: true'), '后台条目标了 adminOnly（不给普通群友看）');
+
+  // 单条授权：入口在卡片上，名单按条走
+  ok(read('components/MemoryItem.js').includes('<MemoryGrants'), '卡片里挂上了「谁能改」面板');
+  ok(read('pages/memories/index.js').includes('viewer:'), 'SSR 把查看者传给列表（算每条 granted）');
+  ok(read('pages/api/memories/index.js').includes('viewer:'), '列表接口也按查看者算 granted');
 
   // 标签的交互只有一处实现（发布和编辑共用 TagPicker），
   // 再各自写一套就会变成「发布能点，编辑不能点」这类不一致
@@ -389,6 +410,69 @@ const call = async (url, opts = {}) => {
       '管理员能读到名单',
       'status=' + listEditors.status
     );
+
+    /* 单条授权：只对 memory_id 这一条生效的名单。
+       真实账号用 cookie 里的登录名（解出来才知道自己叫什么），
+       加完再撤掉，不给线上留影子数据。 */
+    const me = sessionNameOf(ck);
+    const grantAnon = await call(`/api/memories/${mid}/editors`);
+    ok(grantAnon.status === 401, '未登录读单条授权名单被拒（401）', 'status=' + grantAnon.status);
+
+    const grant0 = await call(`/api/memories/${mid}/editors`, { cookie: ck });
+    ok(
+      grant0.status === 200 && grant0.json && Array.isArray(grant0.json.editors) && !grant0.json.editors.length,
+      '新回忆的单条名单是空的',
+      'status=' + grant0.status
+    );
+
+    const grantBad = await call(`/api/memories/${mid}/editors`, {
+      method: 'POST',
+      cookie: ck,
+      body: { account: 'no-such-account-zzz' },
+    });
+    ok(grantBad.status === 400, '加不存在的账号被拒（400）', (grantBad.json && grantBad.json.error) || '');
+
+    const grantAdd = await call(`/api/memories/${mid}/editors`, {
+      method: 'POST',
+      cookie: ck,
+      body: { account: me },
+    });
+    ok(
+      grantAdd.status === 200 && grantAdd.json && grantAdd.json.editors.length === 1,
+      '把账号加进这一条的名单',
+      'account=' + me
+    );
+
+    const grantAgain = await call(`/api/memories/${mid}/editors`, {
+      method: 'POST',
+      cookie: ck,
+      body: { account: me },
+    });
+    ok(grantAgain.json && grantAgain.json.editors.length === 1, '重复加同一个人不会变成两条');
+
+    const grantList = await call('/api/memories');
+    const grantedRow = ((grantList.json && grantList.json.memories) || []).find(
+      (m) => String(m.id) === String(mid)
+    );
+    ok(
+      grantedRow && grantedRow.granted === true,
+      '列表里这一条带上了 granted 标记（前端据此放编辑入口）'
+    );
+
+    const grantDel = await call(
+      `/api/memories/${mid}/editors?account=` + encodeURIComponent(me),
+      { method: 'DELETE', cookie: ck }
+    );
+    ok(grantDel.status === 200 && grantDel.json && grantDel.json.editors.length === 0, '从这一条的名单里移除');
+
+    const grantDel2 = await call(
+      `/api/memories/${mid}/editors?account=` + encodeURIComponent(me),
+      { method: 'DELETE', cookie: ck }
+    );
+    ok(grantDel2.status === 404, '移除本来不在的人返回 404', 'status=' + grantDel2.status);
+
+    const grantGhost = await call('/api/memories/99999999/editors', { cookie: ck });
+    ok(grantGhost.status === 404, '给不存在的回忆管授权返回 404', 'status=' + grantGhost.status);
 
     const mDel = await call(`/api/memories/${mid}`, { method: 'DELETE', cookie: ck });
     ok(mDel.status === 200, '删自己回忆成功');

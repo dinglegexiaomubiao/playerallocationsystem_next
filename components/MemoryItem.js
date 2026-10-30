@@ -3,6 +3,7 @@ import { apiFetch } from '../lib/api-client.mjs';
 import { relTime, gridClass, aspectOf } from '../lib/memories-view.mjs';
 import { normalizeTags } from '../lib/memories-tags.mjs';
 import TagPicker from './TagPicker';
+import MemoryGrants from './MemoryGrants';
 
 /** 和 lib/memories.mjs 的 TEXT_LIMIT 是同一个数，改一边要改另一边。 */
 const TEXT_MAX = 800;
@@ -44,15 +45,19 @@ export default function MemoryItem({
   const [text, setText] = useState(memory.content || '');
   const [saving, setSaving] = useState(false);
   const [editErr, setEditErr] = useState('');
+  // 「这条谁能改」面板：按需展开，不预取名单
+  const [grantOpen, setGrantOpen] = useState(false);
   // 标签同样存本地：保存后筛选条上的计数由父页面刷新，这里只负责这一条的显示
   const [tags, setTags] = useState(memory.tags || []);
   const [tagText, setTagText] = useState('');
 
   const mine = !!myPlayerId && String(memory.author.playerId) === String(myPlayerId);
   const canDelete = !!me && (isAdmin || mine);
-  // 站长可以指定「能改别人文案」的人（名单存在库里）。改文案和删回忆是两种权限：
-  // 校对能改字，但删内容仍然是作者本人或管理员的事。
-  const canEdit = canDelete || (!!me && !!canEditAll);
+  // 改文案三种来源：作者本人 / 全站名单（校对）/ 这一条单独指定的人（memory.granted）。
+  // 删回忆始终只有作者和管理员 —— 能改字不等于能删内容。
+  const canEdit = canDelete || (!!me && (canEditAll || !!memory.granted));
+  // 谁有权指定「这条谁能改」：作者本人和管理员。别人改字是帮忙，派活是作者的事。
+  const canGrant = !!me && (isAdmin || mine);
   const cls = gridClass(memory.photos.length);
   const ratio = memory.photos.length === 1 ? aspectOf(memory.photos[0].w, memory.photos[0].h) : null;
 
@@ -181,9 +186,18 @@ export default function MemoryItem({
         <time className="mem-time" dateTime={memory.createdAt}>
           {relTime(memory.createdAt)}
         </time>
-        {(canEdit || canDelete) && (
+        {(canEdit || canDelete || canGrant) && (
           <div className="mem-acts">
             {/* 编辑态不重复给「取消」—— 输入框下面已经有一个，两个取消按钮会让人犹豫按哪个 */}
+            {canGrant && !editing && (
+              <button
+                type="button"
+                className={'mem-drop' + (grantOpen ? ' is-on' : '')}
+                onClick={() => setGrantOpen((v) => !v)}
+              >
+                {grantOpen ? '收起' : '谁能改'}
+              </button>
+            )}
             {canEdit && !editing && (
               <button type="button" className="mem-drop" onClick={startEdit}>
                 编辑
@@ -197,6 +211,8 @@ export default function MemoryItem({
           </div>
         )}
       </header>
+
+      {grantOpen && canGrant && <MemoryGrants memoryId={memory.id} />}
 
       {editing ? (
         <div className="mem-edit">

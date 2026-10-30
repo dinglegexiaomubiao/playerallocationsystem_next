@@ -140,6 +140,9 @@ export default function AdminMemoriesPage({ denied }) {
                 <th>正文</th>
                 <th>标签</th>
                 <th className="is-num">评论</th>
+                <th className="is-num" title="这条单独指定了几个人能改文案">
+                  可改
+                </th>
                 <th className="is-nowrap">时间</th>
                 <th className="is-nowrap">状态</th>
                 <th />
@@ -178,6 +181,13 @@ export default function AdminMemoriesPage({ denied }) {
                     )}
                   </td>
                   <td className="is-num">{m.commentCount}</td>
+                  <td className="is-num">
+                    {m.grantCount > 0 ? (
+                      <span title="在前台这一条的「谁能改」里维护">{m.grantCount}</span>
+                    ) : (
+                      <span className="is-weak">—</span>
+                    )}
+                  </td>
                   <td className="is-nowrap">{when(m.createdAt)}</td>
                   <td className="is-nowrap">
                     {m.deletedAt ? (
@@ -206,9 +216,9 @@ export default function AdminMemoriesPage({ denied }) {
 
       <div className="adm-panel" style={{ marginTop: 20 }}>
         <div className="adm-panel-head">
-          <span className="adm-panel-title">谁可以改文案</span>
+          <span className="adm-panel-title">通用名单（哪条都能改）</span>
           <span className="adm-panel-sub">
-            名单里的人能改所有人的回忆文案；删回忆、进后台仍然只限你和作者本人
+            校对 / 版主放这里；只想让某一条的某个人能改，去前台那条上点「谁能改」单独指定
           </span>
         </div>
 
@@ -231,7 +241,7 @@ export default function AdminMemoriesPage({ denied }) {
         </p>
 
         {editors.length === 0 ? (
-          <p className="adm-empty">还没有指定人。现在只有管理员和作者本人能改文案。</p>
+          <p className="adm-empty">还没有通用名单。每条回忆仍可在前台单独指定能改文案的人。</p>
         ) : (
           <div className="adm-scroll">
             <table className="adm-data">
