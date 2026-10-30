@@ -138,6 +138,7 @@ export default function AdminMemoriesPage({ denied }) {
                 <th>照片</th>
                 <th>作者</th>
                 <th>正文</th>
+                <th>标签</th>
                 <th className="is-num">评论</th>
                 <th className="is-nowrap">时间</th>
                 <th className="is-nowrap">状态</th>
@@ -163,6 +164,17 @@ export default function AdminMemoriesPage({ denied }) {
                     {(m.content || '').slice(0, SUMMARY) || <span className="is-weak">（只有照片）</span>}
                     {m.photos.length > 1 && (
                       <span className="is-weak"> ＋{m.photos.length - 1} 图</span>
+                    )}
+                  </td>
+                  <td>
+                    {(m.tags || []).length ? (
+                      m.tags.map((t) => (
+                        <span key={t} className="adm-chip">
+                          {t}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="is-weak">—</span>
                     )}
                   </td>
                   <td className="is-num">{m.commentCount}</td>

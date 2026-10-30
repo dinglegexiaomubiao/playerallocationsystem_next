@@ -83,6 +83,7 @@ const call = async (url, opts = {}) => {
   console.log('\n[静态 · 文件与接线]');
   const files = [
     'lib/memories.mjs',
+    'lib/memories-tags.mjs',
     'lib/memory-store.mjs',
     'lib/memories-view.mjs',
     'lib/image-compress.mjs',
@@ -98,10 +99,11 @@ const call = async (url, opts = {}) => {
     'pages/admin/memories.js',
     'components/MemoryComposer.js',
     'components/MemoryItem.js',
+    'components/TagPicker.js',
     'styles/memories.css',
   ];
   const missing = files.filter((f) => !exists(f));
-  ok(missing.length === 0, '18 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
+  ok(missing.length === 0, '19 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
 
   ok(read('components/Layout.js').includes("href: '/memories'"), '主导航有「群友回忆」');
   ok(
@@ -113,9 +115,17 @@ const call = async (url, opts = {}) => {
   ok(read('.gitignore').includes('.uploads/'), '.gitignore 忽略了 .uploads');
 
   const cl = read('lib/changelog.js');
+  ok(cl.includes("version: '1.18.0'"), '更新日志有 1.18.0（标签）');
   ok(cl.includes("version: '1.17.0'"), '更新日志有 1.17.0');
   const block = cl.slice(cl.indexOf("version: '1.17.0'"), cl.indexOf("version: '1.16.0'"));
   ok(block.includes('adminOnly: true'), '后台条目标了 adminOnly（不给普通群友看）');
+
+  // 标签的交互只有一处实现（发布和编辑共用 TagPicker），
+  // 再各自写一套就会变成「发布能点，编辑不能点」这类不一致
+  ok(read('components/TagPicker.js').includes('SUGGESTED_TAGS'), '标签选择器用了候选列表');
+  ok(read('components/MemoryComposer.js').includes('<TagPicker'), '发布框复用标签选择器');
+  ok(read('components/MemoryItem.js').includes('<TagPicker'), '编辑态复用标签选择器');
+  ok(read('pages/memories/index.js').includes('?tag='), '筛选状态写进 URL（可分享/刷新）');
 
   // 页面里不能再包 Layout（会渲染两个 header）。判 import 而不是找字符串，
   // 因为文件注释里就写着「不要包 <Layout>」，按字符串判会自己把自己绊倒。
@@ -151,6 +161,15 @@ const call = async (url, opts = {}) => {
   ok(view.gridClass(9) === 'mem-grid mem-grid-3', 'gridClass 9 张走九宫格');
   ok(view.aspectOf(1600, 900) === '1600 / 900', 'aspectOf 生成占位比例');
   ok(view.aspectOf(0, 0) === null, 'aspectOf 缺尺寸时返回 null（不写非法 CSS）');
+
+  const tg = await import('../lib/memories-tags.mjs');
+  ok(tg.normalizeTags(['聚会', ' 聚会 ', '#聚会']).length === 1, '标签去重（忽略空格与 #）');
+  ok(tg.normalizeTags('聚会，夜宵、合影').length === 3, '手打字符串按中英文逗号/顿号拆开');
+  ok(tg.normalizeTags(['a', 'b', 'c', 'd', 'e', 'f', 'g']).length === tg.MAX_TAGS, '超过上限只留 5 个');
+  ok([...tg.normalizeTags(['一'.repeat(30)])[0]].length === tg.TAG_LIMIT, '单个标签截到 12 字');
+  ok(tg.normalizeTags(['Dota', 'dota']).length === 1, '英文标签大小写算同一个');
+  ok(tg.normalizeTags(null).length === 0, 'null 进来返回空数组而不是炸');
+  ok(tg.normalizeTags(['   ', '#']).length === 0, '全空/只有井号的标签被丢掉');
 
   /* ---------------- ③ 链路 ---------------- */
   const ck = cookie();
@@ -189,9 +208,22 @@ const call = async (url, opts = {}) => {
     const created = await call('/api/memories', {
       method: 'POST',
       cookie: ck,
-      body: { content: '自检：这是一条测试回忆\n第二行', photos: [{ p, w: 1, h: 1 }] },
+      body: {
+        content: '自检：这是一条测试回忆\n第二行',
+        photos: [{ p, w: 1, h: 1 }],
+        // 发布时就带标签，顺带验一次「同一条回忆里重复的标签只留一个」
+        tags: ['自检标签Zq', ' 自检标签Zq ', '#聚会'],
+      },
     });
     ok(created.status === 201 && created.json && created.json.memory, '发布成功');
+    ok(
+      created.json &&
+        created.json.memory &&
+        created.json.memory.tags.length === 2 &&
+        created.json.memory.tags[1] === '聚会',
+      '发布时带的标签入库并去掉井号前缀',
+      'tags=' + JSON.stringify(created.json && created.json.memory && created.json.memory.tags)
+    );
     const mid = created.json && created.json.memory && created.json.memory.id;
     ok(
       created.json &&
@@ -236,6 +268,69 @@ const call = async (url, opts = {}) => {
       '改文案成功并返回新内容',
       'status=' + edit.status
     );
+
+    /* 标签：打标签、只改标签不碰正文、按标签筛选、超量与超长被静默截断。
+       筛选用的标签名故意带随机后缀，避免撞上线上真实数据导致断言飘。 */
+    const tagged = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { tags: ['自检标签Zq', '聚会', '  聚会  ', '#聚会'] },
+    });
+    ok(
+      tagged.status === 200 && tagged.json && tagged.json.memory.tags.length === 2,
+      '打标签成功且去重（2 个）',
+      'tags=' + JSON.stringify(tagged.json && tagged.json.memory && tagged.json.memory.tags)
+    );
+    ok(
+      tagged.json && tagged.json.memory.content === '自检：改过的文案',
+      '只传 tags 时正文保持不变'
+    );
+
+    const manyTags = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { tags: ['t1', 't2', 't3', 't4', 't5', 't6', 't7'] },
+    });
+    ok(manyTags.json && manyTags.json.memory.tags.length === 5, '超过 5 个标签静默截断');
+
+    const longTag = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { tags: ['一'.repeat(30)] },
+    });
+    ok([...(longTag.json.memory.tags[0] || '')].length === 12, '单个标签超长被截到 12 字');
+
+    await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { tags: ['自检标签Zq'] },
+    });
+    const byTag = await call('/api/memories?tag=' + encodeURIComponent('自检标签Zq'));
+    const tagRows = (byTag.json && byTag.json.memories) || [];
+    ok(
+      byTag.status === 200 &&
+        tagRows.length > 0 &&
+        tagRows.every((m) => (m.tags || []).includes('自检标签Zq')) &&
+        tagRows.some((m) => String(m.id) === String(mid)),
+      '按标签筛选只返回带该标签的',
+      'n=' + tagRows.length
+    );
+    ok(
+      byTag.json &&
+        Array.isArray(byTag.json.tags) &&
+        byTag.json.tags.some((t) => t.tag === '自检标签Zq' && t.count >= 1),
+      '筛选条拿得到标签及用量'
+    );
+
+    const ghost = await call('/api/memories?tag=' + encodeURIComponent('不存在的标签zzz'));
+    ok(
+      ghost.json && ghost.json.memories.length === 0 && ghost.json.total === 0,
+      '筛不存在的标签返回空'
+    );
+
+    const noTags = await call(`/api/memories/${mid}`, { method: 'PATCH', cookie: ck, body: { tags: [] } });
+    ok(noTags.json && noTags.json.memory.tags.length === 0, '标签可以清空');
+    ok(noTags.json && noTags.json.memory.content === '自检：改过的文案', '清空标签时正文也没被动');
 
     const cleared = await call(`/api/memories/${mid}`, {
       method: 'PATCH',

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { apiFetch } from '../lib/api-client.mjs';
 import { relTime, gridClass, aspectOf } from '../lib/memories-view.mjs';
+import { normalizeTags } from '../lib/memories-tags.mjs';
+import TagPicker from './TagPicker';
 
 /** 和 lib/memories.mjs 的 TEXT_LIMIT 是同一个数，改一边要改另一边。 */
 const TEXT_MAX = 800;
@@ -17,7 +19,17 @@ const TEXT_MAX = 800;
  * 文案编辑是原地展开的：正文位置换成输入框，不弹窗、不跳页面 ——
  * 改的是「这张照片配的几句话」，眼睛应该还盯在照片上。
  */
-export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll, onDeleted }) {
+export default function MemoryItem({
+  memory,
+  me,
+  myPlayerId,
+  isAdmin,
+  canEditAll,
+  onDeleted,
+  onTag,
+  activeTag,
+  onTagsChange,
+}) {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [count, setCount] = useState(memory.commentCount || 0);
@@ -32,6 +44,9 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll
   const [text, setText] = useState(memory.content || '');
   const [saving, setSaving] = useState(false);
   const [editErr, setEditErr] = useState('');
+  // 标签同样存本地：保存后筛选条上的计数由父页面刷新，这里只负责这一条的显示
+  const [tags, setTags] = useState(memory.tags || []);
+  const [tagText, setTagText] = useState('');
 
   const mine = !!myPlayerId && String(memory.author.playerId) === String(myPlayerId);
   const canDelete = !!me && (isAdmin || mine);
@@ -43,12 +58,16 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll
 
   const startEdit = () => {
     setText(content);
+    setTags(memory.tags || tags);
+    setTagText('');
     setEditErr('');
     setEditing(true);
   };
 
   const cancelEdit = () => {
     setText(content);
+    setTags(memory.tags || []);
+    setTagText('');
     setEditErr('');
     setEditing(false);
   };
@@ -57,17 +76,22 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll
     if (saving) return;
     setSaving(true);
     setEditErr('');
+    // 打了标签没回车就点保存，也要算数（和发布框同一套处理）
+    const nextTags = tagText.trim() ? normalizeTags([...tags, tagText]) : tags;
     try {
       const r = await apiFetch(`/api/memories/${memory.id}`, {
         method: 'PATCH',
-        body: { content: text },
+        body: { content: text, tags: nextTags },
         timeout: 20000,
       });
       if (!r || !r.success) throw new Error((r && r.error) || '没改成');
       const next = (r.memory && r.memory.content) || '';
       setContent(next);
       setText(next);
+      setTags((r.memory && r.memory.tags) || nextTags);
+      setTagText('');
       setEditing(false);
+      if (onTagsChange) onTagsChange();
     } catch (e) {
       setEditErr((e && e.message) || '没改成，稍后再试');
     } finally {
@@ -184,6 +208,12 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll
             placeholder="给这条回忆写点什么，留空就只留照片。"
             onChange={(e) => setText(e.target.value)}
           />
+          <TagPicker
+            value={tags}
+            onChange={setTags}
+            draft={tagText}
+            onDraftChange={setTagText}
+          />
           <div className="mem-edit-foot">
             <span className="mem-count">
               {text.length}/{TEXT_MAX}
@@ -214,6 +244,23 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll
             >
               <img src={p.url} alt={`回忆照片 ${i + 1}`} loading="lazy" />
             </a>
+          ))}
+        </div>
+      )}
+
+      {/* 标签贴在照片下面：它描述的是这几张图，不是上面那段文字 */}
+      {!editing && tags.length > 0 && (
+        <div className="mem-tags">
+          {tags.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={'mem-tag-link' + (activeTag === t ? ' is-on' : '')}
+              onClick={() => onTag && onTag(t)}
+              title={`只看「${t}」`}
+            >
+              #{t}
+            </button>
           ))}
         </div>
       )}

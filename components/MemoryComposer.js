@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api-client.mjs';
 import { compressImage } from '../lib/image-compress.mjs';
+import { normalizeTags } from '../lib/memories-tags.mjs';
+import TagPicker from './TagPicker';
 
 /**
- * 发一条回忆：一段文字 + 最多 9 张照片。
+ * 发一条回忆：一段文字 + 最多 9 张照片 + 最多 5 个标签。
  *
  * 上传时机是「选完图立刻传」，不是「点发布才传」：
  *   - 弱网下 9 张图串行传要十几秒，卡在发布按钮上会让人以为卡死了；
@@ -12,6 +14,9 @@ import { compressImage } from '../lib/image-compress.mjs';
  *
  * 正文长度 800，和 lib/memories.mjs 的 TEXT_LIMIT 对齐；提示语不说「审核」，
  * 只说「发不出去」，因为绝大多数情况是词表命中，跟用户解释规则没意义。
+ *
+ * 标签不强制：绝大多数照片归不进任何类别，逼人选只会让人乱点。
+ * 但一旦要选，候选就当开关用 —— 点一下选中、再点取消，不做下拉菜单。
  */
 
 const MAX_PHOTOS = 9;
@@ -23,6 +28,8 @@ const nextKey = () => 'p' + ++seq;
 export default function MemoryComposer({ onCreated }) {
   const [text, setText] = useState('');
   const [items, setItems] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [tagDraft, setTagDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
@@ -77,18 +84,23 @@ export default function MemoryComposer({ onCreated }) {
     setBusy(true);
     setErr('');
     setMsg('');
+    // 打完标签没回车就点发布也要算数：这里再合一次，不依赖 blur 事件
+    const finalTags = tagDraft.trim() ? normalizeTags([...tags, tagDraft]) : tags;
     try {
       const r = await apiFetch('/api/memories', {
         method: 'POST',
         body: {
           content: text.trim(),
           photos: uploaded.map((it) => ({ p: it.p, w: it.w, h: it.h })),
+          tags: finalTags,
         },
         timeout: 30000,
       });
       if (!r || !r.success || !r.memory) throw new Error((r && r.error) || '没发出去');
       setText('');
       setItems([]);
+      setTags([]);
+      setTagDraft('');
       setMsg('发出去了');
       if (onCreated) onCreated(r.memory);
       setTimeout(() => setMsg(''), 2500);
@@ -108,6 +120,13 @@ export default function MemoryComposer({ onCreated }) {
         placeholder="谁家聚过、哪次翻盘、谁的键盘冒烟了 —— 写一句，配几张图"
         onChange={(e) => setText(e.target.value)}
         rows={3}
+      />
+
+      <TagPicker
+        value={tags}
+        onChange={setTags}
+        draft={tagDraft}
+        onDraftChange={setTagDraft}
       />
 
       {items.length > 0 && (

@@ -14,7 +14,8 @@ import { getClientIp } from '../../../../lib/rate-limit';
 import {
   memoryById,
   softDeleteMemory,
-  updateMemoryContent,
+  updateMemory,
+  checkTags,
   authorOfAccount,
   allowAction,
   isMemoryEditor,
@@ -54,14 +55,18 @@ export default async function handler(req, res) {
         return res.status(403).json({ success: false, error: '没有改这条文案的权限' });
       }
 
-      const raw = (req.body || {}).content;
-      if (typeof raw !== 'string') {
+      const body = req.body || {};
+      // 正文和标签都是「传了才改」：只打标签时不该把正文一起写空，
+      // 只改文案时也不该把标签清掉。
+      const hasContent = typeof body.content === 'string';
+      const hasTags = body.tags !== undefined;
+      if (!hasContent && !hasTags) {
         return res.status(400).json({ success: false, error: '参数不正确' });
       }
 
-      const next = raw.trim();
+      const next = hasContent ? body.content.trim() : '';
       // 允许清空文案（只留照片），但不能彻底空掉 —— 那样这条回忆就没有任何内容了
-      if (!next && !memory.photos.length) {
+      if (hasContent && !next && !memory.photos.length) {
         return res.status(400).json({ success: false, error: '图和字至少留一样' });
       }
 
@@ -82,7 +87,18 @@ export default async function handler(req, res) {
         clean = hit.cleaned.content;
       }
 
-      const updated = await updateMemoryContent(id, clean);
+      // 标签和发布走同一套词表检查，只改标签时也要过
+      let tagsNext;
+      if (hasTags) {
+        const t = checkTags(body.tags);
+        if (!t.ok) return res.status(400).json({ success: false, error: t.error });
+        tagsNext = t.tags;
+      }
+
+      const updated = await updateMemory(id, {
+        content: hasContent ? clean : undefined,
+        tags: tagsNext,
+      });
       if (!updated) return res.status(404).json({ success: false, error: '这条回忆已经不在了' });
       return res.status(200).json({ success: true, memory: updated });
     } catch (e) {

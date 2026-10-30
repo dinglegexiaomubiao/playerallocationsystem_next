@@ -13,6 +13,7 @@ import { getClientIp } from '../../../lib/rate-limit';
 import {
   listMemories,
   createMemory,
+  checkTags,
   authorOfAccount,
   allowAction,
   isPhotoPath,
@@ -29,7 +30,11 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const data = await listMemories({ limit: req.query.limit, before: req.query.before });
+      const data = await listMemories({
+        limit: req.query.limit,
+        before: req.query.before,
+        tag: req.query.tag,
+      });
       return res.status(200).json({ success: true, ...data });
     } catch (e) {
       console.error('[memories] 列表查询失败:', e);
@@ -76,6 +81,11 @@ export default async function handler(req, res) {
         clean = hit.cleaned.content;
       }
 
+      // 标签只过词表（短分类词，不用等模型），脏词直接拒，不做星号替换。
+      // 超过 5 个不报错，由 normalizeTags 静默截断 —— 站内一贯策略。
+      const tagCheck = checkTags(body.tags);
+      if (!tagCheck.ok) return res.status(400).json({ success: false, error: tagCheck.error });
+
       // 一个人一小时最多 20 条，够用，也能挡住脚本刷屏
       const who = authorOfAccount(session && session.name);
       const gate = allowAction('memory:' + ((session && session.name) || getClientIp(req)), 20);
@@ -91,6 +101,7 @@ export default async function handler(req, res) {
         authorName: author.name,
         content: clean,
         photos,
+        tags: tagCheck.tags,
       });
       return res.status(201).json({ success: true, memory });
     } catch (e) {

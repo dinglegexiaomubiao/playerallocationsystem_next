@@ -255,6 +255,148 @@
   font-size: 0.9rem;
 }
 
+/* ---------- 标签（发布框 / 编辑框共用 TagPicker） ---------- */
+
+/* 刻意不用全局 .chip：那是 20px 圆角的胶囊，放在这一页的直线语言里又高又软，
+   而且标签是「筛选项」不是「行动号召」，用不着那么大的点击面。 */
+.mem-tagrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.mem-taglabel {
+  flex: none;
+  padding-top: 5px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.mem-tagpick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mem-tag {
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.mem-tag:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.mem-tag.active {
+  background: var(--brand-solid);
+  border-color: var(--brand-solid);
+  color: #fff;
+}
+
+.mem-tag-x {
+  margin-left: 5px;
+  font-size: 0.82em;
+  opacity: 0.7;
+}
+
+.mem-tag-add {
+  border-style: dashed;
+  color: var(--text-3);
+}
+
+.mem-tag-input {
+  width: 118px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.76rem;
+}
+
+.mem-tag-input:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.mem-tag-err {
+  font-size: 0.72rem;
+  color: var(--danger-ink);
+}
+
+/* ---------- 标签筛选条 ---------- */
+
+.mem-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 0 14px;
+  border-bottom: 1px solid var(--line-hairline);
+}
+
+.mem-fbtn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.mem-fbtn em {
+  font-style: normal;
+  font-size: 0.9em;
+  color: var(--text-3);
+}
+
+.mem-fbtn:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.mem-fbtn.is-on {
+  background: var(--brand-solid);
+  border-color: var(--brand-solid);
+  color: #fff;
+}
+
+/* 品牌实底恒为深红，白字补偿不随主题翻转，所以这里可以直接写 rgba 白 */
+.mem-fbtn.is-on em {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.mem-fbtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mem-filter-wait {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
 /* ---------- 列表 ---------- */
 
 .mem-feed {
@@ -450,6 +592,37 @@
 
 .mem-shot:hover img {
   opacity: 0.92;
+}
+
+/* 照片下面的标签：一行 #字，点一下就只看这个题材。
+   用品牌色文字链接而不是按钮 —— 它看起来应该像「可以点进去的注释」。 */
+.mem-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 0;
+}
+
+.mem-tag-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.mem-tag-link:hover {
+  text-decoration: underline;
+}
+
+/* 当前正筛着的那个标签：不是链接了，是「你现在的位置」，所以去掉颜色 */
+.mem-tag-link.is-on {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
 }
 
 /* ---------- 评论 ---------- */
