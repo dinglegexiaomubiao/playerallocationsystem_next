@@ -12,8 +12,7 @@
  *   ② 规则层：buildInsight（本地规则引擎，现仅作离线自检/可回退参考保留）
  *      对同一份数字必须给出同一份结论，分档边界不漏，且样本口径固定为整份对局
  *      （最多 200 场），GPM/伤害必须自带「近 20 场」标签；
- *   ③ AI 呈现护栏：不再禁止「AI」字样，而是确保 AI 区块被明确标注、且必须登录才能触发，
- *      避免误导用户与额度滥用。
+ *   ③ 呈现护栏：可见文案不出现「AI」字样，但必须标注「由服务器生成」，且登录才能触发。
  *
  * 全程不联网、不读库、不消耗任何模型额度，随时可跑：
  *   node scripts/check-mp-insight.cjs
@@ -327,20 +326,36 @@ const PLAYER = {
   expect(tierOf(5520) === '冠绝一世', '5520 分归「冠绝一世」');
   expect(streakOf(MATCHES, 3).n === 4, '导出的 streakOf 与内部实现同一份');
 
-  // ---------------------------------------------------------------- ③ AI 呈现护栏
+  // ---------------------------------------------------------------- ③ 呈现护栏
 
-  console.log('\n[AI 呈现 · 明确标注 + 登录前置，避免误导与额度滥用]');
+  console.log('\n[呈现 · 文案不含 AI 字样 + 明确标注服务器生成 + 登录前置]');
 
-  // 2026-10-30 起小程序重新展示服务器生成的 AI 文本（提审风险见 小程序项目档案）。
-  // 护栏目标变了：不再禁止「AI」字样，而是确保它被明确标注、且必须登录才能触发。
+  // 2026-10-30 用户要求：小程序可见文案里不出现「AI」字样，但仍需标注「由服务器生成」，
+  // 且必须登录才能触发（额度保护）。护栏按这三条守。
+  function walkAll(dir, acc) {
+    for (const name of fs.readdirSync(dir)) {
+      const full = path.join(dir, name);
+      if (fs.statSync(full).isDirectory()) walkAll(full, acc);
+      else acc.push(full);
+    }
+    return acc;
+  }
+  const allWxml = walkAll(MP, []).filter((f) => /\.wxml$/.test(f));
+  const wxmlWithAI = allWxml.filter((f) => /AI/.test(fs.readFileSync(f, 'utf8')));
+  expect(
+    wxmlWithAI.length === 0,
+    allWxml.length + ' 个 wxml 均不含「AI」字样' +
+      (wxmlWithAI.length ? '（命中：' + wxmlWithAI.map((f) => path.relative(ROOT, f)).join(', ') + '）' : '')
+  );
+
   const memberWxml2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
-  expect(memberWxml2.indexOf('AI 战绩分析') >= 0, '名片页该区块明确标注「AI 战绩分析」');
-  expect(memberWxml2.indexOf('由服务器 AI 生成') >= 0, 'AI 文本处标注「由服务器 AI 生成」，让用户/审核知道是生成式内容');
+  expect(memberWxml2.indexOf('战绩解读') >= 0, '名片页该区块标注「战绩解读」');
+  expect(memberWxml2.indexOf('由服务器生成') >= 0, '解读文本处标注「由服务器生成」，让用户知道内容来源');
 
   const memberJs2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.js'), 'utf8');
-  expect(memberJs2.indexOf('/api/ai-analysis') >= 0, '名片页改用服务端 /api/ai-analysis（服务器调大模型）');
-  expect(memberJs2.indexOf('session.isLoggedIn()') >= 0, '名片页在调 AI 前检查登录态（与网页一致，防额度滥用）');
-  expect(memberJs2.indexOf('pages/login/login') >= 0, '未登录时引导去登录页，而不是直接调 AI');
+  expect(memberJs2.indexOf('/api/ai-analysis') >= 0, '名片页改用服务端 /api/ai-analysis');
+  expect(memberJs2.indexOf('session.isLoggedIn()') >= 0, '名片页在调接口前检查登录态（防额度滥用）');
+  expect(memberJs2.indexOf('pages/login/login') >= 0, '未登录时引导去登录页，而不是直接调接口');
 
   // ---------------------------------------------------------------- ④ 数据源护栏
 

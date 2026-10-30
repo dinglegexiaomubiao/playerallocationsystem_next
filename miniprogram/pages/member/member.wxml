@@ -70,22 +70,6 @@
       <view class="text">{{p.enemiesText}}</view>
     </view>
 
-    <view wx:if="{{p.records.length}}" class="block">
-      <view class="sec-title">参赛记录</view>
-      <view class="surface board">
-        <view wx:for="{{p.records}}" wx:key="key" class="rec">
-          <view class="rec-main">
-            <text class="rec-tour">{{item.tournament}}</text>
-            <text wx:if="{{item.rankText}}" class="rec-rank {{item.rank === 1 ? 'is-gold' : ''}}">{{item.rankText}}</text>
-          </view>
-          <view class="rec-sub">
-            <text wx:if="{{item.team}}">{{item.team}}</text>
-            <text wx:if="{{item.dateText}}" class="rec-date">{{item.dateText}}</text>
-          </view>
-        </view>
-      </view>
-    </view>
-
     <!-- 近期战绩（OpenDota）：纯公开数据展示，下面「战绩解读」也吃这份数据。
          样本窗口与网页成员页「最近比赛」一致（最多 200 场），别改回 20 场。 -->
     <view class="block">
@@ -194,10 +178,7 @@
 
     <!-- 战绩解读：由服务器调用大模型生成，小程序拉取并展示（需登录） -->
     <view class="block ai-block">
-      <view class="sec-title">
-        AI 战绩分析
-        <text wx:if="{{insight.status === 'done'}}" class="sec-note">AI 生成</text>
-      </view>
+      <view class="sec-title">战绩解读</view>
 
       <view wx:if="{{insight.status === 'idle'}}" class="surface act-row">
         <text class="act-hint">{{insight.idleHint}}</text>
@@ -224,8 +205,24 @@
       <view wx:else class="surface ai-body">
         <view wx:for="{{insight.lines}}" wx:key="*this" class="ai-para">{{item}}</view>
         <view class="ai-foot">
-          <text class="ai-foot-hint">由服务器 AI 生成，仅供参考</text>
+          <text class="ai-foot-hint">由服务器生成，仅供参考</text>
           <text class="ai-rerun" bindtap="onTapInsight">重新生成</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{p.records.length}}" class="block">
+      <view class="sec-title">参赛记录</view>
+      <view class="surface board">
+        <view wx:for="{{p.records}}" wx:key="key" class="rec">
+          <view class="rec-main">
+            <text class="rec-tour">{{item.tournament}}</text>
+            <text wx:if="{{item.rankText}}" class="rec-rank {{item.rank === 1 ? 'is-gold' : ''}}">{{item.rankText}}</text>
+          </view>
+          <view class="rec-sub">
+            <text wx:if="{{item.team}}">{{item.team}}</text>
+            <text wx:if="{{item.dateText}}" class="rec-date">{{item.dateText}}</text>
+          </view>
         </view>
       </view>
     </view>

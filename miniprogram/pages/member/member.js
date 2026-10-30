@@ -18,8 +18,8 @@ const EMPTY_INSIGHT = { status: 'idle', error: '', analysis: '', lines: [], empt
 // 「看解读」按钮的三种空闲态文案：无 SteamID / 未登录 / 可分析
 function idleOf(gameId, loggedIn) {
   if (!gameId) return { idleHint: '这位群友还没填 SteamID，无法分析', idleBtn: '无 SteamID' };
-  if (!loggedIn) return { idleHint: 'AI 分析会消耗接口额度，登录后可用', idleBtn: '登录后可用' };
-  return { idleHint: '由服务器调用大模型，对近期战绩做生成式解读', idleBtn: '看解读' };
+  if (!loggedIn) return { idleHint: '解读会消耗接口额度，登录后可用', idleBtn: '登录后可用' };
+  return { idleHint: '按近期战绩生成解读，仅供参考', idleBtn: '看解读' };
 }
 
 // 逐场明细一屏放 10 条，点「展开更多」再放 10 条。
