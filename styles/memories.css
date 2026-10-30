@@ -324,6 +324,68 @@
   color: var(--danger-ink);
 }
 
+/* 作者行右端那一组动作（编辑 / 删除）。单独包一层，是因为 .mem-drop 自己带
+   margin-left:auto —— 两个按钮各推一次会散开 */
+.mem-acts {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mem-acts .mem-drop {
+  margin-left: 0;
+}
+
+.mem-drop.is-on {
+  color: var(--text);
+}
+
+/* 原地改文案：不弹窗、不跳页，眼睛还盯在照片上 */
+.mem-edit {
+  margin: 0 0 12px;
+}
+
+.mem-edit-box {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line-hairline);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  padding: 10px 12px;
+  min-height: 84px;
+  resize: vertical;
+  outline: none;
+}
+
+.mem-edit-box:focus {
+  border-color: var(--border-strong);
+}
+
+.mem-edit-box::placeholder {
+  color: var(--text-3);
+}
+
+.mem-edit-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.mem-edit-foot .mem-count {
+  margin-right: auto;
+}
+
+.mem-edit-save {
+  padding: 6px 16px;
+  font-size: 0.82rem;
+}
+
 .mem-text {
   margin: 0 0 12px;
   font-size: 0.95rem;

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { apiFetch } from '../lib/api-client.mjs';
 import { relTime, gridClass, aspectOf } from '../lib/memories-view.mjs';
 
+/** 和 lib/memories.mjs 的 TEXT_LIMIT 是同一个数，改一边要改另一边。 */
+const TEXT_MAX = 800;
+
 /**
  * 一条回忆：作者行 → 正文 → 图片 → 评论。
  *
@@ -10,6 +13,9 @@ import { relTime, gridClass, aspectOf } from '../lib/memories-view.mjs';
  *
  * 评论是按需加载的：列表里只显示条数，点开才请求。二十条回忆如果都带评论，
  * 首屏要多传几十 KB，而多数人其实只看图。
+ *
+ * 文案编辑是原地展开的：正文位置换成输入框，不弹窗、不跳页面 ——
+ * 改的是「这张照片配的几句话」，眼睛应该还盯在照片上。
  */
 export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted }) {
   const [open, setOpen] = useState(false);
@@ -20,11 +26,51 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [gone, setGone] = useState(false);
+  // 正文单独存一份：改完立刻生效，不用等整页重新拉数据
+  const [content, setContent] = useState(memory.content || '');
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(memory.content || '');
+  const [saving, setSaving] = useState(false);
+  const [editErr, setEditErr] = useState('');
 
   const mine = !!myPlayerId && String(memory.author.playerId) === String(myPlayerId);
   const canDelete = !!me && (isAdmin || mine);
   const cls = gridClass(memory.photos.length);
   const ratio = memory.photos.length === 1 ? aspectOf(memory.photos[0].w, memory.photos[0].h) : null;
+
+  const startEdit = () => {
+    setText(content);
+    setEditErr('');
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setText(content);
+    setEditErr('');
+    setEditing(false);
+  };
+
+  const save = async () => {
+    if (saving) return;
+    setSaving(true);
+    setEditErr('');
+    try {
+      const r = await apiFetch(`/api/memories/${memory.id}`, {
+        method: 'PATCH',
+        body: { content: text },
+        timeout: 20000,
+      });
+      if (!r || !r.success) throw new Error((r && r.error) || '没改成');
+      const next = (r.memory && r.memory.content) || '';
+      setContent(next);
+      setText(next);
+      setEditing(false);
+    } catch (e) {
+      setEditErr((e && e.message) || '没改成，稍后再试');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadComments = async () => {
     setLoading(true);
@@ -109,13 +155,47 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted 
           {relTime(memory.createdAt)}
         </time>
         {canDelete && (
-          <button type="button" className="mem-drop" onClick={drop}>
-            删除
-          </button>
+          <div className="mem-acts">
+            <button
+              type="button"
+              className={'mem-drop' + (editing ? ' is-on' : '')}
+              onClick={editing ? cancelEdit : startEdit}
+            >
+              {editing ? '取消' : '编辑'}
+            </button>
+            <button type="button" className="mem-drop" onClick={drop}>
+              删除
+            </button>
+          </div>
         )}
       </header>
 
-      {memory.content && <p className="mem-text">{memory.content}</p>}
+      {editing ? (
+        <div className="mem-edit">
+          <textarea
+            className="mem-edit-box"
+            value={text}
+            maxLength={TEXT_MAX}
+            rows={3}
+            placeholder="给这条回忆写点什么，留空就只留照片。"
+            onChange={(e) => setText(e.target.value)}
+          />
+          <div className="mem-edit-foot">
+            <span className="mem-count">
+              {text.length}/{TEXT_MAX}
+            </span>
+            {editErr && <span className="mem-err">{editErr}</span>}
+            <button type="button" className="mem-pick" onClick={cancelEdit} disabled={saving}>
+              取消
+            </button>
+            <button type="button" className="mem-post mem-edit-save" onClick={save} disabled={saving}>
+              {saving ? '保存中…' : '保存'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        content && <p className="mem-text">{content}</p>
+      )}
 
       {memory.photos.length > 0 && (
         <div className={cls}>

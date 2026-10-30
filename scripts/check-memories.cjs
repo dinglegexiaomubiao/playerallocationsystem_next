@@ -223,6 +223,54 @@ const call = async (url, opts = {}) => {
     const cDel = await call(`/api/memories/${mid}/comments/${cid}`, { method: 'DELETE', cookie: ck });
     ok(cDel.status === 200, '删自己评论成功');
 
+    /* 改文案：本人能改、能清空，未登录 / 超长 / 非字符串 / 不存在的 id 都要拦住。
+       「别人改不了（403）」测不了 —— 脚本只有一个账号，越权那条只能靠代码评审。 */
+    const edit = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { content: '自检：改过的文案' },
+    });
+    ok(
+      edit.status === 200 && edit.json && edit.json.memory && edit.json.memory.content === '自检：改过的文案',
+      '改文案成功并返回新内容',
+      'status=' + edit.status
+    );
+
+    const cleared = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { content: '   ' },
+    });
+    ok(
+      cleared.status === 200 && cleared.json && cleared.json.memory.content === '',
+      '清空文案被允许（照片还在）',
+      'status=' + cleared.status
+    );
+
+    const anonEdit = await call(`/api/memories/${mid}`, { method: 'PATCH', body: { content: 'x' } });
+    ok(anonEdit.status === 401, '未登录改文案被拒（401）', 'status=' + anonEdit.status);
+
+    const longEdit = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { content: 'x'.repeat(900) },
+    });
+    ok(longEdit.status === 400, '超过 800 字被拒（400）', 'status=' + longEdit.status);
+
+    const badEdit = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { content: 123 },
+    });
+    ok(badEdit.status === 400, '非字符串 content 被拒（400）', 'status=' + badEdit.status);
+
+    const noSuch = await call('/api/memories/99999999', {
+      method: 'PATCH',
+      cookie: ck,
+      body: { content: 'x' },
+    });
+    ok(noSuch.status === 404, '改不存在的回忆 404', 'status=' + noSuch.status);
+
     const mDel = await call(`/api/memories/${mid}`, { method: 'DELETE', cookie: ck });
     ok(mDel.status === 200, '删自己回忆成功');
 
