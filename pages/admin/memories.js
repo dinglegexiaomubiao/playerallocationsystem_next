@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSession, isAdmin } from '../../lib/auth';
-import { apiDelete, apiGet } from '../../lib/api-client.mjs';
+import { apiDelete, apiGet, apiPost } from '../../lib/api-client.mjs';
 import AdminShell, { AdminDenied } from '../../components/admin/AdminShell';
 
 /**
@@ -28,11 +28,18 @@ export default function AdminMemoriesPage({ denied }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [flash, setFlash] = useState(null);
+  // 「谁可以改文案」：存在库里的账号名单，改这里不用登服务器碰 .env
+  const [editors, setEditors] = useState([]);
+  const [acc, setAcc] = useState('');
+  const [accBusy, setAccBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await apiGet('/api/admin/memories');
+      const [d, ed] = await Promise.all([
+        apiGet('/api/admin/memories'),
+        apiGet('/api/admin/memory-editors').catch(() => null),
+      ]);
       if (d && d.success) {
         setRows(d.memories || []);
         setTotal(d.total || 0);
@@ -40,6 +47,7 @@ export default function AdminMemoriesPage({ denied }) {
       } else {
         setFlash({ type: 'err', text: (d && d.error) || '没读出来' });
       }
+      if (ed && ed.success) setEditors(ed.editors || []);
     } catch (e) {
       setFlash({ type: 'err', text: '没读出来：' + e.message });
     } finally {
@@ -66,8 +74,41 @@ export default function AdminMemoriesPage({ denied }) {
     }
   };
 
-  if (denied) return <AdminDenied />;
+  const addEditor = async () => {
+    const name = acc.trim();
+    if (!name || accBusy) return;
+    setAccBusy(true);
+    setFlash(null);
+    try {
+      const d = await apiPost('/api/admin/memory-editors', { account: name });
+      if (!d || !d.success) throw new Error((d && d.error) || '没加上');
+      setEditors(d.editors || []);
+      setAcc('');
+      setFlash({ type: 'ok', text: `已把 ${name} 加进改文案名单` });
+    } catch (e) {
+      setFlash({ type: 'err', text: e.message });
+    } finally {
+      setAccBusy(false);
+    }
+  };
 
+  const dropEditor = async (account) => {
+    if (!window.confirm(`把「${account}」从改文案名单里移除？\n\n他改过的文案不会回滚。`)) return;
+    setAccBusy(true);
+    setFlash(null);
+    try {
+      const d = await apiDelete('/api/admin/memory-editors', { account });
+      if (!d || !d.success) throw new Error((d && d.error) || '没移除');
+      setEditors(d.editors || []);
+      setFlash({ type: 'ok', text: `${account} 已移除` });
+    } catch (e) {
+      setFlash({ type: 'err', text: e.message });
+    } finally {
+      setAccBusy(false);
+    }
+  };
+
+  if (denied) return <AdminDenied />;
   return (
     <AdminShell
       title="群友"
@@ -150,6 +191,68 @@ export default function AdminMemoriesPage({ denied }) {
           </table>
         </div>
       )}
+
+      <div className="adm-panel" style={{ marginTop: 20 }}>
+        <div className="adm-panel-head">
+          <span className="adm-panel-title">谁可以改文案</span>
+          <span className="adm-panel-sub">
+            名单里的人能改所有人的回忆文案；删回忆、进后台仍然只限你和作者本人
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, maxWidth: 460, marginBottom: 12 }}>
+          <input
+            className="adm-input"
+            value={acc}
+            placeholder="群友的登录账号名（区分不了大小写就填小写）"
+            onChange={(e) => setAcc(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) addEditor();
+            }}
+          />
+          <button className="btn btn-ghost" onClick={addEditor} disabled={accBusy || !acc.trim()}>
+            {accBusy ? '添加中…' : '加入'}
+          </button>
+        </div>
+        <p className="adm-input-hint" style={{ marginTop: -6, marginBottom: 12 }}>
+          账号必须在站内注册过，否则加不进来 —— 拼错一个字母会变成一条永远不生效的记录。
+        </p>
+
+        {editors.length === 0 ? (
+          <p className="adm-empty">还没有指定人。现在只有管理员和作者本人能改文案。</p>
+        ) : (
+          <div className="adm-scroll">
+            <table className="adm-data">
+              <thead>
+                <tr>
+                  <th>账号</th>
+                  <th>昵称</th>
+                  <th className="is-nowrap">加入时间</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {editors.map((e) => (
+                  <tr key={e.account}>
+                    <td className="is-strong is-nowrap">{e.account}</td>
+                    <td>{e.nickname || <span className="is-weak">未绑定玩家</span>}</td>
+                    <td className="is-nowrap">{when(e.createdAt)}</td>
+                    <td className="adm-ops">
+                      <button
+                        className="adm-link-btn"
+                        onClick={() => dropEditor(e.account)}
+                        disabled={accBusy}
+                      >
+                        移除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </AdminShell>
   );
 }

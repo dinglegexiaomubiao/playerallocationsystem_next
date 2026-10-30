@@ -15,7 +15,7 @@ import useSession from '../../hooks/useSession';
  * 数据两条腿：首屏走 getServerSideProps（有没有登录都能直接看到内容，不用等接口），
  * 翻页和评论走客户端请求。
  */
-export default function MemoriesPage({ initial, myPlayerId, loadError }) {
+export default function MemoriesPage({ initial, myPlayerId, canEditAll, loadError }) {
   const { me, ready } = useSession();
   const [items, setItems] = useState((initial && initial.memories) || []);
   const [total, setTotal] = useState((initial && initial.total) || 0);
@@ -99,6 +99,7 @@ export default function MemoriesPage({ initial, myPlayerId, loadError }) {
                 me={me}
                 myPlayerId={myPlayerId}
                 isAdmin={!!(me && me.isAdmin)}
+                canEditAll={canEditAll}
                 onDeleted={onDeleted}
               />
             ))}
@@ -119,18 +120,21 @@ export default function MemoriesPage({ initial, myPlayerId, loadError }) {
 
 export async function getServerSideProps(ctx) {
   try {
-    const { listMemories, authorOfAccount } = await import('../../lib/memories.mjs');
+    const { listMemories, authorOfAccount, isMemoryEditor } = await import('../../lib/memories.mjs');
     const { getSession } = await import('../../lib/auth');
     const { toSerializable } = await import('../../lib/serialize.mjs');
 
     const data = await listMemories({ limit: 12 });
     const session = getSession(ctx.req);
     const mine = session ? await authorOfAccount(session.name) : null;
+    // 站长指定的「可以改别人文案」的人：前端据此把编辑入口放出来，服务端还会再判一次
+    const canEditAll = session ? await isMemoryEditor(session.name) : false;
 
     return {
       props: toSerializable({
         initial: data,
         myPlayerId: (mine && mine.playerId) || null,
+        canEditAll,
         loadError: null,
       }),
     };
@@ -139,6 +143,7 @@ export async function getServerSideProps(ctx) {
       props: {
         initial: { memories: [], total: 0, hasMore: false, nextCursor: null },
         myPlayerId: null,
+        canEditAll: false,
         loadError: (e && e.message) || '未知错误',
       },
     };

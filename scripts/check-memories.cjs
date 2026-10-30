@@ -93,6 +93,7 @@ const call = async (url, opts = {}) => {
     'pages/api/memories/[id]/comments/[cid].js',
     'pages/api/media/[...path].js',
     'pages/api/admin/memories.js',
+    'pages/api/admin/memory-editors.js',
     'pages/memories/index.js',
     'pages/admin/memories.js',
     'components/MemoryComposer.js',
@@ -100,7 +101,7 @@ const call = async (url, opts = {}) => {
     'styles/memories.css',
   ];
   const missing = files.filter((f) => !exists(f));
-  ok(missing.length === 0, '17 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
+  ok(missing.length === 0, '18 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
 
   ok(read('components/Layout.js').includes("href: '/memories'"), '主导航有「群友回忆」');
   ok(
@@ -112,8 +113,8 @@ const call = async (url, opts = {}) => {
   ok(read('.gitignore').includes('.uploads/'), '.gitignore 忽略了 .uploads');
 
   const cl = read('lib/changelog.js');
-  ok(cl.includes("version: '1.15.0'"), '更新日志有 1.15.0');
-  const block = cl.slice(cl.indexOf("version: '1.15.0'"), cl.indexOf("version: '1.14.1'"));
+  ok(cl.includes("version: '1.17.0'"), '更新日志有 1.17.0');
+  const block = cl.slice(cl.indexOf("version: '1.17.0'"), cl.indexOf("version: '1.16.0'"));
   ok(block.includes('adminOnly: true'), '后台条目标了 adminOnly（不给普通群友看）');
 
   // 页面里不能再包 Layout（会渲染两个 header）。判 import 而不是找字符串，
@@ -277,6 +278,17 @@ const call = async (url, opts = {}) => {
       body: { content: 'x' },
     });
     ok(noSuch.status === 404, '改不存在的回忆 404', 'status=' + noSuch.status);
+
+    // 名单里那个人能改别人文案这件事测不了 —— 脚本只有一个账号，
+    // 只能确定名单接口本身是管理员专属
+    const anonEditors = await call('/api/admin/memory-editors');
+    ok(anonEditors.status === 401, '未登录读改文案名单被拒（401）', 'status=' + anonEditors.status);
+    const listEditors = await call('/api/admin/memory-editors', { cookie: ck });
+    ok(
+      listEditors.status === 200 && listEditors.json && Array.isArray(listEditors.json.editors),
+      '管理员能读到名单',
+      'status=' + listEditors.status
+    );
 
     const mDel = await call(`/api/memories/${mid}`, { method: 'DELETE', cookie: ck });
     ok(mDel.status === 200, '删自己回忆成功');

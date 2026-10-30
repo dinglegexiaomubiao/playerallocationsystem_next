@@ -17,7 +17,7 @@ const TEXT_MAX = 800;
  * 文案编辑是原地展开的：正文位置换成输入框，不弹窗、不跳页面 ——
  * 改的是「这张照片配的几句话」，眼睛应该还盯在照片上。
  */
-export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted }) {
+export default function MemoryItem({ memory, me, myPlayerId, isAdmin, canEditAll, onDeleted }) {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState([]);
   const [count, setCount] = useState(memory.commentCount || 0);
@@ -35,6 +35,9 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted 
 
   const mine = !!myPlayerId && String(memory.author.playerId) === String(myPlayerId);
   const canDelete = !!me && (isAdmin || mine);
+  // 站长可以指定「能改别人文案」的人（名单存在库里）。改文案和删回忆是两种权限：
+  // 校对能改字，但删内容仍然是作者本人或管理员的事。
+  const canEdit = canDelete || (!!me && !!canEditAll);
   const cls = gridClass(memory.photos.length);
   const ratio = memory.photos.length === 1 ? aspectOf(memory.photos[0].w, memory.photos[0].h) : null;
 
@@ -154,17 +157,19 @@ export default function MemoryItem({ memory, me, myPlayerId, isAdmin, onDeleted 
         <time className="mem-time" dateTime={memory.createdAt}>
           {relTime(memory.createdAt)}
         </time>
-        {canDelete && (
+        {(canEdit || canDelete) && (
           <div className="mem-acts">
             {/* 编辑态不重复给「取消」—— 输入框下面已经有一个，两个取消按钮会让人犹豫按哪个 */}
-            {!editing && (
+            {canEdit && !editing && (
               <button type="button" className="mem-drop" onClick={startEdit}>
                 编辑
               </button>
             )}
-            <button type="button" className="mem-drop" onClick={drop}>
-              删除
-            </button>
+            {canDelete && (
+              <button type="button" className="mem-drop" onClick={drop}>
+                删除
+              </button>
+            )}
           </div>
         )}
       </header>
