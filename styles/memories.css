@@ -370,7 +370,10 @@
   color: var(--text-3);
 }
 
-.mem-fbtn:hover:not(:disabled) {
+/* hover 只对「没选中」的按钮生效。不加 :not(.is-on) 的话，
+   鼠标停在选中项上时 --brand 文字色会盖掉 .is-on 的白字，
+   而 --brand 和 --brand-solid 是同一个红 —— 「夜宵」两个字当场消失。 */
+.mem-fbtn:hover:not(:disabled):not(.is-on) {
   border-color: var(--brand);
   color: var(--brand);
 }
@@ -623,6 +626,7 @@
   color: var(--text);
   font-weight: 600;
   cursor: default;
+  text-decoration: none;
 }
 
 /* ---------- 评论 ---------- */
