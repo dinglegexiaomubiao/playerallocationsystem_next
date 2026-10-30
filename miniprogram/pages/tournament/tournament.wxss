@@ -307,27 +307,38 @@
   padding: 6rpx;
 }
 .tab {
+  position: relative;
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
-  text-align: center;
   padding: 14rpx 4rpx;
   font-size: 26rpx;
   line-height: 1.2;
   color: var(--text-2);
   border-radius: 999rpx;
 }
+.tab-label {
+  flex: 0 0 auto;
+}
 .tab.is-on {
   color: #ffffff;
   background: var(--brand);
   font-weight: 600;
 }
+/* 计数徽标：相对 tab 单元格右缘定位，不占用文字居中空间 —— 四个标签才能严格对齐 */
 .tab-n {
-  display: inline-block;
-  min-width: 30rpx;
-  margin-left: 6rpx;
-  padding: 0 8rpx;
-  font-size: 20rpx;
+  position: absolute;
+  right: 10rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 28rpx;
+  padding: 0 7rpx;
+  font-size: 19rpx;
+  line-height: 1.4;
+  text-align: center;
   background: var(--bg-card);
   color: var(--text-3);
   border-radius: 999rpx;
