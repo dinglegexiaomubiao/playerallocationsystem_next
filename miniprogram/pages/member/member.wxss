@@ -269,6 +269,175 @@
   margin: 0 10rpx 10rpx 0;
 }
 
+/* 近 20 场最高：网页端是工具栏右侧一句，小程序拆成三个并列小项 */
+.stats-best {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+  padding: 0 24rpx;
+}
+.stats-best-t {
+  font-size: 20rpx;
+  color: var(--text-3);
+  background: var(--bg-subtle);
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  margin-right: 14rpx;
+}
+.stats-best-i {
+  font-size: 21rpx;
+  color: var(--text-2);
+  margin-right: 18rpx;
+}
+
+/* 模式分布：网页端那一排可点 tab 的静态版 */
+.stats-modes {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+  padding: 0 24rpx;
+}
+.stats-mode {
+  font-size: 21rpx;
+  color: var(--text-2);
+  border: 1rpx solid var(--border);
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  margin: 0 10rpx 10rpx 0;
+}
+
+/* 近 20 场色块：胜绿败红，左侧色条 + 英雄名，一行 4 个 */
+.tiles {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16rpx;
+  padding: 14rpx 24rpx 0;
+  border-top: 1rpx solid var(--border);
+}
+.tile {
+  width: calc(25% - 12rpx);
+  margin: 0 16rpx 12rpx 0;
+  padding: 10rpx 8rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid var(--border);
+  border-left-width: 6rpx;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow: hidden;
+}
+.tile:nth-child(4n) {
+  margin-right: 0;
+}
+.tile.is-win {
+  border-left-color: var(--ok);
+  background: var(--ok-soft);
+}
+.tile.is-lose {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+.tile-hero {
+  width: 100%;
+  font-size: 21rpx;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-res {
+  font-size: 19rpx;
+  color: var(--text-3);
+  margin-top: 2rpx;
+}
+.tile.is-win .tile-res {
+  color: var(--ok);
+}
+.tile.is-lose .tile-res {
+  color: var(--danger);
+}
+
+/* 逐场明细 */
+.mlist {
+  flex: 0 0 100%;
+  margin-top: 6rpx;
+  padding: 8rpx 24rpx 0;
+}
+.mrow {
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid var(--border);
+}
+.mrow:last-child {
+  border-bottom: 0;
+}
+.mrow-head {
+  display: flex;
+  align-items: baseline;
+}
+.mrow-res {
+  flex: 0 0 auto;
+  width: 64rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+.mrow-res.is-win {
+  color: var(--ok);
+}
+.mrow-res.is-lose {
+  color: var(--danger);
+}
+.mrow-hero {
+  flex: 1;
+  min-width: 0;
+  font-size: 23rpx;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mrow-kda {
+  flex: 0 0 auto;
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.mrow-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6rpx;
+  padding-left: 64rpx;
+}
+.mrow-tag {
+  font-size: 19rpx;
+  color: var(--text-3);
+  background: var(--bg-subtle);
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  margin: 0 10rpx 4rpx 0;
+}
+.mrow-ago {
+  font-size: 19rpx;
+  color: var(--text-3);
+  margin-left: auto;
+}
+.mrow-more {
+  margin-top: 16rpx;
+  padding: 16rpx 0;
+  text-align: center;
+  font-size: 23rpx;
+  color: var(--brand);
+  background: var(--bg-subtle);
+  border-radius: 8rpx;
+}
+
 .ai-loading {
   display: flex;
   align-items: center;

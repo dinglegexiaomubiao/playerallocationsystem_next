@@ -15,6 +15,12 @@ const rankText = (n) => {
 const EMPTY_STATS = { status: 'idle', error: '', data: null };
 const EMPTY_INSIGHT = { status: 'idle', error: '', blocks: [], items: 0, note: '', emptyText: '' };
 
+// 逐场明细一屏放 10 条，点「展开更多」再放 10 条。
+// 网页端是每页 20 条（大屏够放），小程序竖屏 10 条刚好一屏，再多就得一直滑。
+const MATCH_STEP = 10;
+// 近 20 场色块：与网页端「近 20 场最高」同一个窗口
+const TILE_COUNT = 20;
+
 Page({
   data: {
     id: '',
@@ -54,6 +60,7 @@ Page({
     // 下拉刷新会把名片重读一遍，战绩也得跟着重来（SteamID 可能刚改过），
     // 否则上面是新人、下面还是旧人的战绩。
     this._stats = null;
+    this._rows = null;
     this.setData({
       loading: true,
       error: '',
@@ -195,6 +202,36 @@ Page({
         const sum = stat.summarize(s.matches);
         const best = stat.bestOf(s.matches);
         const r20 = s.recent20 || null;
+
+        /* 逐场明细：一次把 200 场映射好放内存（this._rows），setData 只推当前要显示的那几条。
+           直接 setData 200 条会把 200~300KB 塞进视图层，切页会卡。 */
+        const rows = (Array.isArray(s.matches) ? s.matches : []).map(function (m, i) {
+          return {
+            key: m.matchId || 'm' + i,
+            hero: m.hero || '未知',
+            isWin: !!m.isWin,
+            kdaText: (m.kills || 0) + '/' + (m.deaths || 0) + '/' + (m.assists || 0),
+            kda: m.kda || '0.0',
+            mode: m.modeLabel || '其他',
+            durText: stat.fmtDuration(m.duration),
+            patch: m.patch || '',
+            rank: m.rankLabel || '',
+            ago: stat.fmtAgo(m.startTime)
+          };
+        });
+        this._rows = rows;
+
+        // 模式分布：网页端是 tab + 计数，小程序不做筛选（竖屏下拉太重），只把分布摊开
+        const modes = stat.modeBreakdown(s.matches)
+          .slice(0, 4)
+          .map(function (x) {
+            return {
+              label: x.label,
+              total: x.total,
+              pct: sum.total ? Math.round((x.total / sum.total) * 100) : 0
+            };
+          });
+
         // 接口一次给 200 场明细，这里只挑页面要显示的几项，别把整个响应塞进 setData
         const data = {
           total: sum.total,
@@ -203,7 +240,10 @@ Page({
           winRate: sum.winRate,
           kda: sum.kda,
           durationText: stat.fmtDuration(sum.avgDuration),
-          bestText: '击杀 ' + best.kills + ' / 助攻 ' + best.assists + ' / KDA ' + best.kda,
+          bestKills: best.kills,
+          bestAssists: best.assists,
+          bestKda: best.kda,
+          modes: modes,
           // GPM 与伤害是近 20 场口径，单独一行显示
           gpm: r20 ? r20.avgGpm : 0,
           dmg: r20 ? r20.avgHeroDamage : 0,
@@ -216,7 +256,13 @@ Page({
             accounts.length > 1
               ? (hit.acc.isPrimary ? '主号 ' : '小号 ') + hit.acc.accountId
               : '',
-          heroes: stat.heroStatsOf(s.matches).slice(0, 5)
+          heroes: stat.heroStatsOf(s.matches).slice(0, 5),
+          // 近 20 场色块：按时间顺序（最新在前），胜/负 + 英雄名
+          tiles: rows.slice(0, TILE_COUNT),
+          // 逐场明细：先给一屏，剩下的点「展开更多」
+          list: rows.slice(0, MATCH_STEP),
+          listShown: Math.min(MATCH_STEP, rows.length),
+          listMore: rows.length > MATCH_STEP
         };
         this._stats = s;
         this.setData({ stats: { status: 'loaded', error: '', data: data } });
@@ -234,6 +280,19 @@ Page({
     this.loadStats().catch((e) =>
       wx.showToast({ title: (e && e.message) || '战绩加载失败', icon: 'none' })
     );
+  },
+
+  /** 逐场明细「展开更多」：每次多放一屏，不动内存里的全量 */
+  onTapMoreMatches() {
+    const data = this.data.stats.data;
+    const rows = this._rows || [];
+    if (!data || !rows.length) return;
+    const shown = Math.min(rows.length, (data.listShown || 0) + MATCH_STEP);
+    this.setData({
+      'stats.data.list': rows.slice(0, shown),
+      'stats.data.listShown': shown,
+      'stats.data.listMore': shown < rows.length
+    });
   },
 
   // ---------------- 战绩解读（本地按规则统计，不调任何模型） ----------------

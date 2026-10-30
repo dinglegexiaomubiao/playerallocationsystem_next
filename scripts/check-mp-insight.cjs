@@ -54,6 +54,12 @@ function makeMatches(n) {
       assists: 6 + (i % 7),
       duration: 1800 + (i % 11) * 90,
       startTime: 1760000000 - i * 3600,
+      // 下面这几个字段是 2026-10-30 扩维度时补上的：
+      // 模式/组队/段位/版本四条结论全靠它们，缺了那几条就出不来
+      modeLabel: i % 5 === 0 ? '普通' : '天梯',
+      partySize: i % 4 === 0 ? 3 : 1,
+      rankLabel: i % 2 === 0 ? '传奇 3' : '传奇 4',
+      patch: i % 2 === 0 ? '7.41' : '7.40',
     });
   }
   return out;
@@ -124,6 +130,39 @@ const PLAYER = {
   expect(MP_STAT.kdaOf(10, 0, 5) === LIB.kdaOf(10, 0, 5), 'kdaOf 0 死亡退化为「击杀+助攻」');
   expect(MP_STAT.kdaOf(3, 2, 11) === LIB.kdaOf(3, 2, 11), 'kdaOf 常规除法一致');
 
+  /* ---- 2026-10-30 扩维度时新增的七个函数，同样要逐字段对拍 ----
+     这几个是「名片页内容太少」那次补的，网页端暂时没调用（放在 lib 里是为了只有一份实现），
+     但小程序必须抄一份，所以照样纳入对拍——漂移了就在这里红。 */
+  const NEW_FNS = [
+    'averagesOf',
+    'modeBreakdown',
+    'durationByResult',
+    'partyBreakdown',
+    'rankMode',
+    'patchBreakdown',
+  ];
+  for (const fn of NEW_FNS) {
+    for (const [label, list] of sets) {
+      const a = JSON.stringify(LIB[fn](list));
+      const b = JSON.stringify(MP_STAT[fn](list));
+      expect(a === b, fn + ' 一致（' + label + '）：' + (b.length > 90 ? b.slice(0, 90) + '…' : b));
+    }
+  }
+
+  const ACT_NOW = 1760100000;
+  expect(
+    JSON.stringify(LIB.activityOf(MATCHES, 7, ACT_NOW)) === JSON.stringify(MP_STAT.activityOf(MATCHES, 7, ACT_NOW)),
+    'activityOf 一致（固定时钟）：' + JSON.stringify(MP_STAT.activityOf(MATCHES, 7, ACT_NOW))
+  );
+  expect(
+    LIB.fmtAgo(MATCHES[1].startTime, ACT_NOW * 1000) === MP_STAT.fmtAgo(MATCHES[1].startTime, ACT_NOW * 1000),
+    'fmtAgo 一致：' + MP_STAT.fmtAgo(MATCHES[1].startTime, ACT_NOW * 1000)
+  );
+  // 空集不能炸：这几个函数都会被「一个号 0 场」的路径调到
+  expect(MP_STAT.modeBreakdown([]).length === 0, 'modeBreakdown 空集返回空数组');
+  expect(MP_STAT.rankMode([]) === null, 'rankMode 空集返回 null（没有段位数据时不下结论）');
+  expect(MP_STAT.activityOf([]) === null, 'activityOf 空集返回 null');
+
   const ms = MP_STAT.streakOf(MATCHES, 3);
   expect(!!ms && ms.n === 4 && ms.isWin, '连胜识别：最近 4 场连胜');
   expect(MP_STAT.streakOf([{ isWin: true }, { isWin: true }, { isWin: false }], 3) === null, '两连胜太短，不单独列');
@@ -140,7 +179,7 @@ const PLAYER = {
 
   expect(out.empty === false, '有数据时 empty=false');
   expect(out.items === out.blocks.length, 'items 与 blocks 数量一致');
-  expect(out.items >= 6, '固定维度基本齐全（实得 ' + out.items + ' 项）');
+  expect(out.items >= 10, '固定维度基本齐全（实得 ' + out.items + ' 项）');
   expect(text.indexOf('近 60 场') >= 0, '第 1 条按整份对局算样本（近 60 场），不是固定的 20 场');
   expect(
     text.indexOf(st.wins + ' 胜 ' + st.losses + ' 负') >= 0,
@@ -156,6 +195,97 @@ const PLAYER = {
   expect(text.indexOf('斧王') < 0, '斧王只有 30 场且不在常用前三，整段结论里不该出现');
   expect(text.indexOf('最近 4 场连胜') >= 0, '连赢 4 场被识别为连胜');
   expect(!/可能|倾向|建议|推测|估计/.test(text), '结论里不出现模型口气的措辞（可能/倾向/建议/推测）');
+
+  // ---- 2026-10-30 新增的六条维度 ----
+  expect(text.indexOf('对局构成') >= 0, '「对局构成」按 modeLabel + 单排/组队给出一行');
+  expect(/模式 天梯 \d+ 场 \/ 普通 \d+ 场/.test(text), '模式分布按场次从多到少：' + text.split('\n')[1]);
+  expect(/单排 \d+ 场（胜率 \d+%） · 组队 \d+ 场（胜率 \d+%）/.test(text), '单排 / 组队各带胜率');
+  expect(
+    text.indexOf('对局段位') >= 0 && text.indexOf('「传奇 4」30 场') >= 0,
+    '对局段位取众数（传奇 3 / 传奇 4 各 30 场，平票按字典序取「传奇 4」，保证每次一致）'
+  );
+  expect(/60 场有段位数据，占 100%/.test(text), '段位结论必须写明有数据的覆盖场次');
+  expect(text.indexOf('场均数据') >= 0 && text.indexOf('死亡数属') >= 0, '「场均数据」含 KDA、场均 K/D/A 与死亡分档');
+
+  // 助攻/击杀比：主夹具里两者接近 1，属于不描述区间，所以单独造一组明显的
+  const assistCase = buildInsight(
+    {
+      matches: [
+        { hero: '水晶室女', isWin: true, kills: 2, deaths: 5, assists: 14, duration: 2100 },
+        { hero: '水晶室女', isWin: false, kills: 1, deaths: 7, assists: 11, duration: 2200 },
+      ],
+    },
+    {}
+  );
+  const assistText = assistCase.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n');
+  expect(assistText.indexOf('助攻是击杀的 8.3 倍') >= 0, '助攻显著多于击杀时点明倍数（14+11 / 2+1 = 8.3）');
+  // 反过来：击杀碾压助攻时也要说，但用另一种措辞
+  const carryCase = buildInsight(
+    {
+      matches: [
+        { hero: '影魔', isWin: true, kills: 16, deaths: 3, assists: 4, duration: 2100 },
+        { hero: '影魔', isWin: true, kills: 12, deaths: 2, assists: 3, duration: 2200 },
+      ],
+    },
+    {}
+  );
+  const carryText = carryCase.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n');
+  expect(carryText.indexOf('击杀多于助攻') >= 0, '击杀远多于助攻时点明（助攻 / 击杀 0.3）');
+  // 两者接近 1 时不硬编一句废话
+  const evenCase = buildInsight(
+    {
+      matches: [
+        { hero: '影魔', isWin: true, kills: 8, deaths: 3, assists: 8, duration: 2100 },
+        { hero: '影魔', isWin: true, kills: 8, deaths: 3, assists: 8, duration: 2100 },
+      ],
+    },
+    {}
+  );
+  const evenText = evenCase.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n');
+  expect(
+    evenText.indexOf('助攻是击杀的') < 0 && evenText.indexOf('击杀多于助攻') < 0,
+    '助攻/击杀接近 1 时不出这条（否则等于说废话）'
+  );
+
+  // 全部字段缺失时，这几条新增维度必须各自安静地跳过，不能吐出「0 场」这种空话
+  const sparse = buildInsight(
+    {
+      matches: [
+        { hero: '影魔', isWin: true, kills: 5, deaths: 3, assists: 6, duration: 2000 },
+        { hero: '影魔', isWin: false, kills: 3, deaths: 5, assists: 4, duration: 2100 },
+      ],
+    },
+    {}
+  );
+  const sparseText = sparse.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n');
+  expect(sparseText.indexOf('对局构成') < 0, '没有 modeLabel / partySize 时不出「对局构成」');
+  expect(sparseText.indexOf('对局段位') < 0, '没有 rankLabel 时不出「对局段位」');
+  expect(sparseText.indexOf('版本对照') < 0, '没有 patch 时不出「版本对照」');
+  expect(sparseText.indexOf('活跃度') < 0, '没有 startTime 时不出「活跃度」');
+  expect(text.indexOf('活跃度') >= 0 && /近 7 天打了 \d+ 场/.test(text), '「活跃度」给出最近一场与近 7 天场次');
+  expect(text.indexOf('版本对照') >= 0 && /7\.40 打了 30 场/.test(text), '「版本对照」拿当前版本和其余场次最多的版本比');
+
+  // 胜负与时长：主夹具里胜/负平均时长差不到 2 分钟，所以单独造一组刚好过线的
+  const durWin = [];
+  for (let i = 0; i < 5; i++) durWin.push({ hero: '影魔', isWin: true, kills: 5, deaths: 1, assists: 5, duration: 2400 });
+  const durLose = [];
+  for (let i = 0; i < 5; i++) durLose.push({ hero: '影魔', isWin: false, kills: 2, deaths: 6, assists: 4, duration: 1800 });
+  const durOut = buildInsight({ matches: durWin.concat(durLose) }, {});
+  const durText = durOut.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n');
+  expect(/赢的 5 场平均 40:00，输的 5 场平均 30:00，赢下的局平均多打 10:00/.test(durText), '胜负与时长：差 10 分钟要点明方向与差值');
+  const shortCase = buildInsight(
+    {
+      matches: [
+        { hero: '影魔', isWin: true, kills: 5, deaths: 1, assists: 5, duration: 1830 },
+        { hero: '影魔', isWin: false, kills: 2, deaths: 6, assists: 4, duration: 1800 },
+      ],
+    },
+    {}
+  );
+  expect(
+    shortCase.blocks.map((b) => b.segs.map((s) => s.t).join('')).join('\n').indexOf('胜负与时长') < 0,
+    '两端场次不足 5 场时不出「胜负与时长」'
+  );
   expect(/口径：近 60 场公开对局 · GPM\/伤害取近 20 场/.test(out.note), '页脚口径写明两个窗口：' + out.note);
 
   const top3 = MP_STAT.heroStatsOf(MATCHES).slice(0, 3);
@@ -243,6 +373,25 @@ const PLAYER = {
   const api = fs.readFileSync(path.join(ROOT, 'pages', 'api', 'player-matches.js'), 'utf8');
   expect(api.indexOf('recent20') >= 0, '接口返回 recent20（GPM/伤害的唯一来源）');
   expect(api.indexOf('heroesLifetime') >= 0, '接口返回 heroesLifetime（绝活判定依据）');
+
+  // ---------------------------------------------------------------- ⑤ 展示层
+  // 「内容太少」那次补的三块：模式分布 / 近 20 场色块 / 逐场明细。
+  // 它们全靠 member.js 算好塞进 setData，wxml 只是渲染，两边缺一个就是空白块。
+  console.log('\n[展示层 · 名片页补齐的三块内容]');
+
+  const memberWxml = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
+  expect(memberJs.indexOf('stat.modeBreakdown') >= 0, 'member.js 算模式分布');
+  expect(memberJs.indexOf('tiles:') >= 0, 'member.js 生成近 20 场色块数据');
+  expect(memberJs.indexOf('listMore') >= 0, 'member.js 给逐场明细分页开关');
+  expect(memberJs.indexOf('onTapMoreMatches') >= 0, 'member.js 有「展开更多」处理函数');
+  expect(memberWxml.indexOf('stats-modes') >= 0, 'wxml 渲染模式分布');
+  expect(memberWxml.indexOf('class="tiles"') >= 0, 'wxml 渲染近 20 场色块');
+  expect(memberWxml.indexOf('class="mlist"') >= 0, 'wxml 渲染逐场明细');
+  expect(memberWxml.indexOf('bindtap="onTapMoreMatches"') >= 0, '「展开更多」已绑定');
+  // 逐场明细里网页端有的字段，小程序一个都不能少
+  for (const f of ['item.kdaText', 'item.mode', 'item.durText', 'item.patch', 'item.rank', 'item.ago']) {
+    expect(memberWxml.indexOf(f) >= 0, '逐场明细包含 ' + f);
+  }
 
   console.log('\n结果：' + (fail === 0 ? '全部通过' : fail + ' 项失败'));
   process.exit(fail === 0 ? 0 : 1);

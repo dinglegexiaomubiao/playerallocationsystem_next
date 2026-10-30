@@ -20,6 +20,14 @@
 //
 // 输出结构与页面 wx:for 直接对接：
 //   { blocks: [{ k, type:'item', num, segs:[{k,b,t}] }], items, note }
+//
+// ---- 维度清单（2026-10-30 扩过一次，用户反馈「内容太少」）----
+// 潜在 14 条，实际条数取决于这个号有没有对应数据：
+//   1 近期战绩  2 对局构成  3 对局段位  4 生涯对照  5 自报胜率对照
+//   6 场均数据  7 胜负与时长  8 经济与输出  9 常用擅长项  10 自报与实操重合
+//   11 高熟练度擅长项  12 版本对照  13 近期走势  14 活跃度
+// 每条都对应 /api/player-matches 里的一个字段，没有对应数据就整条不出现
+// （比如一个号 200 场全在同一个版本，第 12 条就不会有）。
 
 const stat = require('./match-stat.js');
 
@@ -44,6 +52,32 @@ const DMG_TIERS = [
   [20000, '中等'],
   [0, '偏低']
 ];
+
+// 场均死亡分档。实测群里主力号多在 4~7 次，所以 6 以上才算多
+const DEATH_TIERS = [
+  [8, '明显偏多'],
+  [6, '偏多'],
+  [4, '中等'],
+  [2, '偏少'],
+  [0, '明显偏少']
+];
+
+// 助攻 / 击杀比：1 附近是噪音，只在明显偏一侧时才描述
+const ASSIST_RATIO_HIGH = 1.5;
+const ASSIST_RATIO_LOW = 0.8;
+
+// 胜负平均时长差：少于 2 分钟不值得单独说；两端各至少 5 场才有可比性
+const DURATION_GAP = 120;
+const DURATION_MIN_SIDE = 5;
+
+// 版本对照：两个版本各至少这么多场才提，否则是「换版本那天刚好输了两把」
+const PATCH_MIN_MATCHES = 10;
+
+// 对局段位：有段位数据的场次少于这个数就不下结论（average_rank 常为 null）
+const RANK_MIN_COVERED = 10;
+
+// 活跃度窗口（天）
+const ACTIVITY_DAYS = 7;
 
 // 自报胜率与实际胜率的「吻合」区间：差 8 个百分点以内不评价
 const WINRATE_GAP = 8;
@@ -148,15 +182,44 @@ function buildInsight(data, player) {
   const wins = sum.wins;
   const losses = sum.losses;
   const winRate = sum.winRate;
-  const totals = stat.totalsOf(matches);
-  const per = (n) => (total ? (n / total).toFixed(1) : '0.0');
 
   // 1. 样本与胜负：先说清「这堆结论是基于多少场比赛」，避免被当成全期评价
   let first = '近 ' + total + ' 场 ' + wins + ' 胜 ' + losses + ' 负，胜率 ' + winRate + '%';
   if (p.score) first += '（当前天梯 ' + p.score + ' 分 · ' + tierOf(p.score) + '）';
   push('近期战绩', first);
 
-  // 2. 生涯对照：网页上也有这一行，两边数字同源（都来自 /wl）
+  // 2. 对局构成：这批对局都打在什么模式里、单排还是组队。
+  //    只拿得到 modeLabel 才有意义——全是「其他」说明接口没给模式，宁可不写。
+  const modes = stat.modeBreakdown(matches);
+  const party = stat.partyBreakdown(matches);
+  const modeOk = modes.length > 1 || (modes.length === 1 && modes[0].label !== '其他');
+  const constitution = [];
+  if (modeOk) {
+    const shown = modes.slice(0, 4).map(function (m) {
+      return m.label + ' ' + m.total + ' 场';
+    });
+    constitution.push('模式 ' + shown.join(' / ') + (modes.length > 4 ? ' 等' : ''));
+  }
+  if (party.solo.total > 0 && party.team.total > 0) {
+    constitution.push(
+      '单排 ' + party.solo.total + ' 场（胜率 ' + party.solo.winRate + '%）' +
+        ' · 组队 ' + party.team.total + ' 场（胜率 ' + party.team.winRate + '%）'
+    );
+  }
+  if (constitution.length) push('对局构成', constitution.join('；'));
+
+  // 3. 对局段位：average_rank 常为 null，所以必须带上「有数据的场次」，
+  //    否则会被当成「这 200 场都在这个段位」。
+  const rank = stat.rankMode(matches);
+  if (rank && rank.covered >= RANK_MIN_COVERED) {
+    push(
+      '对局段位',
+      '出现最多的是「' + rank.label + '」' + rank.total + ' 场（' +
+        rank.covered + ' 场有段位数据，占 ' + Math.round((rank.covered / total) * 100) + '%）'
+    );
+  }
+
+  // 4. 生涯对照：网页上也有这一行，两边数字同源（都来自 /wl）
   const life = d.lifetime;
   if (life && Number(life.total) > 0) {
     push(
@@ -166,7 +229,7 @@ function buildInsight(data, player) {
     );
   }
 
-  // 3. 自报胜率对照：只在本人填过胜率时才有意义
+  // 5. 自报胜率对照：只在本人填过胜率时才有意义
   const selfWin = Number(p.win_rate) || 0;
   if (selfWin > 0) {
     const gap = winRate - selfWin;
@@ -177,17 +240,49 @@ function buildInsight(data, player) {
     push('自报胜率对照', '自报 ' + selfWin + '%，近 ' + total + ' 场实际 ' + winRate + '%，' + verdict);
   }
 
-  // 4. KDA：三个分项都摆出来，用户在别处能自己复核
-  const kda = Number(sum.kda) || 0;
-  if (kda > 0) {
+  // 6. 场均数据：KDA 三分项 + 死亡分档 + 助攻/击杀结构，一条说完，
+  //    不再单拆几条——分项数字摆出来，用户在别处能自己复核
+  const avg = stat.averagesOf(matches);
+  const avgKills = Number(avg.kills) || 0;
+  const avgDeaths = Number(avg.deaths) || 0;
+  const avgAssists = Number(avg.assists) || 0;
+  if (avgKills + avgDeaths + avgAssists > 0) {
+    const seg = [
+      'KDA ' + sum.kda + '（场均 ' + avg.kills + ' 击杀 / ' + avg.deaths + ' 死亡 / ' + avg.assists + ' 助攻）',
+    ];
+    const kdaTier = pickTier(KDA_TIERS, Number(sum.kda) || 0);
+    if (kdaTier) seg.push('KDA 属「' + kdaTier + '」');
+    const deathTier = pickTier(DEATH_TIERS, avgDeaths);
+    if (deathTier) seg.push('死亡数属「' + deathTier + '」');
+    // 助攻与击杀都非 0 才谈比例，否则除出来的是假信号
+    if (avgKills > 0 && avgAssists > 0) {
+      const ratio = avgAssists / avgKills;
+      if (ratio >= ASSIST_RATIO_HIGH) {
+        seg.push('助攻是击杀的 ' + ratio.toFixed(1) + ' 倍');
+      } else if (ratio <= ASSIST_RATIO_LOW) {
+        seg.push('击杀多于助攻（助攻 / 击杀 ' + ratio.toFixed(1) + '）');
+      }
+    }
+    push('场均数据', seg.join('，'));
+  }
+
+  // 7. 胜负与时长：同样的样本里，赢的局和输的局打得长短差多少
+  const dur = stat.durationByResult(matches);
+  if (
+    dur.winCount >= DURATION_MIN_SIDE &&
+    dur.loseCount >= DURATION_MIN_SIDE &&
+    Math.abs(dur.diff) >= DURATION_GAP
+  ) {
     push(
-      '场均 KDA',
-      sum.kda + '（' + per(totals.kills) + ' / ' + per(totals.deaths) + ' / ' + per(totals.assists) + '）' +
-        '，在常见分档里属「' + pickTier(KDA_TIERS, kda) + '」'
+      '胜负与时长',
+      '赢的 ' + dur.winCount + ' 场平均 ' + stat.fmtDuration(dur.winAvg) +
+        '，输的 ' + dur.loseCount + ' 场平均 ' + stat.fmtDuration(dur.loseAvg) +
+        '，' + (dur.diff > 0 ? '赢下的局平均多打 ' : '赢下的局平均少打 ') +
+        stat.fmtDuration(Math.abs(dur.diff))
     );
   }
 
-  // 5. 经济与输出：只有近 20 场那个窗口有 GPM / 伤害，标题和句子里都写明，
+  // 8. 经济与输出：只有近 20 场那个窗口有 GPM / 伤害，标题和句子里都写明，
   //    否则用户会拿它去对上面 200 场的胜率。
   const r20 = d.recent20;
   if (r20 && (Number(r20.avgGpm) > 0 || Number(r20.avgHeroDamage) > 0)) {
@@ -199,7 +294,7 @@ function buildInsight(data, player) {
     push('经济与输出（近 ' + Number(r20.total) + ' 场）', parts.join('，'));
   }
 
-  // 6. 常用英雄：只列前三，多了页面放不下。窗口与上面几条一致（近 N 场）。
+  // 9. 常用英雄：只列前三，多了页面放不下。窗口与上面几条一致（近 N 场）。
   const heroes = stat.heroStatsOf(matches);
   const top = heroes.slice(0, 3);
   if (top.length) {
@@ -213,7 +308,13 @@ function buildInsight(data, player) {
     );
   }
 
-  // 7. 绝活：按「生涯场次 + 胜率」两个硬条件筛，不做主观判断
+  // 10. 自报擅长与实际常用的重合：给一个可核对的事实，不评价「该练什么」
+  const hit = overlapHeroes(p.heroes, top);
+  if (hit.length) {
+    push('自报与实操重合', '自报擅长项里，' + hit.join('、') + ' 正好进了近期常用前三');
+  }
+
+  // 11. 绝活：按「生涯场次 + 胜率」两个硬条件筛，不做主观判断
   const lifeHeroes = Array.isArray(d.heroesLifetime) ? d.heroesLifetime : [];
   const signature = lifeHeroes
     .filter(function (h) {
@@ -235,22 +336,41 @@ function buildInsight(data, player) {
     );
   }
 
-  // 8. 连胜 / 连败：短于 STREAK_MIN 不提，否则「两连胜」这种噪音太多
+  // 12. 版本对照：拿「最近一场所在的版本」和「其余版本里场次最多的那个」比。
+  //     matches 已按开赛时间倒序，所以 matches[0].patch 就是当前版本。
+  const patches = stat.patchBreakdown(matches);
+  const curPatch = String((matches[0] || {}).patch || '');
+  let curRow = null;
+  let prevRow = null;
+  for (let i = 0; i < patches.length; i++) {
+    if (patches[i].label === curPatch) curRow = patches[i];
+    else if (!prevRow || patches[i].total > prevRow.total) prevRow = patches[i];
+  }
+  if (curRow && prevRow && curRow.total >= PATCH_MIN_MATCHES && prevRow.total >= PATCH_MIN_MATCHES) {
+    push(
+      '版本对照',
+      prevRow.label + ' 打了 ' + prevRow.total + ' 场（胜率 ' + prevRow.winRate + '%），' +
+        curRow.label + ' 打了 ' + curRow.total + ' 场（胜率 ' + curRow.winRate + '%）'
+    );
+  }
+
+  // 13. 连胜 / 连败：短于 STREAK_MIN 不提，否则「两连胜」这种噪音太多
   const streak = stat.streakOf(matches, STREAK_MIN);
   if (streak) {
     push('近期走势', '最近 ' + streak.n + ' 场' + (streak.isWin ? '连胜' : '连败'));
   }
 
-  // 9. 自报擅长与实际常用的重合：给一个可核对的事实，不评价「该练什么」
-  const hit = overlapHeroes(p.heroes, top);
-  if (hit.length) {
-    push('自报与实操重合', '自报擅长项里，' + hit.join('、') + ' 正好进了近期常用前三');
+  // 14. 活跃度：最近一场多久之前 + 近 N 天打了多少场
+  const act = stat.activityOf(matches, ACTIVITY_DAYS);
+  if (act) {
+    const ago = act.agoDays <= 0 ? '24 小时内' : act.agoDays + ' 天前';
+    push('活跃度', '最近一场在 ' + ago + '，近 ' + act.days + ' 天打了 ' + act.recent + ' 场');
   }
 
   // 页脚口径：把「哪一段是哪个窗口」写在用户看得见的地方
   let note = '口径：近 ' + total + ' 场公开对局';
   if (r20 && Number(r20.total) > 0) note += ' · GPM/伤害取近 ' + Number(r20.total) + ' 场';
-  note += ' · 不含预测';
+  note += ' · 段位取众数 · 不含预测';
 
   return {
     blocks: blocks,

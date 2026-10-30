@@ -16,6 +16,13 @@ page {
   /* 星级用网页的 --gold（浅色主题取 #83590f），别自己编金色 */
   --gold: #83590f;
   --gold-soft: rgba(131, 89, 15, 0.10);
+  /* 胜负色：直接抄网页 tokens.css 浅色主题的 --ok / --color-danger。
+     网页端对局列表就是这两色（.mh-res.win / .lose），小程序跟它保持一致。
+     ⚠ 这不是 A 股的红涨绿跌，是「胜=绿、负=红」的通用游戏配色，别按股市习惯反过来。 */
+  --ok: #1a7240;
+  --ok-soft: rgba(26, 114, 64, 0.10);
+  --danger: #c02a22;
+  --danger-soft: rgba(192, 42, 34, 0.09);
   --radius: 8px;
   --radius-lg: 12px;
   --shadow: 0 2px 7px rgba(21, 24, 28, 0.06);

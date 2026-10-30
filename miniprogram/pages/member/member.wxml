@@ -134,7 +134,6 @@
         <view class="stats-meta">
           <text wx:if="{{stats.data.accountLabel}}" class="stats-meta-i">{{stats.data.accountLabel}}</text>
           <text wx:if="{{stats.data.lifetimeText}}" class="stats-meta-i">生涯 {{stats.data.lifetimeText}}</text>
-          <text class="stats-meta-i">近 20 场最高 {{stats.data.bestText}}</text>
         </view>
 
         <!-- GPM / 伤害只有近 20 场这个窗口有，单独一行标清口径，不和 200 场的胜率并排看 -->
@@ -144,8 +143,51 @@
           <text wx:if="{{stats.data.dmg}}" class="stats-window-i">场均伤害 {{stats.data.dmg}}</text>
         </view>
 
+        <!-- 单场最高：网页端是「近 20 场最高」三个并排小项，这里照搬，拆成标签更好扫 -->
+        <view class="stats-best">
+          <text class="stats-best-t">近 20 场最高</text>
+          <text class="stats-best-i">击杀 {{stats.data.bestKills}}</text>
+          <text class="stats-best-i">助攻 {{stats.data.bestAssists}}</text>
+          <text class="stats-best-i">KDA {{stats.data.bestKda}}</text>
+        </view>
+
+        <!-- 模式分布：网页端是可点的 tab，小程序竖屏放不下筛选条，改成一行分布 -->
+        <view wx:if="{{stats.data.modes.length}}" class="stats-modes">
+          <text wx:for="{{stats.data.modes}}" wx:key="label" class="stats-mode">{{item.label}} {{item.total}} 场 · {{item.pct}}%</text>
+        </view>
+
+        <!-- 常用项（整份样本聚合，不是最近 20 场） -->
         <view wx:if="{{stats.data.heroes.length}}" class="stats-heroes">
           <text wx:for="{{stats.data.heroes}}" wx:key="name" class="stats-hero">{{item.name}} {{item.matches}} 场 · {{item.winRate}}%</text>
+        </view>
+
+        <!-- 近 20 场色块：与上面的「近 20 场最高」同一个窗口，一眼看手感 -->
+        <view wx:if="{{stats.data.tiles.length}}" class="tiles">
+          <view wx:for="{{stats.data.tiles}}" wx:key="key" class="tile {{item.isWin ? 'is-win' : 'is-lose'}}">
+            <text class="tile-hero">{{item.hero}}</text>
+            <text class="tile-res">{{item.isWin ? '胜' : '负'}} · {{item.kda}}</text>
+          </view>
+        </view>
+
+        <!-- 逐场明细：网页端有的字段这里一个不少（结果/英雄/KDA/模式·时长/版本/段位/时间） -->
+        <view wx:if="{{stats.data.list.length}}" class="mlist">
+          <view wx:for="{{stats.data.list}}" wx:key="key" class="mrow">
+            <view class="mrow-head">
+              <text class="mrow-res {{item.isWin ? 'is-win' : 'is-lose'}}">{{item.isWin ? '胜利' : '失败'}}</text>
+              <text class="mrow-hero">{{item.hero}}</text>
+              <text class="mrow-kda">{{item.kdaText}}</text>
+            </view>
+            <view class="mrow-sub">
+              <text class="mrow-tag">{{item.mode}}</text>
+              <text class="mrow-tag">{{item.durText}}</text>
+              <text wx:if="{{item.patch}}" class="mrow-tag">{{item.patch}}</text>
+              <text wx:if="{{item.rank}}" class="mrow-tag">{{item.rank}}</text>
+              <text class="mrow-ago">{{item.ago}}</text>
+            </view>
+          </view>
+          <view wx:if="{{stats.data.listMore}}" class="mrow-more" bindtap="onTapMoreMatches">
+            展开更多（已显示 {{stats.data.listShown}} / {{stats.data.total}} 场）
+          </view>
         </view>
       </view>
     </view>
