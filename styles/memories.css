@@ -346,12 +346,12 @@
 }
 
 .mem-grid-2 {
-  grid-template-columns: repeat(2, minmax(0, 235px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* 多图铺满正文栏宽：之前卡在 640px，桌面端照片比正文窄一截，看着像没对齐 */
 .mem-grid-3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  max-width: 640px;
 }
 
 .mem-shot {
