@@ -19,7 +19,7 @@ const EMPTY_INSIGHT = { status: 'idle', error: '', analysis: '', lines: [], empt
 function idleOf(gameId, loggedIn) {
   if (!gameId) return { idleHint: '这位群友还没填 SteamID，无法分析', idleBtn: '无 SteamID' };
   if (!loggedIn) return { idleHint: '解读会消耗接口额度，登录后可用', idleBtn: '登录后可用' };
-  return { idleHint: '按近期战绩生成解读，仅供参考', idleBtn: '看解读' };
+  return { idleHint: '从服务器读取解读，仅供参考', idleBtn: '看解读' };
 }
 
 // 逐场明细一屏放 10 条，点「展开更多」再放 10 条。

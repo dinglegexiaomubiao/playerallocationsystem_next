@@ -12,7 +12,7 @@
  *   ② 规则层：buildInsight（本地规则引擎，现仅作离线自检/可回退参考保留）
  *      对同一份数字必须给出同一份结论，分档边界不漏，且样本口径固定为整份对局
  *      （最多 200 场），GPM/伤害必须自带「近 20 场」标签；
- *   ③ 呈现护栏：可见文案不出现「AI」字样，但必须标注「由服务器生成」，且登录才能触发。
+ *   ③ 呈现护栏：可见文案不出现「AI」字样，但必须标注「从服务器读取」，且登录才能触发。
  *
  * 全程不联网、不读库、不消耗任何模型额度，随时可跑：
  *   node scripts/check-mp-insight.cjs
@@ -328,7 +328,7 @@ const PLAYER = {
 
   // ---------------------------------------------------------------- ③ 呈现护栏
 
-  console.log('\n[呈现 · 文案不含 AI 字样 + 明确标注服务器生成 + 登录前置]');
+  console.log('\n[呈现 · 文案不含 AI 字样 + 标注从服务器读取 + 登录前置]');
 
   // 2026-10-30 用户要求：小程序可见文案里不出现「AI」字样，但仍需标注「由服务器生成」，
   // 且必须登录才能触发（额度保护）。护栏按这三条守。
@@ -350,7 +350,8 @@ const PLAYER = {
 
   const memberWxml2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
   expect(memberWxml2.indexOf('战绩解读') >= 0, '名片页该区块标注「战绩解读」');
-  expect(memberWxml2.indexOf('由服务器生成') >= 0, '解读文本处标注「由服务器生成」，让用户知道内容来源');
+  expect(memberWxml2.indexOf('从服务器读取') >= 0, '解读文本处标注「从服务器读取」，让用户知道内容来源');
+  expect(memberWxml2.indexOf('由服务器生成') < 0, '不再出现「由服务器生成」这种口径');
 
   const memberJs2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.js'), 'utf8');
   expect(memberJs2.indexOf('/api/ai-analysis') >= 0, '名片页改用服务端 /api/ai-analysis');
