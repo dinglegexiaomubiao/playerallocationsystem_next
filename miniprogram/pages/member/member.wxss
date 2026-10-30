@@ -497,6 +497,18 @@
   padding: 24rpx;
   margin-top: 16rpx;
 }
+
+/* AI 生成文本：逐行渲染（<text> 不保证保留换行，按行拆开最稳） */
+.ai-para {
+  font-size: 25rpx;
+  line-height: 1.8;
+  color: var(--text-2);
+  word-break: break-word;
+  margin-bottom: 10rpx;
+}
+.ai-para:last-child {
+  margin-bottom: 0;
+}
 .ai-line {
   display: flex;
   align-items: flex-start;

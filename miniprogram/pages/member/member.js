@@ -1,6 +1,5 @@
 const { request, getBase } = require('../../utils/api');
 const { fullUrl, regionShort, fmtMonthDay } = require('../../utils/format');
-const { buildInsight } = require('../../utils/insight');
 const stat = require('../../utils/match-stat');
 const session = require('../../utils/session');
 
@@ -10,10 +9,18 @@ const rankText = (n) => {
   return '第 ' + n + ' 名';
 };
 
-// 战绩解读是本地按规则算的（utils/insight.js），毫秒级返回，所以不设缓存：
-// 之前那套 30 分钟 storage 缓存是给服务端大模型分析用的，现在没有等待成本了。
+// 战绩解读 = 服务器调用大模型生成（POST /api/ai-analysis），小程序只负责拉取并展示，
+// 自己不跑模型、也不存模型 key（算力在哪不影响审核判定，详见 小程序项目档案 提审记录）。
+// 要走网络且可能耗时几秒，insight 有 idle / running / done / error / empty 五个态。
 const EMPTY_STATS = { status: 'idle', error: '', data: null };
-const EMPTY_INSIGHT = { status: 'idle', error: '', blocks: [], items: 0, note: '', emptyText: '' };
+const EMPTY_INSIGHT = { status: 'idle', error: '', analysis: '', lines: [], emptyText: '', idleHint: '', idleBtn: '' };
+
+// 「看解读」按钮的三种空闲态文案：无 SteamID / 未登录 / 可分析
+function idleOf(gameId, loggedIn) {
+  if (!gameId) return { idleHint: '这位群友还没填 SteamID，无法分析', idleBtn: '无 SteamID' };
+  if (!loggedIn) return { idleHint: 'AI 分析会消耗接口额度，登录后可用', idleBtn: '登录后可用' };
+  return { idleHint: '由服务器调用大模型，对近期战绩做生成式解读', idleBtn: '看解读' };
+}
 
 // 逐场明细一屏放 10 条，点「展开更多」再放 10 条。
 // 网页端是每页 20 条（大屏够放），小程序竖屏 10 条刚好一屏，再多就得一直滑。
@@ -46,6 +53,7 @@ Page({
   onShow() {
     // 从登录页回来要立刻反映登录态（页面上有「登录后可用」之类的提示位）
     this.setData({ loggedIn: !!session.isLoggedIn() });
+    if (this.data.gameId) this.syncInsightIdle();
   },
 
   onPullDownRefresh() {
@@ -95,6 +103,9 @@ Page({
         }
         this._accounts = accounts;
 
+        const gameId = accounts.length ? accounts[0].accountId : '';
+        const idle = idleOf(gameId, !!session.isLoggedIn());
+
         const records = (Array.isArray(raw.records) ? raw.records : []).slice()
           .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
 
@@ -104,7 +115,9 @@ Page({
         this.setData({
           loading: false,
           // SteamID 是拉 OpenDota 战绩的唯一钥匙，也是战绩解读的前置条件
-          gameId: accounts.length ? accounts[0].accountId : '',
+          gameId: gameId,
+          // 进入页面先把「看解读」按钮的空闲态文案算好（含未登录/无 SteamID 分支）
+          insight: Object.assign({}, EMPTY_INSIGHT, idle),
           p: {
             nickname: name,
             initial: name.charAt(0),
@@ -295,67 +308,82 @@ Page({
     });
   },
 
-  // ---------------- 战绩解读（本地按规则统计，不调任何模型） ----------------
+  // ---------------- 战绩解读：服务器调大模型，小程序拉取展示 ----------------
+
+  /** 刷新「看解读」按钮的空闲态文案（无 SteamID / 未登录 / 可分析） */
+  syncInsightIdle() {
+    const idle = idleOf(this.data.gameId, !!session.isLoggedIn());
+    this.setData({ 'insight.idleHint': idle.idleHint, 'insight.idleBtn': idle.idleBtn });
+  },
 
   onTapInsight() {
     if (!this.data.gameId) {
       wx.showToast({ title: '这位群友没填 SteamID', icon: 'none' });
       return;
     }
-    if (this.data.stats.status === 'loading' || this.data.insight.status === 'running') return;
-    this.runInsight();
+    // AI 分析要消耗接口额度，与网页端一致：必须登录。未登录直接引导去登录页。
+    if (!session.isLoggedIn()) {
+      wx.navigateTo({ url: '/pages/login/login' });
+      return;
+    }
+    if (this.data.insight.status === 'running') return;
+    this.runAI();
   },
 
-  /** 有战绩就直接算，没有就先拉一次再算。整段同步完成，不需要等待提示 */
-  runInsight() {
+  /** 调服务端 /api/ai-analysis（type=player），服务端内部拉 stats 再生成；结果缓存 30 分钟 */
+  runAI() {
     this.setData({ insight: Object.assign({}, EMPTY_INSIGHT, { status: 'running' }) });
 
-    const compute = (matchesData) => {
-      const raw = this._raw || {};
-      const out = buildInsight(matchesData, {
-        score: raw.score || 0,
-        heroes: Array.isArray(raw.heroes) ? raw.heroes : [],
-        win_rate: raw.win_rate || 0,
-        positions: Array.isArray(raw.positions) ? raw.positions : []
-      });
-      this.setData({
-        insight: {
-          status: out.empty ? 'empty' : 'done',
-          error: '',
-          blocks: out.blocks,
-          items: out.items,
-          note: out.note,
-          emptyText: out.emptyText
-        }
-      });
+    const raw = this._raw || {};
+    const player = {
+      nickname: (this.data.p && this.data.p.nickname) || '',
+      score: raw.score || 0,
+      positions: Array.isArray(raw.positions) ? raw.positions : [],
+      heroes: Array.isArray(raw.heroes) ? raw.heroes : [],
+      win_rate: raw.win_rate || 0,
+      championships: raw.championships || 0,
+      synergy_names: (Array.isArray(raw.synergy_players) ? raw.synergy_players : []).map(
+        (id) => this._nameMap[String(id)] || id
+      ),
+      // 服务器靠这个去 OpenDota 拉战绩统计，再喂给大模型
+      game_id: this.data.gameId
     };
 
-    if (this._stats) {
-      compute(this._stats);
-      return Promise.resolve();
-    }
-    // 拉战绩失败时上面的战绩块自己会报错，这里只把解读区标成空，不重复喊。
-    // 注意 loadStats 在「号有、但对局是 0 场」时是 resolve(null) 而不是 reject，
-    // 这种情况也要落到空态，否则解读区会一直停在「正在统计…」。
-    const fallback = (msg) => {
-      this.setData({
-        insight: {
-          status: 'empty',
-          error: '',
-          blocks: [],
-          items: 0,
-          note: '',
-          emptyText: msg
+    return request('/api/ai-analysis', { type: 'player', data: { player: player, stats: null } }, { method: 'POST' })
+      .then((res) => {
+        if (res && res.success && res.analysis) {
+          const text = String(res.analysis);
+          // ** 是模型输出的加粗标记，原样保留；按行拆开逐行渲染更稳（<text> 不保证保留换行）
+          const lines = text
+            .split('\n')
+            .map((s) => s.replace(/\s+$/, ''))
+            .filter((s, i, arr) => !(s === '' && (i === 0 || i === arr.length - 1)));
+          this.setData({
+            insight: { status: 'done', error: '', analysis: text, lines: lines, emptyText: '' }
+          });
+        } else {
+          this.setData({
+            insight: {
+              status: 'error',
+              error: (res && res.error) || '分析失败',
+              analysis: '',
+              lines: [],
+              emptyText: ''
+            }
+          });
         }
+      })
+      .catch((e) => {
+        this.setData({
+          insight: {
+            status: 'error',
+            error: (e && e.message) || '网络错误，请稍后重试',
+            analysis: '',
+            lines: [],
+            emptyText: ''
+          }
+        });
       });
-    };
-    return this.loadStats().then(
-      (s) => {
-        if (s) compute(s);
-        else fallback('这位群友的账号在 OpenDota 上没有对局记录，暂时没有可统计的数据。');
-      },
-      () => fallback('没能拉到公开战绩，暂时没有可统计的数据。')
-    );
   },
 
   onShareAppMessage() {

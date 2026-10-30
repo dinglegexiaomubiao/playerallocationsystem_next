@@ -192,44 +192,42 @@
       </view>
     </view>
 
-    <!-- 战绩解读：数字全部来自上面那份公开战绩，按固定规则分档，不做推断也不做预测 -->
+    <!-- 战绩解读：由服务器调用大模型生成，小程序拉取并展示（需登录） -->
     <view class="block ai-block">
       <view class="sec-title">
-        战绩解读
-        <text wx:if="{{insight.status === 'done'}}" class="sec-note">{{insight.items}} 项</text>
+        AI 战绩分析
+        <text wx:if="{{insight.status === 'done'}}" class="sec-note">AI 生成</text>
       </view>
 
       <view wx:if="{{insight.status === 'idle'}}" class="surface act-row">
-        <text class="act-hint">把近期战绩的数字按固定标准分档，不做预测</text>
-        <text class="act-btn" bindtap="onTapInsight">{{gameId ? '看解读' : '无 SteamID'}}</text>
+        <text class="act-hint">{{insight.idleHint}}</text>
+        <text class="act-btn" bindtap="onTapInsight">{{insight.idleBtn}}</text>
       </view>
 
       <view wx:elif="{{insight.status === 'running'}}" class="surface ai-loading">
         <view class="spinner"></view>
         <view class="ai-loading-body">
-          <text class="ai-loading-title">{{stats.status === 'loading' ? '正在拉取战绩…' : '正在统计…'}}</text>
-          <text class="ai-loading-hint">用公开战绩直接算，一般一秒内</text>
+          <text class="ai-loading-title">AI 分析中…</text>
+          <text class="ai-loading-hint">由服务器调用大模型，约 3~10 秒</text>
         </view>
+      </view>
+
+      <view wx:elif="{{insight.status === 'error'}}" class="surface empty-tip">
+        {{insight.error}}
+        <text class="ai-rerun" bindtap="onTapInsight">重试</text>
       </view>
 
       <view wx:elif="{{insight.status === 'empty'}}" class="surface empty-tip">
         {{insight.emptyText}}
       </view>
 
-      <block wx:else>
-        <view class="surface ai-body">
-          <view wx:for="{{insight.blocks}}" wx:key="k" class="ai-line {{item.type === 'item' ? 'is-item' : ''}}">
-            <text wx:if="{{item.num}}" class="ai-num">{{item.num}}</text>
-            <view class="ai-line-body">
-              <text wx:for="{{item.segs}}" wx:for-item="seg" wx:key="k" class="ai-seg {{seg.b ? 'is-bold' : ''}}">{{seg.t}}</text>
-            </view>
-          </view>
-          <view class="ai-foot">
-            <text class="ai-foot-hint">{{insight.note}}</text>
-            <text class="ai-rerun" bindtap="onTapInsight">重新统计</text>
-          </view>
+      <view wx:else class="surface ai-body">
+        <view wx:for="{{insight.lines}}" wx:key="*this" class="ai-para">{{item}}</view>
+        <view class="ai-foot">
+          <text class="ai-foot-hint">由服务器 AI 生成，仅供参考</text>
+          <text class="ai-rerun" bindtap="onTapInsight">重新生成</text>
         </view>
-      </block>
+      </view>
     </view>
   </block>
 </view>

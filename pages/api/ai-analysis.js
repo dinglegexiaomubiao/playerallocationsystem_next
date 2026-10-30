@@ -9,6 +9,41 @@ function getCacheKey(type, data) {
   return `${type}_${JSON.stringify(data)}`;
 }
 
+// 小程序端不传 stats 时，服务端自己拉一次 /api/player-stats 再生成。
+// 这样小程序只需传 player（含 game_id），少一次外部往返；
+// 网页端仍按老样子传 stats，两条路径互不影响，缓存 key 也各自独立。
+function selfBase(req) {
+  if (process.env.APP_BASE_URL) return process.env.APP_BASE_URL.replace(/\/+$/, '');
+  const headers = (req && req.headers) || {};
+  const host = headers.host;
+  if (!host) return 'http://127.0.0.1:' + (process.env.PORT || 3000);
+  // 生产多在 nginx 后面：优先取 x-forwarded-proto；没有就按 host 猜（本地 http、线上 https），
+  // 避免内部自调用走 http 被 301 到 https 后再多一跳。
+  const xfp = headers['x-forwarded-proto'] ? String(headers['x-forwarded-proto']).split(',')[0].trim() : '';
+  const isLocal = /^(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(host);
+  const proto = xfp || (isLocal ? 'http' : 'https');
+  return proto + '://' + host;
+}
+
+async function fetchPlayerStats(gameId, req) {
+  const base = selfBase(req);
+  const url = base + '/api/player-stats?playerId=' + encodeURIComponent(gameId);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const r = await fetch(url, {
+      signal: controller.signal,
+      headers: { 'content-type': 'application/json' },
+    });
+    if (!r.ok) throw new Error('战绩统计接口返回 ' + r.status);
+    const j = await r.json();
+    if (!j || !j.stats) throw new Error('战绩统计为空');
+    return j.stats;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function buildPlayerPrompt(player, stats) {
   const score = player.score || 0;
   const tier = score >= 5420 ? '冠绝一世' 
@@ -167,7 +202,13 @@ export default async function handler(req, res) {
   try {
     let prompt;
     if (type === 'player') {
-      prompt = buildPlayerPrompt(data.player, data.stats);
+      let stats = data.stats;
+      const gameId = data.player && data.player.game_id;
+      // 小程序端只传 game_id，由服务端补齐 stats（与网页端传 stats 等价）
+      if (!stats && gameId) {
+        stats = await fetchPlayerStats(gameId, req);
+      }
+      prompt = buildPlayerPrompt(data.player, stats);
     } else if (type === 'team') {
       prompt = buildTeamPrompt(data.team, data.playersData);
     } else {

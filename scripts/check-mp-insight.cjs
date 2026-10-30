@@ -2,16 +2,18 @@
 /**
  * 群友名片「战绩解读」自检。
  *
- * 这个功能的特殊性在于**合规约束大于功能约束**：个人主体小程序未开放生成式 AI
- * 类目，2026-10-29 就因「涉及深度合成技术」被驳回过一次。所以自检分三块：
+ * 2026-10-30 起小程序重新展示**服务器生成的 AI 文本**（POST /api/ai-analysis，
+ * 服务器内部调大模型）。2026-10-29 曾因「涉及深度合成技术」被驳回，算力在哪不影响
+ * 判定，提审风险随之回来（见 小程序项目档案 提审记录）。自检分三块：
  *
  *   ① 口径层：`utils/match-stat.js` 是 `lib/match-format.mjs` 的手工移植，
  *      两边必须对同一批对局给出逐字段相同的汇总——这是「小程序和网页数字对不上」
  *      那次事故的护栏，漂移了就在这里红；
- *   ② 规则层：buildInsight 对同一份数字必须给出同一份结论，分档边界不漏，
- *      且样本口径固定为整份对局（最多 200 场），GPM/伤害必须自带「近 20 场」标签；
- *   ③ 合规层：静态扫 miniprogram 与 lib/changelog.js，用户可见文案里不许出现
- *      「AI / 智能 / 生成 / 推断 / 深度合成」这类会触发类目判定的字样。
+ *   ② 规则层：buildInsight（本地规则引擎，现仅作离线自检/可回退参考保留）
+ *      对同一份数字必须给出同一份结论，分档边界不漏，且样本口径固定为整份对局
+ *      （最多 200 场），GPM/伤害必须自带「近 20 场」标签；
+ *   ③ AI 呈现护栏：不再禁止「AI」字样，而是确保 AI 区块被明确标注、且必须登录才能触发，
+ *      避免误导用户与额度滥用。
  *
  * 全程不联网、不读库、不消耗任何模型额度，随时可跑：
  *   node scripts/check-mp-insight.cjs
@@ -325,49 +327,31 @@ const PLAYER = {
   expect(tierOf(5520) === '冠绝一世', '5520 分归「冠绝一世」');
   expect(streakOf(MATCHES, 3).n === 4, '导出的 streakOf 与内部实现同一份');
 
-  // ---------------------------------------------------------------- ③ 合规层
+  // ---------------------------------------------------------------- ③ AI 呈现护栏
 
-  console.log('\n[合规 · 用户可见文案不含生成式 AI 字样]');
+  console.log('\n[AI 呈现 · 明确标注 + 登录前置，避免误导与额度滥用]');
 
-  const BANNED = /AI\s*分析|AI\s*战力|AI\s*复审|AI\s*问答|AI\s*助手|智能分析|智能生成|深度合成|AIGC|大模型/i;
+  // 2026-10-30 起小程序重新展示服务器生成的 AI 文本（提审风险见 小程序项目档案）。
+  // 护栏目标变了：不再禁止「AI」字样，而是确保它被明确标注、且必须登录才能触发。
+  const memberWxml2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
+  expect(memberWxml2.indexOf('AI 战绩分析') >= 0, '名片页该区块明确标注「AI 战绩分析」');
+  expect(memberWxml2.indexOf('由服务器 AI 生成') >= 0, 'AI 文本处标注「由服务器 AI 生成」，让用户/审核知道是生成式内容');
 
-  function walk(dir, acc) {
-    for (const name of fs.readdirSync(dir)) {
-      const full = path.join(dir, name);
-      const st = fs.statSync(full);
-      if (st.isDirectory()) walk(full, acc);
-      else acc.push(full);
-    }
-    return acc;
-  }
-
-  const wxmlFiles = walk(MP, []).filter((f) => /\.wxml$/.test(f));
-  let wxmlHit = 0;
-  for (const f of wxmlFiles) {
-    const src = fs.readFileSync(f, 'utf8');
-    const m = src.match(BANNED);
-    if (m) {
-      bad('用户可见文案含「' + m[0] + '」：' + path.relative(ROOT, f));
-      wxmlHit++;
-    }
-  }
-  expect(wxmlHit === 0, wxmlFiles.length + ' 个 wxml 全部通过文案扫描');
-
-  const cl = fs.readFileSync(path.join(ROOT, 'lib', 'changelog.js'), 'utf8');
-  const clHit = cl.match(BANNED);
-  expect(!clHit, clHit ? 'lib/changelog.js 含「' + clHit[0] + '」（会在小程序更新日志页露出）' : 'lib/changelog.js 无违规字样');
+  const memberJs2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.js'), 'utf8');
+  expect(memberJs2.indexOf('/api/ai-analysis') >= 0, '名片页改用服务端 /api/ai-analysis（服务器调大模型）');
+  expect(memberJs2.indexOf('session.isLoggedIn()') >= 0, '名片页在调 AI 前检查登录态（与网页一致，防额度滥用）');
+  expect(memberJs2.indexOf('pages/login/login') >= 0, '未登录时引导去登录页，而不是直接调 AI');
 
   // ---------------------------------------------------------------- ④ 数据源护栏
 
-  console.log('\n[数据源 · 与网页端同一接口同一窗口]');
+  console.log('\n[数据源 · 战绩口径与网页端同源]');
 
-  const memberJs = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.js'), 'utf8');
-  expect(memberJs.indexOf('/api/ai-analysis') < 0, '名片页不请求 /api/ai-analysis');
-  expect(memberJs.indexOf('utils/insight') >= 0, '名片页用本地规则统计（utils/insight）');
-  expect(memberJs.indexOf("'/api/player-matches") >= 0, '名片页走 /api/player-matches（与网页同一接口）');
+  // memberJs2 已在 ③ 读取，这里复用
+  expect(memberJs2.indexOf('utils/insight') < 0, '名片页不再用本地规则引擎（utils/insight），改走服务端 AI');
+  expect(memberJs2.indexOf("'/api/player-matches") >= 0, '名片页仍走 /api/player-matches（与网页同一接口）');
   expect(
-    memberJs.indexOf("'/api/player-stats") < 0,
-    '名片页不再走 /api/player-stats（那是最近 20 场口径，两边数字对不上的根源）'
+    memberJs2.indexOf("'/api/player-stats") < 0,
+    '名片页不直接走 /api/player-stats（由服务端 /api/ai-analysis 内部拉取，避免重复往返）'
   );
 
   const api = fs.readFileSync(path.join(ROOT, 'pages', 'api', 'player-matches.js'), 'utf8');
@@ -380,10 +364,10 @@ const PLAYER = {
   console.log('\n[展示层 · 名片页补齐的三块内容]');
 
   const memberWxml = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
-  expect(memberJs.indexOf('stat.modeBreakdown') >= 0, 'member.js 算模式分布');
-  expect(memberJs.indexOf('tiles:') >= 0, 'member.js 生成近 20 场色块数据');
-  expect(memberJs.indexOf('listMore') >= 0, 'member.js 给逐场明细分页开关');
-  expect(memberJs.indexOf('onTapMoreMatches') >= 0, 'member.js 有「展开更多」处理函数');
+  expect(memberJs2.indexOf('stat.modeBreakdown') >= 0, 'member.js 算模式分布');
+  expect(memberJs2.indexOf('tiles:') >= 0, 'member.js 生成近 20 场色块数据');
+  expect(memberJs2.indexOf('listMore') >= 0, 'member.js 给逐场明细分页开关');
+  expect(memberJs2.indexOf('onTapMoreMatches') >= 0, 'member.js 有「展开更多」处理函数');
   expect(memberWxml.indexOf('stats-modes') >= 0, 'wxml 渲染模式分布');
   expect(memberWxml.indexOf('class="tiles"') >= 0, 'wxml 渲染近 20 场色块');
   expect(memberWxml.indexOf('class="mlist"') >= 0, 'wxml 渲染逐场明细');
