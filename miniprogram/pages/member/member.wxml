@@ -207,8 +207,8 @@
       <view wx:elif="{{insight.status === 'running'}}" class="surface ai-loading">
         <view class="spinner"></view>
         <view class="ai-loading-body">
-          <text class="ai-loading-title">AI 分析中…</text>
-          <text class="ai-loading-hint">由服务器调用大模型，约 3~10 秒</text>
+          <text class="ai-loading-title">正在生成解读…</text>
+          <text class="ai-loading-hint">约 3~10 秒，请稍候</text>
         </view>
       </view>
 
