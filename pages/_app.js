@@ -9,6 +9,8 @@ import '../styles/layout.css';
 import '../styles/shell.css';
 import '../styles/home.css';
 import '../styles/tournament-dark.css';
+// 群友回忆：新增页自己的样式层，只作用于 .mem-* 命名空间
+import '../styles/memories.css';
 // 后台自己的样式层，放最后：它只作用于 .adm-* 命名空间，但需要压过上面的通用规则
 import '../styles/admin.css';
 import Layout from '../components/Layout';

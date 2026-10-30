@@ -19,6 +19,7 @@ const PRIMARY_NAV = [
   { href: '/map', label: '群友分布' },
   { href: '/food', label: '群友美食' },
   { href: '/quotes', label: '群友语录' },
+  { href: '/memories', label: '群友回忆' },
 ];
 
 // 登录后追加的次级入口

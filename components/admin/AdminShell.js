@@ -41,6 +41,7 @@ const NAV = [
       { key: 'food', href: '/admin/food', label: '美食' },
       { key: 'reviews', href: '/admin/reviews', label: '评价' },
       { key: 'quotes', href: '/admin/quotes', label: '语录' },
+      { key: 'memories', href: '/admin/memories', label: '回忆' },
       { key: 'party', href: '/admin/party', label: '开黑' },
       { key: 'activities', href: '/admin/activities', label: '活动' },
       { key: 'messages', href: '/admin/messages', label: '留言' },

@@ -30,7 +30,10 @@ const ok = (c, label, detail = '') => {
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   const errors = [];
-  p.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  // 开发服务器的 HMR websocket 在无头浏览器里握不上手（ERR_INVALID_HTTP_RESPONSE），
+  // 这不是产品缺陷，生产构建里没有 /_next/hmr。过滤掉，其余照旧算错。
+  const isNoise = (t) => String(t).includes('/_next/hmr');
+  p.on('console', (m) => m.type() === 'error' && !isNoise(m.text()) && errors.push(m.text()));
   p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 
   await p.goto(BASE + '/', { waitUntil: 'networkidle', timeout: 60000 });
@@ -94,12 +97,20 @@ const ok = (c, label, detail = '') => {
 
   await p.locator('.home-hero-feed').screenshot({ path: 'shots/home-tabs-feature.png' });
 
-  // ---- 切到「活动」（库里 0 条，应该走空态） ----
+  // ---- 切到「活动」：有内容就看内容，没内容就走空态 ----
+  //
+  // ⚠ 不要写死「活动一定是 0 条」：库里有没有活动是随时会变的
+  // （2026-10-30 就有人建了一条测试活动，这条断言当天变红，但产品其实没问题）。
+  // 两种情况下都不该出现「既有行又显示空态」这种自相矛盾的状态。
   await p.locator('.home-feed-tab').filter({ hasText: '活动' }).click();
   await p.waitForTimeout(350);
   const rowsAct = await p.locator('.home-hero-feed-row').count();
   const emptyShown = await p.locator('.home-feed-empty').count();
-  ok(rowsAct === 0 && emptyShown === 1, '空分类显示空态文案而不是空白', `行 ${rowsAct} / 空态 ${emptyShown}`);
+  ok(
+    rowsAct === 0 ? emptyShown === 1 : emptyShown === 0,
+    rowsAct === 0 ? '空分类显示空态文案' : '有内容的分类不再显示空态',
+    `行 ${rowsAct} / 空态 ${emptyShown}`
+  );
 
   // ---- 「帮派」Tab：有帮派看句式与链接，没帮派看空态，两边都得验 ----
   //

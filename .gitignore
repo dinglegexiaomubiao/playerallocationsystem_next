@@ -99,3 +99,6 @@ miniprogram/node_modules/
 miniprogram/miniprogram_npm/
 miniprogram/.miniprogram-cache/
 miniprogram/project.private.config.json
+
+# 本地开发时的照片上传目录（线上走 /www/wwwroot/laroja-uploads，与代码目录分离）
+.uploads/
