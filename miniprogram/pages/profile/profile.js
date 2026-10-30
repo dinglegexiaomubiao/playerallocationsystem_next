@@ -14,6 +14,7 @@
 //   - 擅长项用擅长项列表选（网页端有擅长项图标库），这里退化成逗号分隔的文本。
 const { request } = require('../../utils/api');
 const { loadOptions } = require('../../utils/options');
+const session = require('../../utils/session');
 
 const toast = (t) => wx.showToast({ title: t, icon: 'none' });
 
@@ -30,6 +31,48 @@ function toInt(v) {
   const s = String(v === undefined || v === null ? '' : v).trim();
   if (!s) return null;
   return Number(s);
+}
+
+// 身份数组在服务端有两种历史形态：['123'] 和 [{accountId:'123', isPrimary:true}]。
+// 统一成 [{accountId,isPrimary}]：既给页面显示用，也直接喂给 player-deep 试号。
+function toAccounts(list, gameId) {
+  const out = [];
+  const seen = {};
+  (Array.isArray(list) ? list : []).forEach(function (a) {
+    const raw = a && typeof a === 'object' ? a.accountId : a;
+    const id = String(raw === undefined || raw === null ? '' : raw).trim();
+    if (!id || seen[id]) return;
+    seen[id] = 1;
+    out.push({ accountId: id, isPrimary: !!(a && typeof a === 'object' && a.isPrimary) });
+  });
+  // 主号排前面：只有一个号时它就是主号
+  out.sort(function (x, y) {
+    return (y.isPrimary ? 1 : 0) - (x.isPrimary ? 1 : 0);
+  });
+  const gid = String(gameId === undefined || gameId === null ? '' : gameId).trim();
+  if (!out.length && gid) out.push({ accountId: gid, isPrimary: true });
+  return out;
+}
+
+// 群昵称同理：{nickname,isPrimary} → 纯字符串（wxml 里直接渲染，别再出现 [object Object]）
+function nicknameTexts(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(function (a) {
+      return String(a && typeof a === 'object' ? a.nickname || '' : a || '').trim();
+    })
+    .filter(Boolean);
+}
+
+function emptyInfo() {
+  return {
+    nickname: '',
+    gameId: '',
+    guildName: '',
+    steamIds: [],
+    steamAccounts: [],
+    groupNicknames: [],
+    avatar: ''
+  };
 }
 
 Page({
@@ -52,7 +95,11 @@ Page({
     },
     posChips: [],
     limits: {},
-    info: { nickname: '', gameId: '', guildName: '', steamIds: [], groupNicknames: [], avatar: '' }
+    // 战绩解读要登录（与名片页同一条规则），交给 player-deep 判断
+    loggedIn: false,
+    // 喂给 player-deep 的选手资料（服务端解读用，字段名按后端约定）
+    insightPlayer: null,
+    info: emptyInfo()
   },
 
   onLoad() {
@@ -79,7 +126,7 @@ Page({
         const positionsAll = Array.isArray(opts.positions) ? opts.positions : [];
 
         if (!d.bound || !d.profile) {
-          this.setData({ loading: false, bound: false, info: { nickname: '', gameId: '', guildName: '', steamIds: [], groupNicknames: [], avatar: '' } });
+          this.setData({ loading: false, bound: false, info: emptyInfo(), insightPlayer: null });
           return;
         }
 
@@ -98,18 +145,34 @@ Page({
         };
 
         const guild = p.guild || null;
+        // 服务端给的是 [{accountId,personaName,isPrimary}]，页面要显示字符串、
+        // 组件要拿结构化数组，所以两边都从这里派生，别再让 wxml 直接渲染对象。
+        const steamAccounts = toAccounts(p.steamIds, p.game_id);
         this.setData({
           loading: false,
           bound: true,
           limits: limits,
+          // 从登录页回来/换账号后，解读按钮的可用性要跟着变
+          loggedIn: !!session.isLoggedIn(),
           info: {
             nickname: p.nickname || '未命名',
             gameId: p.game_id || '',
             guildName: guild ? guild.name || '' : '',
             // 多值身份只读展示，编辑走网页端
-            steamIds: Array.isArray(p.steamIds) ? p.steamIds : [],
-            groupNicknames: Array.isArray(p.groupNicknames) ? p.groupNicknames : [],
+            steamIds: steamAccounts.map((a) => a.accountId),
+            steamAccounts: steamAccounts,
+            groupNicknames: nicknameTexts(p.groupNicknames),
             avatar: p.avatar || ''
+          },
+          // 解读用的选手资料（服务端拼 prompt 用）。默契队友这里是选手 id，
+          // 个人信息页拿不到昵称映射，索性不传，免得 prompt 里出现一串数字。
+          insightPlayer: {
+            nickname: p.nickname || '',
+            score: this._base.score || 0,
+            positions: this._base.positions,
+            heroes: this._base.heroes,
+            win_rate: this._base.win_rate || 0,
+            championships: p.championships || 0
           },
           form: {
             score: String(this._base.score || ''),
@@ -256,7 +319,10 @@ Page({
   },
 
   onShow() {
-    // 从登录页回来：刚才 401 的，重新拉一次
+    // 从登录页回来：登录态要立刻反映到「看解读」按钮上（组件按 logged-in 判断）
+    const li = !!session.isLoggedIn();
+    if (li !== this.data.loggedIn) this.setData({ loggedIn: li });
+    // 刚才 401 的，重新拉一次
     if (this.data.needLogin) this.load();
   },
 

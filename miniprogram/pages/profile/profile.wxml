@@ -28,6 +28,13 @@
       </view>
     </view>
 
+    <!-- 近期战绩 + 战绩解读：与名片页同一个组件，口径（最多 200 场）与文案完全一致 -->
+    <player-deep
+      accounts="{{info.steamAccounts}}"
+      player="{{insightPlayer}}"
+      logged-in="{{loggedIn}}"
+    />
+
     <view class="sec-title">基本资料</view>
     <view class="surface card">
       <view class="field">

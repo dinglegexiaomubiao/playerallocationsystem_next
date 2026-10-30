@@ -1,5 +1,7 @@
 {
   "navigationBarTitleText": "群友名片",
   "enablePullDownRefresh": true,
-  "usingComponents": {}
+  "usingComponents": {
+    "player-deep": "/components/player-deep/player-deep"
+  }
 }

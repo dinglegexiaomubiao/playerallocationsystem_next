@@ -348,26 +348,38 @@ const PLAYER = {
       (wxmlWithAI.length ? '（命中：' + wxmlWithAI.map((f) => path.relative(ROOT, f)).join(', ') + '）' : '')
   );
 
-  const memberWxml2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
-  expect(memberWxml2.indexOf('战绩解读') >= 0, '名片页该区块标注「战绩解读」');
-  expect(memberWxml2.indexOf('从服务器读取') >= 0, '解读文本处标注「从服务器读取」，让用户知道内容来源');
-  expect(memberWxml2.indexOf('由服务器生成') < 0, '不再出现「由服务器生成」这种口径');
+  // 2026-10-30 起「近期战绩 + 战绩解读」整块搬进 components/player-deep（名片页与
+  // 个人信息页共用），所以呈现/数据源/展示三层护栏都盯组件，不再盯 member 页面本身。
+  const deepDir = path.join(MP, 'components', 'player-deep');
+  const deepJs = fs.readFileSync(path.join(deepDir, 'player-deep.js'), 'utf8');
+  const deepWxml = fs.readFileSync(path.join(deepDir, 'player-deep.wxml'), 'utf8');
+
+  expect(deepWxml.indexOf('战绩解读') >= 0, '该区块标注「战绩解读」');
+  expect(deepWxml.indexOf('从服务器读取') >= 0, '解读文本处标注「从服务器读取」，让用户知道内容来源');
+  expect(deepWxml.indexOf('由服务器生成') < 0, '不再出现「由服务器生成」这种口径');
+
+  expect(deepJs.indexOf('/api/ai-analysis') >= 0, '解读改用服务端 /api/ai-analysis');
+  expect(deepJs.indexOf('loggedIn') >= 0, '调接口前检查登录态（防额度滥用）');
+  expect(deepJs.indexOf('pages/login/login') >= 0, '未登录时引导去登录页，而不是直接调接口');
 
   const memberJs2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.js'), 'utf8');
-  expect(memberJs2.indexOf('/api/ai-analysis') >= 0, '名片页改用服务端 /api/ai-analysis');
-  expect(memberJs2.indexOf('session.isLoggedIn()') >= 0, '名片页在调接口前检查登录态（防额度滥用）');
-  expect(memberJs2.indexOf('pages/login/login') >= 0, '未登录时引导去登录页，而不是直接调接口');
+  const memberWxml2 = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
+  expect(memberWxml2.indexOf('<player-deep') >= 0, '名片页改用 player-deep 组件（不再自己写一份）');
 
   // ---------------------------------------------------------------- ④ 数据源护栏
 
   console.log('\n[数据源 · 战绩口径与网页端同源]');
 
-  // memberJs2 已在 ③ 读取，这里复用
-  expect(memberJs2.indexOf('utils/insight') < 0, '名片页不再用本地规则引擎（utils/insight），改走服务端 AI');
-  expect(memberJs2.indexOf("'/api/player-matches") >= 0, '名片页仍走 /api/player-matches（与网页同一接口）');
+  // deepJs 已在 ③ 读取，这里复用
+  expect(deepJs.indexOf('utils/insight') < 0, '不再用本地规则引擎（utils/insight），改走服务端 AI');
+  expect(deepJs.indexOf("'/api/player-matches") >= 0, '仍走 /api/player-matches（与网页同一接口）');
   expect(
-    memberJs2.indexOf("'/api/player-stats") < 0,
-    '名片页不直接走 /api/player-stats（由服务端 /api/ai-analysis 内部拉取，避免重复往返）'
+    deepJs.indexOf("'/api/player-stats") < 0,
+    '不直接走 /api/player-stats（由服务端 /api/ai-analysis 内部拉取，避免重复往返）'
+  );
+  expect(
+    memberJs2.indexOf("'/api/player-matches") < 0,
+    '名片页自己不再拉对局（账号交给组件挨个试）'
   );
 
   const api = fs.readFileSync(path.join(ROOT, 'pages', 'api', 'player-matches.js'), 'utf8');
@@ -376,22 +388,67 @@ const PLAYER = {
 
   // ---------------------------------------------------------------- ⑤ 展示层
   // 「内容太少」那次补的三块：模式分布 / 近 20 场色块 / 逐场明细。
-  // 它们全靠 member.js 算好塞进 setData，wxml 只是渲染，两边缺一个就是空白块。
-  console.log('\n[展示层 · 名片页补齐的三块内容]');
+  // 它们全靠 JS 算好塞进 setData，wxml 只是渲染，两边缺一个就是空白块。
+  console.log('\n[展示层 · 组件渲染的三块内容]');
 
-  const memberWxml = fs.readFileSync(path.join(MP, 'pages', 'member', 'member.wxml'), 'utf8');
-  expect(memberJs2.indexOf('stat.modeBreakdown') >= 0, 'member.js 算模式分布');
-  expect(memberJs2.indexOf('tiles:') >= 0, 'member.js 生成近 20 场色块数据');
-  expect(memberJs2.indexOf('listMore') >= 0, 'member.js 给逐场明细分页开关');
-  expect(memberJs2.indexOf('onTapMoreMatches') >= 0, 'member.js 有「展开更多」处理函数');
-  expect(memberWxml.indexOf('stats-modes') >= 0, 'wxml 渲染模式分布');
-  expect(memberWxml.indexOf('class="tiles"') >= 0, 'wxml 渲染近 20 场色块');
-  expect(memberWxml.indexOf('class="mlist"') >= 0, 'wxml 渲染逐场明细');
-  expect(memberWxml.indexOf('bindtap="onTapMoreMatches"') >= 0, '「展开更多」已绑定');
-  // 逐场明细里网页端有的字段，小程序一个都不能少
+  expect(deepJs.indexOf('stat.modeBreakdown') >= 0, '组件算模式分布');
+  expect(deepJs.indexOf('tiles:') >= 0, '组件生成近 20 场色块数据');
+  expect(deepJs.indexOf('listMore') >= 0, '组件给逐场明细分页开关');
+  expect(deepJs.indexOf('onTapMoreMatches') >= 0, '组件有「展开更多」处理函数');
+  expect(deepWxml.indexOf('stats-modes') >= 0, 'wxml 渲染模式分布');
+  expect(deepWxml.indexOf('class="tiles"') >= 0, 'wxml 渲染近 20 场色块');
+  expect(deepWxml.indexOf('class="mlist"') >= 0, 'wxml 渲染逐场明细');
+  expect(deepWxml.indexOf('bindtap="onTapMoreMatches"') >= 0, '「展开更多」已绑定');
+  // 逐场明细里网页端有的字段，一个都不能少
   for (const f of ['item.kdaText', 'item.mode', 'item.durText', 'item.patch', 'item.rank', 'item.ago']) {
-    expect(memberWxml.indexOf(f) >= 0, '逐场明细包含 ' + f);
+    expect(deepWxml.indexOf(f) >= 0, '逐场明细包含 ' + f);
   }
+
+  // ---------------------------------------------------------------- ⑥ 个人信息页复用
+
+  // 2026-10-30 用户要求「个人信息里也要有近期战绩和战绩解读」。
+  // 做法是把名片页那两块抽成组件 player-deep，**不是**在 profile 里复制一遍逻辑：
+  // 复制出来的第二份必然和第一份漂移（口径、文案、账号回退规则都会各改各的）。
+  console.log('\n[个人信息页 · 复用 player-deep 组件，不复制第二份逻辑]');
+
+  // deepDir / deepJs / deepWxml 已在 ③ 读取
+  for (const f of ['player-deep.js', 'player-deep.json', 'player-deep.wxml', 'player-deep.wxss']) {
+    expect(fs.existsSync(path.join(deepDir, f)), '组件四件套含 ' + f);
+  }
+
+  const deepJson = JSON.parse(fs.readFileSync(path.join(deepDir, 'player-deep.json'), 'utf8'));
+  expect(deepJson.component === true, '组件声明了 component: true');
+
+  // 组件的口径必须和名片页一致：只吃 /api/player-matches（200 场），自己不去拉 player-stats
+  expect(deepJs.indexOf("'/api/player-matches") >= 0, '组件走 /api/player-matches（与网页同源）');
+  expect(deepJs.indexOf("'/api/player-stats") < 0, '组件不直接走 /api/player-stats（stats 由服务端内部拉）');
+  expect(deepJs.indexOf('/api/ai-analysis') >= 0, '组件调服务端 /api/ai-analysis');
+  expect(deepJs.indexOf('fetchByAccounts') >= 0, '组件保留多号回退（主号没数据时试小号）');
+  expect(deepJs.indexOf('accountLabel') >= 0, '多号时标出用的是哪个号');
+  expect(deepJs.indexOf('pages/login/login') >= 0, '未登录时引导去登录页（额度保护）');
+  expect(deepWxml.indexOf('从服务器读取') >= 0, '组件文案标注「从服务器读取」');
+  expect(deepWxml.indexOf('近 20 场最高') >= 0, 'GPM/最高数据仍标「近 20 场」口径');
+
+  const profileJson = JSON.parse(fs.readFileSync(path.join(MP, 'pages', 'profile', 'profile.json'), 'utf8'));
+  expect(
+    (profileJson.usingComponents || {})['player-deep'] === '/components/player-deep/player-deep',
+    'profile.json 注册了 player-deep'
+  );
+
+  const profileWxml = fs.readFileSync(path.join(MP, 'pages', 'profile', 'profile.wxml'), 'utf8');
+  expect(profileWxml.indexOf('<player-deep') >= 0, '个人信息页挂了 player-deep 组件');
+  expect(profileWxml.indexOf('accounts="{{info.steamAccounts}}"') >= 0, '把账号列表传给组件（多号回退才有效）');
+  expect(profileWxml.indexOf('logged-in="{{loggedIn}}"') >= 0, '把登录态传给组件');
+  expect(
+    profileWxml.indexOf('<player-deep') < profileWxml.indexOf('基本资料'),
+    '战绩放在编辑表单之前（打开页面先看自己的近期状态）'
+  );
+
+  // 服务端给的身份是 [{accountId,personaName,isPrimary}]，直接渲染会出 [object Object]
+  const profileJs = fs.readFileSync(path.join(MP, 'pages', 'profile', 'profile.js'), 'utf8');
+  expect(profileJs.indexOf('steamAccounts:') >= 0, 'profile.js 派生 steamAccounts');
+  expect(profileJs.indexOf('nicknameTexts(') >= 0, 'profile.js 把群昵称对象拍平成字符串');
+  expect(profileJs.indexOf('insightPlayer:') >= 0, 'profile.js 传解读用的选手资料');
 
   console.log('\n结果：' + (fail === 0 ? '全部通过' : fail + ' 项失败'));
   process.exit(fail === 0 ? 0 : 1);

@@ -2,6 +2,7 @@
   "navigationBarTitleText": "个人信息",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "region-picker": "/components/region-picker/region-picker"
+    "region-picker": "/components/region-picker/region-picker",
+    "player-deep": "/components/player-deep/player-deep"
   }
 }
