@@ -282,7 +282,12 @@ const call = async (url, opts = {}) => {
     // 名单里那个人能改别人文案这件事测不了 —— 脚本只有一个账号，
     // 只能确定名单接口本身是管理员专属
     const anonEditors = await call('/api/admin/memory-editors');
-    ok(anonEditors.status === 401, '未登录读改文案名单被拒（401）', 'status=' + anonEditors.status);
+    // 后台接口统一用 denyIfNotAdmin：未登录也回 403（不是 401），全站一致
+    ok(
+      anonEditors.status === 403,
+      '未登录/非管理员读改文案名单被拒（403）',
+      'status=' + anonEditors.status
+    );
     const listEditors = await call('/api/admin/memory-editors', { cookie: ck });
     ok(
       listEditors.status === 200 && listEditors.json && Array.isArray(listEditors.json.editors),
