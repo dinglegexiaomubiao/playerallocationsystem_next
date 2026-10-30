@@ -53,9 +53,10 @@ Page({
     wx.navigateTo({ url: '/pages/quotes/quotes' });
   },
 
-  // 原「AI 助手」CTA 指向的 /api/assistant 后端从未实现（点了必 404），
-  // tab 与页面已下线。CTA 改成指向真实存在的「AI 战力分析」入口：
-  // 名片页现在有 OpenDota 战绩 + AI 推断，这是首页最值得推的一个功能。
+  // 首页 CTA 指向群友名录 → 名片页。名片页现在是「公开战绩 + 规则分档解读」，
+  // 全站唯一一个能在两跳内看到完整数据链路的入口，所以放在首屏推。
+  // （原「AI 助手」已下线：/api/assistant 后端从未实现；分析类能力也于 2026-10-29
+  //   因个人主体类目限制一并下线，详见 utils/insight.js 顶部注释。）
   goMembers() {
     wx.navigateTo({ url: '/pages/members/members' });
   },

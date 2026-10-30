@@ -1,6 +1,7 @@
 const { request, getBase } = require('../../utils/api');
 const { fullUrl, regionShort, fmtMonthDay } = require('../../utils/format');
-const { parseAnalysis } = require('../../utils/ai-text');
+const { buildInsight } = require('../../utils/insight');
+const stat = require('../../utils/match-stat');
 const session = require('../../utils/session');
 
 // 名次徽标：1/2/3 用品牌色系，其余中性
@@ -9,38 +10,10 @@ const rankText = (n) => {
   return '第 ' + n + ' 名';
 };
 
-// AI 结果本地缓存（对齐网页端 useAIAnalysis 的浏览器本地缓存）。
-// ⚠ 只留最近 20 条：storage 有 10MB 上限，无限追加迟早把别的键挤掉。
-const AI_CACHE_KEY = 'aiAnalysisCache';
-const AI_CACHE_MAX = 20;
-
-function readAiCache() {
-  try {
-    const raw = wx.getStorageSync(AI_CACHE_KEY);
-    return raw && typeof raw === 'object' ? raw : {};
-  } catch (e) {
-    return {};
-  }
-}
-
-function saveAiCache(map) {
-  try {
-    const keys = Object.keys(map);
-    if (keys.length > AI_CACHE_MAX) {
-      // 先删最早写入的那几条（值里带 at 时间戳）
-      keys
-        .sort((a, b) => (map[a].at || 0) - (map[b].at || 0))
-        .slice(0, keys.length - AI_CACHE_MAX)
-        .forEach((k) => delete map[k]);
-    }
-    wx.setStorageSync(AI_CACHE_KEY, map);
-  } catch (e) {
-    /* 存不下就只留内存，不影响本次查看 */
-  }
-}
-
+// 战绩解读是本地按规则算的（utils/insight.js），毫秒级返回，所以不设缓存：
+// 之前那套 30 分钟 storage 缓存是给服务端大模型分析用的，现在没有等待成本了。
 const EMPTY_STATS = { status: 'idle', error: '', data: null };
-const EMPTY_AI = { status: 'idle', error: '', blocks: [], items: 0, cached: false, elapsed: 0 };
+const EMPTY_INSIGHT = { status: 'idle', error: '', blocks: [], items: 0, note: '', emptyText: '' };
 
 Page({
   data: {
@@ -51,7 +24,7 @@ Page({
     error: '',
     loggedIn: false,
     stats: EMPTY_STATS,
-    ai: EMPTY_AI
+    insight: EMPTY_INSIGHT
   },
 
   onLoad(query) {
@@ -65,7 +38,7 @@ Page({
   },
 
   onShow() {
-    // 从登录页回来要立刻能点「AI 分析」，所以每次显示都重读一次登录态
+    // 从登录页回来要立刻反映登录态（页面上有「登录后可用」之类的提示位）
     this.setData({ loggedIn: !!session.isLoggedIn() });
   },
 
@@ -78,7 +51,15 @@ Page({
 
   load() {
     const base = getBase();
-    this.setData({ loading: true, error: '' });
+    // 下拉刷新会把名片重读一遍，战绩也得跟着重来（SteamID 可能刚改过），
+    // 否则上面是新人、下面还是旧人的战绩。
+    this._stats = null;
+    this.setData({
+      loading: true,
+      error: '',
+      stats: Object.assign({}, EMPTY_STATS),
+      insight: Object.assign({}, EMPTY_INSIGHT)
+    });
     // 没有 /api/players/{id}，和网页详情页一样拉全量再按 id 找。
     // ⚠ 两边都按字符串比：雪花号转 Number 会丢最后一位，找出来是另一个人。
     return request('/api/players', null, { method: 'GET' })
@@ -95,6 +76,18 @@ Page({
           this._nameMap[String(x.id)] = x.nickname || x.group_nickname || '';
         });
 
+        // 一个人可能有多个 Steam 号（主号 + 小号），对局是按账号分开的。
+        // 网页端给的是切换器，这里不重复那套 UI，只按「主号优先」自动挑一个能拉到数据的，
+        // 页面标题上标出用的是哪个号——否则主号没数据的人在小程序里会显示成「没有战绩」。
+        const accounts = (Array.isArray(raw.steamIds) ? raw.steamIds : [])
+          .map((a) => (a && typeof a === 'object' ? a : { accountId: a }))
+          .map((a) => ({ accountId: String(a.accountId || '').trim(), isPrimary: !!a.isPrimary }))
+          .filter((a) => a.accountId);
+        if (!accounts.length && raw.game_id) {
+          accounts.push({ accountId: String(raw.game_id), isPrimary: true });
+        }
+        this._accounts = accounts;
+
         const records = (Array.isArray(raw.records) ? raw.records : []).slice()
           .sort((a, b) => String(b.start_date || '').localeCompare(String(a.start_date || '')));
 
@@ -103,8 +96,8 @@ Page({
 
         this.setData({
           loading: false,
-          // SteamID 是拉 OpenDota 战绩的唯一钥匙，也是 AI 分析的前置条件
-          gameId: raw.game_id ? String(raw.game_id) : '',
+          // SteamID 是拉 OpenDota 战绩的唯一钥匙，也是战绩解读的前置条件
+          gameId: accounts.length ? accounts[0].accountId : '',
           p: {
             nickname: name,
             initial: name.charAt(0),
@@ -137,52 +130,93 @@ Page({
             }))
           }
         });
-
-        // 回到同一页时先把缓存里已有的分析摆出来，不用再等一分钟
-        const key = 'player_' + String(raw.id);
-        const hit = readAiCache()[key];
-        if (hit && hit.text) {
-          const parsed = parseAnalysis(hit.text);
-          this.setData({
-            ai: {
-              status: 'done',
-              error: '',
-              blocks: parsed.blocks,
-              items: parsed.items,
-              cached: true,
-              elapsed: 0
-            }
-          });
-        }
       })
       .catch((e) =>
         this.setData({ loading: false, error: (e && e.message) || '加载失败' })
       );
   },
 
-  // ---------------- 近期战绩（OpenDota，AI 分析也要用） ----------------
+  // ---------------- 近期战绩（OpenDota，下面的战绩解读复用这份数据） ----------------
+  //
+  // 数据源与网页成员页「最近比赛」同一个接口、同一个窗口（最多 200 场），
+  // 这样两边的场次/胜率/KDA 才是同一个数字。
+  // 之前用的是 /api/player-stats 的 recentMatches（最近 20 场），实测同一个号
+  // 能差 35 个百分点（25% vs 60%），属于「看着都在算战绩，其实算的不是一回事」。
+  //
+  // GPM 和英雄伤害只有近 20 场那个窗口有，接口把它们单独打包成 recent20，
+  // 页面上必须标「近 20 场」，不能和 200 场的胜率并排放在一起不看口径。
+
+  /**
+   * 按顺序试每个 Steam 号，第一个能拉到对局的胜出。
+   * 全都没有（或全失败）时把最后一个错误抛出去。
+   */
+  fetchMatchesByAccounts(accounts, i) {
+    const idx = i || 0;
+    if (idx >= accounts.length) return Promise.resolve(null);
+    const acc = accounts[idx];
+    return request('/api/player-matches?accountId=' + encodeURIComponent(acc.accountId), null, {
+      method: 'GET'
+    }).then(
+      (res) => {
+        if (res && res.success !== false && Array.isArray(res.matches) && res.matches.length) {
+          return { res: res, acc: acc };
+        }
+        return this.fetchMatchesByAccounts(accounts, idx + 1);
+      },
+      (e) => {
+        // 主号挂了（未公开数据 / OpenDota 超时）不该让整个块报错，先试下一个号
+        if (idx + 1 < accounts.length) return this.fetchMatchesByAccounts(accounts, idx + 1);
+        throw e;
+      }
+    );
+  },
 
   loadStats() {
-    const gid = this.data.gameId;
-    if (!gid) return Promise.reject(new Error('这位群友没填 SteamID'));
+    const accounts = this._accounts || [];
+    if (!accounts.length) return Promise.reject(new Error('这位群友没填 SteamID'));
     if (this.data.stats.status === 'loading') return Promise.reject(new Error('正在拉取'));
     this.setData({ stats: { status: 'loading', error: '', data: null } });
 
-    return request('/api/player-stats?playerId=' + encodeURIComponent(gid), null, { method: 'GET' })
-      .then((res) => {
-        const s = (res && res.stats) || null;
-        if (!s) throw new Error('接口没返回战绩');
-        // 接口一次给几十场明细，这里只挑页面要显示的几项，别把整个 stats 塞进 setData
+    return this.fetchMatchesByAccounts(accounts, 0)
+      .then((hit) => {
+        if (!hit) {
+          // 号是有的，但 OpenDota 上一场都没抓到（未公开比赛数据是最常见的原因）
+          this._stats = null;
+          this.setData({
+            stats: {
+              status: 'empty',
+              error: '',
+              data: null
+            }
+          });
+          return null;
+        }
+        const s = hit.res;
+        const sum = stat.summarize(s.matches);
+        const best = stat.bestOf(s.matches);
+        const r20 = s.recent20 || null;
+        // 接口一次给 200 场明细，这里只挑页面要显示的几项，别把整个响应塞进 setData
         const data = {
-          total: s.recentTotal || 0,
-          winRate: s.recentWinRate || 0,
-          gpm: s.avgGpm || 0,
-          kda: s.avgKda || '0',
-          dmg: s.avgHeroDamage || 0,
-          heroes: (s.mostPlayedHeroes || []).slice(0, 5).map((h) => ({
-            name: h.name,
-            text: h.matches + ' 场 · ' + h.winRate + '%'
-          }))
+          total: sum.total,
+          wins: sum.wins,
+          losses: sum.losses,
+          winRate: sum.winRate,
+          kda: sum.kda,
+          durationText: stat.fmtDuration(sum.avgDuration),
+          bestText: '击杀 ' + best.kills + ' / 助攻 ' + best.assists + ' / KDA ' + best.kda,
+          // GPM 与伤害是近 20 场口径，单独一行显示
+          gpm: r20 ? r20.avgGpm : 0,
+          dmg: r20 ? r20.avgHeroDamage : 0,
+          gpmTotal: r20 ? r20.total : 0,
+          lifetimeText: s.lifetime
+            ? s.lifetime.win + ' 胜 / ' + s.lifetime.lose + ' 负 · ' + s.lifetime.winRate + '%'
+            : '',
+          // 多号时标出这是哪个号，避免和网页上主号的数字对不上时说不清
+          accountLabel:
+            accounts.length > 1
+              ? (hit.acc.isPrimary ? '主号 ' : '小号 ') + hit.acc.accountId
+              : '',
+          heroes: stat.heroStatsOf(s.matches).slice(0, 5)
         };
         this._stats = s;
         this.setData({ stats: { status: 'loaded', error: '', data: data } });
@@ -202,105 +236,67 @@ Page({
     );
   },
 
-  // ---------------- AI 战力分析 ----------------
+  // ---------------- 战绩解读（本地按规则统计，不调任何模型） ----------------
 
-  onTapAI() {
-    // 顺序有讲究：先看数据有没有（缺 SteamID 登录了也没用），再看登录态。
-    // 反过来的话，用户会被赶去登录，登录回来才发现这人根本没有 SteamID。
+  onTapInsight() {
     if (!this.data.gameId) {
       wx.showToast({ title: '这位群友没填 SteamID', icon: 'none' });
       return;
     }
-    if (!session.isLoggedIn()) {
-      wx.showToast({ title: '登录后才能用 AI 分析', icon: 'none' });
-      setTimeout(() => wx.navigateTo({ url: '/pages/login/login' }), 600);
-      return;
-    }
-    if (this.data.ai.status === 'running' || this.data.stats.status === 'loading') return;
-    this.runAnalysis();
+    if (this.data.stats.status === 'loading' || this.data.insight.status === 'running') return;
+    this.runInsight();
   },
 
-  /** 顺序固定：没有战绩就先拉战绩，再让服务端分析（服务端 prompt 就是把 stats 喂进去的） */
-  runAnalysis() {
-    this.setData({ ai: Object.assign({}, EMPTY_AI, { status: 'running' }) });
-    const startedAt = Date.now();
+  /** 有战绩就直接算，没有就先拉一次再算。整段同步完成，不需要等待提示 */
+  runInsight() {
+    this.setData({ insight: Object.assign({}, EMPTY_INSIGHT, { status: 'running' }) });
 
-    const ensureStats = this._stats
-      ? Promise.resolve(this._stats)
-      : this.loadStats().catch(() => null);
-
-    return ensureStats
-      .then((stats) => {
-        const raw = this._raw || {};
-        const synergy = (Array.isArray(raw.synergy_players) ? raw.synergy_players : [])
-          .map((id) => (this._nameMap && this._nameMap[String(id)]) || String(id))
-          .filter(Boolean);
-        // 只发 prompt 真正读到的字段：整包 player 里有 records 等大字段，没必要传
-        const player = {
-          nickname: this.data.p ? this.data.p.nickname : '',
-          score: raw.score || 0,
-          positions: Array.isArray(raw.positions) ? raw.positions : [],
-          heroes: Array.isArray(raw.heroes) ? raw.heroes : [],
-          win_rate: raw.win_rate || 0,
-          championships: raw.championships || 0,
-          synergy_names: synergy
-        };
-        return request(
-          '/api/ai-analysis',
-          { type: 'player', data: { player: player, stats: stats || null } },
-          { method: 'POST' }
-        );
-      })
-      .then((res) => {
-        const text = (res && res.analysis) || '';
-        if (!text) throw new Error('AI 返回了空内容，稍后重试');
-        const parsed = parseAnalysis(text);
-        const elapsed = Math.round((Date.now() - startedAt) / 1000);
-        this.setData({
-          ai: {
-            status: 'done',
-            error: '',
-            blocks: parsed.blocks,
-            items: parsed.items,
-            cached: !!(res && res.cached),
-            elapsed: elapsed
-          }
-        });
-        const key = 'player_' + this.data.id;
-        const map = readAiCache();
-        map[key] = { text: text, at: Date.now() };
-        saveAiCache(map);
-      })
-      .catch((e) => {
-        const raw = (e && e.message) || '分析失败';
-        // 客户端 60 秒默认超时，而服务端允许 90 秒 —— 超时是**正常路径**，
-        // 此时服务端多半还在算（算完会进 30 分钟缓存），所以文案要给「再试一次」而不是「失败了」
-        const isTimeout = /timeout|超时/i.test(raw);
-        this.setData({
-          ai: {
-            status: 'error',
-            error: isTimeout
-              ? '等待超时了。AI 通常要 30~60 秒，服务端算完会缓存 30 分钟 —— 现在再点一次通常几秒就出来。'
-              : raw,
-            blocks: [],
-            items: 0,
-            cached: false,
-            elapsed: 0
-          }
-        });
+    const compute = (matchesData) => {
+      const raw = this._raw || {};
+      const out = buildInsight(matchesData, {
+        score: raw.score || 0,
+        heroes: Array.isArray(raw.heroes) ? raw.heroes : [],
+        win_rate: raw.win_rate || 0,
+        positions: Array.isArray(raw.positions) ? raw.positions : []
       });
-  },
+      this.setData({
+        insight: {
+          status: out.empty ? 'empty' : 'done',
+          error: '',
+          blocks: out.blocks,
+          items: out.items,
+          note: out.note,
+          emptyText: out.emptyText
+        }
+      });
+    };
 
-  /** 「重新分析」：清掉本地缓存后重跑（服务端仍可能命中它自己的 30 分钟缓存，页面会标出来） */
-  rerunAI() {
-    const key = 'player_' + this.data.id;
-    const map = readAiCache();
-    if (map[key]) {
-      delete map[key];
-      saveAiCache(map);
+    if (this._stats) {
+      compute(this._stats);
+      return Promise.resolve();
     }
-    this._stats = null;
-    this.runAnalysis();
+    // 拉战绩失败时上面的战绩块自己会报错，这里只把解读区标成空，不重复喊。
+    // 注意 loadStats 在「号有、但对局是 0 场」时是 resolve(null) 而不是 reject，
+    // 这种情况也要落到空态，否则解读区会一直停在「正在统计…」。
+    const fallback = (msg) => {
+      this.setData({
+        insight: {
+          status: 'empty',
+          error: '',
+          blocks: [],
+          items: 0,
+          note: '',
+          emptyText: msg
+        }
+      });
+    };
+    return this.loadStats().then(
+      (s) => {
+        if (s) compute(s);
+        else fallback('这位群友的账号在 OpenDota 上没有对局记录，暂时没有可统计的数据。');
+      },
+      () => fallback('没能拉到公开战绩，暂时没有可统计的数据。')
+    );
   },
 
   onShareAppMessage() {

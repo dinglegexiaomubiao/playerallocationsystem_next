@@ -12,7 +12,7 @@
  */
 import { getSession, isAdmin, denyIfNotLoggedIn } from '../../../lib/auth';
 import { checkInput, moderationMessage, LIMITS } from '../../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../../lib/ai-moderate.mjs';
 import { playerIdOfAccount } from '../../../lib/guild.mjs';
 import {
   listQuotes,
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
       const ai = await aiModerate({
         语录: hit.cleaned.content,
         出处: sourceText || sourcePlayerId,
-      });
+      }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       const session = getSession(req);

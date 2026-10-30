@@ -8,7 +8,7 @@
  */
 import { getSession, denyIfNotLoggedIn } from '../../../../../lib/auth';
 import { checkInput, moderationMessage, LIMITS } from '../../../../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../../../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../../../../lib/ai-moderate.mjs';
 import { playerIdOfAccount } from '../../../../../lib/guild.mjs';
 import { quoteById, listReviews, getMyReview, createReview } from '../../../../../lib/quotes.mjs';
 
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       if (rawComment) {
         const hit = checkInput({ comment: rawComment }, { comment: LIMITS.reviewComment });
         if (!hit.ok) return res.status(400).json({ success: false, error: moderationMessage(hit) });
-        const ai = await aiModerate({ 评价: hit.cleaned.comment });
+        const ai = await aiModerate({ 评价: hit.cleaned.comment }, { openid: openidOf(req) });
         if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
         comment = hit.cleaned.comment;
       }

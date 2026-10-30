@@ -5,7 +5,7 @@
 import { ensureGuildTables } from '../../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../../lib/auth';
 import { checkInput, moderationMessage, LIMITS } from '../../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../../lib/ai-moderate.mjs';
 import { isGuildColor } from '../../../lib/guild-colors.mjs';
 import {
   guildOfPlayer,
@@ -81,7 +81,7 @@ export default async function handler(req, res) {
       }
 
       // AI 复审：帮派名和口号是公开信息，和活动标题同一套标准
-      const ai = await aiModerate({ 帮派名称: name, 帮派口号: slogan });
+      const ai = await aiModerate({ 帮派名称: name, 帮派口号: slogan }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       const id = await createGuild({
@@ -123,7 +123,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: '没有要修改的内容' });
       }
 
-      const ai = await aiModerate({ 帮派名称: patch.name, 帮派口号: patch.slogan });
+      const ai = await aiModerate({ 帮派名称: patch.name, 帮派口号: patch.slogan }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       await updateGuild({ playerId, ...patch });

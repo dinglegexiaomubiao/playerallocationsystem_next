@@ -29,5 +29,5 @@
     </button>
   </view>
 
-  <view class="tip">评价会过一遍内容审核（违禁词 + AI 复审），被拒绝时会告诉你原因。</view>
+  <view class="tip">评价会过一遍内容审核（违禁词 + 人工复审），被拒绝时会告诉你原因。</view>
 </view>

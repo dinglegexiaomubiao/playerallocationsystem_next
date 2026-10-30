@@ -5,6 +5,7 @@
 // - 域名需在小程序后台「request 合法域名」里加入 apiBase；
 //   开发期可在开发者工具勾选「不校验合法域名」
 const session = require('./session.js');
+const wxopenid = require('./wxopenid.js');
 
 function getBase() {
   const app = getApp();
@@ -22,9 +23,13 @@ function request(path, data, options) {
   const base = getBase();
   const url = /^https?:\/\//.test(path) ? path : base + path;
   const token = getToken();
+  // openid 只为服务端内容安全（msgSecCheck 强制要求）。拿不到就不带这个头，
+  // 服务端会跳过官方那一道，只走词表 + AI，不影响功能。
+  const openid = wxopenid.current();
   const header = Object.assign(
     { 'content-type': 'application/json' },
     token ? { Authorization: 'Bearer ' + token } : {},
+    openid ? { 'X-MP-Openid': openid } : {},
     opts.header || {}
   );
 

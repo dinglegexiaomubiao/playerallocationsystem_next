@@ -41,7 +41,7 @@
   </view>
 
   <!-- 他人帮派详情（只读）。
-       网页端 /guild/[id] 对所有人公开、成员列表全量渲染；小程序原来点一下只弹一句
+       帮派详情对所有人公开、成员列表全量渲染；小程序原来点一下只弹一句
        「不能自己申请加入」，看不到口号/首领/成员。这里用弹层把信息补齐，
        数据全部来自已在手的 /api/guilds 列表，不再拉接口。 -->
   <view wx:if="{{detail}}" class="mask" bindtap="closeDetail" catchtouchmove="noop"></view>

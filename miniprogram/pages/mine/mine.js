@@ -12,13 +12,25 @@ Page({
     loginAtText: '',
     base: '',
     unread: 0,
+    showDevTools: false,
     version: '0.2.0'
   },
 
   // 用 onShow 而不是 onLoad：从登录页返回时页面不会重建，只有 onShow 会再跑
   onShow() {
     const user = session.getUser();
+    // 后端地址框只在开发版 / 体验版出现，正式版不给审核员和普通用户看到
+    let showDevTools = false;
+    try {
+      const acc = wx.getAccountInfoSync && wx.getAccountInfoSync();
+      const env = acc && acc.miniProgram && acc.miniProgram.envVersion;
+      showDevTools = env === 'develop' || env === 'trial';
+    } catch (e) {
+      // 老基础库没有这个 API —— 当作正式版，宁可调试时不方便也别在审核版露出来
+      showDevTools = false;
+    }
     this.setData({
+      showDevTools: showDevTools,
       base: getBase(),
       logged: !!user,
       name: (user && user.name) || '',

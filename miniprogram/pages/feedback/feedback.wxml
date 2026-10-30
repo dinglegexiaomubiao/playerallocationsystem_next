@@ -58,7 +58,7 @@
       </button>
 
       <view class="tip" bindtap="copyBase">
-        提交后会推到管理员那边。未登录也能提，提交后在本页「我的反馈」里能看到处理状态。
+        提交后会转给开发者处理。未登录也能提，提交后在本页「我的反馈」里能看到处理状态。
       </view>
     </view>
   </block>
@@ -84,7 +84,7 @@
     </view>
 
     <view wx:if="{{!logged}}" class="tip center-line">
-      登录后能看到账号下提交的所有反馈（含网页端提交的）。
+      登录后能看到账号下提交的所有反馈（含之前提交的）。
       <text class="link" bindtap="goLogin">去登录</text>
     </view>
   </block>

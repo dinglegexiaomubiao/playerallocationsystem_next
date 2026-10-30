@@ -94,6 +94,6 @@
       </view>
     </block>
 
-    <view class="foot">网页端是可视化地图，小程序按区划做排行（地图标注涉及测绘合规，不做）</view>
+    <view class="foot">按区划做排行（地图标注涉及测绘合规，不做）</view>
   </block>
 </view>

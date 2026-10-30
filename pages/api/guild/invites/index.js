@@ -2,7 +2,7 @@
 import { ensureGuildTables } from '../../../../lib/db';
 import { getSession, denyIfNotLoggedIn } from '../../../../lib/auth';
 import { checkInput, moderationMessage, LIMITS } from '../../../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../../../lib/ai-moderate.mjs';
 import {
   playerIdOfAccount,
   listMyInvites,
@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       const message = String(chk.cleaned.message || '').trim();
 
       if (message) {
-        const ai = await aiModerate({ 邀请信息: message });
+        const ai = await aiModerate({ 邀请信息: message }, { openid: openidOf(req) });
         if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
       }
 

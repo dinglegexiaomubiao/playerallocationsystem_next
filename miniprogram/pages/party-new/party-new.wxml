@@ -97,6 +97,6 @@
       </button>
     </view>
 
-    <view class="tip">发布组队需要先在网页端「个人信息」里补填选手资料（分数/位置），否则会被拒绝。</view>
+    <view class="tip">发布组队需要先补填选手资料（分数/位置），否则会被拒绝。</view>
   </block>
 </view>

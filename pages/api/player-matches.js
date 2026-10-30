@@ -14,9 +14,11 @@ import { modeKeyOf, modeLabelOf, rankLabelOf, kdaOf, patchForTime } from '../../
 
 const MATCH_CACHE_TTL = 20 * 60 * 1000; // 对局 20 分钟
 const PATCH_CACHE_TTL = 24 * 60 * 60 * 1000; // 版本表 1 天
+const HERO_CACHE_TTL = 24 * 60 * 60 * 1000; // 英雄生涯统计 1 天（变化极慢）
 const MATCH_LIMIT = 200;
 
 const matchCache = new Map(); // accountId -> { data, ts }
+const heroCache = new Map(); // accountId -> { list, ts }
 let patchCache = { list: null, ts: 0 };
 
 async function loadPatches() {
@@ -27,6 +29,71 @@ async function loadPatches() {
     .filter((p) => p.name && Number.isFinite(p.ts))
     .sort((a, b) => a.ts - b.ts);
   patchCache = { list, ts: Date.now() };
+  return list;
+}
+
+/**
+ * 近 20 场汇总（GPM / 英雄伤害只有这个接口给）。
+ *
+ * `/players/{id}/matches` 的返回里**没有** gold_per_min / hero_damage，
+ * 所以「场均 GPM」「场均伤害」永远是近 20 场口径，别拿它去配 200 场的胜率。
+ * 这里把它单独打包成 recent20，前端能一眼看出这是另一个窗口。
+ */
+async function loadRecent20(accountId) {
+  const raw = await fetchJson(`https://api.opendota.com/api/players/${accountId}/recentMatches`, {
+    timeoutMs: 12000,
+  });
+  const list = (Array.isArray(raw) ? raw : []).slice(0, 20);
+  let total = 0;
+  let wins = 0;
+  let gpm = 0;
+  let dmg = 0;
+  let kills = 0;
+  let deaths = 0;
+  let assists = 0;
+  for (const m of list) {
+    if (!m || typeof m.radiant_win !== 'boolean') continue;
+    const isRadiant = Number(m.player_slot) < 128;
+    total++;
+    if (m.radiant_win === isRadiant) wins++;
+    gpm += Number(m.gold_per_min) || 0;
+    dmg += Number(m.hero_damage) || 0;
+    kills += Number(m.kills) || 0;
+    deaths += Number(m.deaths) || 0;
+    assists += Number(m.assists) || 0;
+  }
+  if (!total) return null;
+  return {
+    total,
+    wins,
+    losses: total - wins,
+    winRate: Math.round((wins / total) * 100),
+    avgGpm: Math.round(gpm / total),
+    avgHeroDamage: Math.round(dmg / total),
+    avgKda: kdaOf(kills, deaths, assists),
+  };
+}
+
+/** 英雄生涯统计（绝活判定的依据），一天缓存一次 */
+async function loadHeroesLifetime(accountId) {
+  const hit = heroCache.get(accountId);
+  if (hit && Date.now() - hit.ts < HERO_CACHE_TTL) return hit.list;
+  const raw = await fetchJson(`https://api.opendota.com/api/players/${accountId}/heroes`, {
+    timeoutMs: 12000,
+  });
+  const list = (Array.isArray(raw) ? raw : [])
+    .map((h) => {
+      const games = Number(h && h.games) || 0;
+      const win = Number(h && h.win) || 0;
+      return {
+        name: heroIdToName[Number(h.hero_id)] || `英雄${h.hero_id}`,
+        matches: games,
+        winRate: games > 0 ? Math.round((win / games) * 100) : 0,
+      };
+    })
+    .filter((h) => h.matches > 0)
+    .sort((a, b) => b.matches - a.matches);
+  heroCache.set(accountId, { list, ts: Date.now() });
   return list;
 }
 
@@ -106,6 +173,12 @@ export default async function handler(req, res) {
       lifetime = null;
     }
 
+    // 近 20 场汇总 + 英雄生涯：都是补充项，任何一个挂了都不该让整页变空
+    const [recent20, heroesLifetime] = await Promise.all([
+      loadRecent20(accountId).catch(() => null),
+      loadHeroesLifetime(accountId).catch(() => []),
+    ]);
+
     // tab 计数 + 版本下拉选项都基于全量数据，切换时不闪
     const modeCounts = { all: matches.length, ranked: 0, normal: 0, turbo: 0, omg: 0, other: 0 };
     const patchCount = new Map();
@@ -127,6 +200,9 @@ export default async function handler(req, res) {
       matches,
       modeCounts,
       patchOptions,
+      // 近 20 场（唯一能给 GPM / 英雄伤害的窗口），字段名直接写明样本量
+      recent20,
+      heroesLifetime,
     };
 
     matchCache.set(accountId, { data, ts: Date.now() });

@@ -5,8 +5,8 @@
   </view>
 
   <view class="cta" bindtap="goMembers">
-    <view class="cta-title">AI 战力分析</view>
-    <view class="cta-desc">选一位群友，看近期战绩与打法推断</view>
+    <view class="cta-title">战绩速览</view>
+    <view class="cta-desc">选一位群友，看近期战绩与数据分档</view>
     <view class="cta-btn">去看群友</view>
   </view>
 
@@ -29,5 +29,5 @@
     </view>
   </view>
 
-  <view class="foot">数据与网页端同源，登录后逐步开放</view>
+  <view class="foot">数据实时同步，登录后开放更多功能</view>
 </view>

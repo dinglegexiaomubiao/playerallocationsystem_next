@@ -9,7 +9,7 @@ import {
   ACTIVITY_COSTS,
 } from '../../lib/options.mjs';
 import { checkInput, LIMITS, moderationMessage } from '../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../lib/ai-moderate.mjs';
 
 const clip = (v, n) =>
   v === null || v === undefined ? null : String(v).trim().slice(0, n) || null;
@@ -206,7 +206,7 @@ export default async function handler(req, res) {
       if (!chk.ok) return res.status(400).json({ success: false, error: moderationMessage(chk) });
       Object.assign(b, chk.cleaned);
       // AI 复审（DeepSeek）：超时/出错自动放行
-      const ai = await aiModerate({ 标题: b.title, 地点: b.location, 备注: b.note });
+      const ai = await aiModerate({ 标题: b.title, 地点: b.location, 备注: b.note }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       const type = String(b.type || '');

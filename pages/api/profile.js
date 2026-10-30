@@ -11,7 +11,7 @@ import {
 import { getSession, denyIfNotLoggedIn } from '../../lib/auth';
 import { guildOfPlayer, countPendingInvites } from '../../lib/guild.mjs';
 import { checkText, LIMITS } from '../../lib/moderation.mjs';
-import { aiModerate, aiModerationMessage } from '../../lib/ai-moderate.mjs';
+import { aiModerate, aiModerationMessage, openidOf } from '../../lib/ai-moderate.mjs';
 import listCache from '../../lib/list-cache';
 
 // 库里 positions / heroes / synergy_players / enemies 是逗号分隔的 text，
@@ -186,7 +186,7 @@ export default async function handler(req, res) {
         自我评价: body.self_intro || '',
         擅长位置: Array.isArray(body.positions) ? body.positions.join('、') : '',
         擅长英雄: Array.isArray(body.heroes) ? body.heroes.join('、') : '',
-      });
+      }, { openid: openidOf(req) });
       if (!ai.ok) return res.status(400).json({ success: false, error: aiModerationMessage(ai) });
 
       // 赛事记录排序偏好（time / rank），只收这两个合法值，其余归一到 'time'

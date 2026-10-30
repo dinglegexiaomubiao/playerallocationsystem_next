@@ -168,7 +168,7 @@
   margin-left: 12rpx;
 }
 
-/* ---------------- 近期战绩 / AI 分析 ---------------- */
+/* ---------------- 近期战绩 / 战绩解读 ---------------- */
 .sec-note {
   margin-left: 10rpx;
   font-size: 20rpx;
@@ -209,6 +209,48 @@
   font-size: 23rpx;
   line-height: 1.6;
   color: var(--text-3);
+}
+
+/* 口径备注：场次 / 生涯 / 近 20 场最高，一行放不下就换行，不与上面的数字抢注意力 */
+.stats-meta {
+  flex: 0 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 18rpx;
+  padding: 14rpx 24rpx 0;
+  border-top: 1rpx solid var(--border);
+}
+.stats-meta-i {
+  font-size: 21rpx;
+  line-height: 1.6;
+  color: var(--text-3);
+  margin-right: 18rpx;
+}
+.stats-meta-i:last-child {
+  margin-right: 0;
+}
+
+/* GPM / 场均伤害：唯一的近 20 场窗口，必须自带口径标签 */
+.stats-window {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 10rpx;
+  padding: 0 24rpx;
+}
+.stats-window-t {
+  font-size: 20rpx;
+  color: var(--text-3);
+  background: var(--bg-subtle);
+  padding: 2rpx 10rpx;
+  border-radius: 4rpx;
+  margin-right: 14rpx;
+}
+.stats-window-i {
+  font-size: 21rpx;
+  color: var(--text-2);
+  margin-right: 18rpx;
 }
 
 .stats-heroes {

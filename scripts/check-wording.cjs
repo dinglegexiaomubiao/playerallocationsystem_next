@@ -55,7 +55,10 @@ for (const file of files) {
     body = body.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ''));
     body = body
       .split('\n')
-      .map((l) => l.replace(/\/\/.*$/, ''))
+      // ⚠ 别写成 /\/\/.*$/ —— `.` 不匹配 \r（\r 是行终止符），而 Windows 检出的
+      // 文件和合并进来的远端文件常常是 CRLF，行尾带 \r，导致这个正则整行匹配失败、
+      // 行尾注释里的词全部误报。用显式字符类绕开。
+      .map((l) => l.replace(/\/\/[^\n\r]*/, ''))
       .join('\n');
   } else if (/\.wxml$/.test(file)) {
     body = body.replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ''));
