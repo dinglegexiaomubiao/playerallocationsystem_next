@@ -16,11 +16,13 @@ import {
   softDeleteMemory,
   updateMemory,
   checkTags,
+  checkPlace,
   authorOfAccount,
   allowAction,
   canEditMemoryText,
   TEXT_LIMIT,
 } from '../../../../lib/memories.mjs';
+import { normalizeShotOn } from '../../../../lib/memories-fields.mjs';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -57,11 +59,13 @@ export default async function handler(req, res) {
       }
 
       const body = req.body || {};
-      // 正文和标签都是「传了才改」：只打标签时不该把正文一起写空，
+      // 正文、标签、拍摄日期、地点都是「传了才改」：只打标签时不该把正文一起写空，
       // 只改文案时也不该把标签清掉。
       const hasContent = typeof body.content === 'string';
       const hasTags = body.tags !== undefined;
-      if (!hasContent && !hasTags) {
+      const hasShotOn = body.shotOn !== undefined;
+      const hasPlace = body.place !== undefined;
+      if (!hasContent && !hasTags && !hasShotOn && !hasPlace) {
         return res.status(400).json({ success: false, error: '参数不正确' });
       }
 
@@ -96,9 +100,27 @@ export default async function handler(req, res) {
         tagsNext = t.tags;
       }
 
+      // 拍摄日期/地点：日期格式不对直接 400（传空字符串 = 清掉），地点过词表
+      let shotOnNext;
+      if (hasShotOn) {
+        const d = normalizeShotOn(body.shotOn);
+        if (d === null) {
+          return res.status(400).json({ success: false, error: '拍摄日期不对，用 2026-10-21 这种格式' });
+        }
+        shotOnNext = d;
+      }
+      let placeNext;
+      if (hasPlace) {
+        const p = checkPlace(body.place);
+        if (!p.ok) return res.status(400).json({ success: false, error: p.error });
+        placeNext = p.place;
+      }
+
       const updated = await updateMemory(id, {
         content: hasContent ? clean : undefined,
         tags: tagsNext,
+        shotOn: shotOnNext,
+        place: placeNext,
       });
       if (!updated) return res.status(404).json({ success: false, error: '这条回忆已经不在了' });
       return res.status(200).json({ success: true, memory: updated });

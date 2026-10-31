@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { apiFetch } from '../lib/api-client.mjs';
 import { relTime, gridClass, aspectOf } from '../lib/memories-view.mjs';
 import { normalizeTags } from '../lib/memories-tags.mjs';
+import { PLACE_LIMIT, fmtShotOn } from '../lib/memories-fields.mjs';
 import TagPicker from './TagPicker';
 import MemoryGrants from './MemoryGrants';
 
@@ -50,6 +51,11 @@ export default function MemoryItem({
   // 标签同样存本地：保存后筛选条上的计数由父页面刷新，这里只负责这一条的显示
   const [tags, setTags] = useState(memory.tags || []);
   const [tagText, setTagText] = useState('');
+  // 拍摄时间与地点：和正文一样「存一份已保存的、一份正在改的」
+  const [shotOn, setShotOn] = useState(memory.shotOn || '');
+  const [place, setPlace] = useState(memory.place || '');
+  const [dayText, setDayText] = useState(memory.shotOn || '');
+  const [placeText, setPlaceText] = useState(memory.place || '');
 
   const mine = !!myPlayerId && String(memory.author.playerId) === String(myPlayerId);
   const canDelete = !!me && (isAdmin || mine);
@@ -65,6 +71,8 @@ export default function MemoryItem({
     setText(content);
     setTags(memory.tags || tags);
     setTagText('');
+    setDayText(shotOn);
+    setPlaceText(place);
     setEditErr('');
     setEditing(true);
   };
@@ -73,6 +81,8 @@ export default function MemoryItem({
     setText(content);
     setTags(memory.tags || []);
     setTagText('');
+    setDayText(shotOn);
+    setPlaceText(place);
     setEditErr('');
     setEditing(false);
   };
@@ -86,7 +96,7 @@ export default function MemoryItem({
     try {
       const r = await apiFetch(`/api/memories/${memory.id}`, {
         method: 'PATCH',
-        body: { content: text, tags: nextTags },
+        body: { content: text, tags: nextTags, shotOn: dayText, place: placeText },
         timeout: 20000,
       });
       if (!r || !r.success) throw new Error((r && r.error) || '没改成');
@@ -94,6 +104,8 @@ export default function MemoryItem({
       setContent(next);
       setText(next);
       setTags((r.memory && r.memory.tags) || nextTags);
+      setShotOn((r.memory && r.memory.shotOn) || '');
+      setPlace((r.memory && r.memory.place) || '');
       setTagText('');
       setEditing(false);
       if (onTagsChange) onTagsChange();
@@ -214,6 +226,25 @@ export default function MemoryItem({
 
       {grantOpen && canGrant && <MemoryGrants memoryId={memory.id} />}
 
+      {/* 拍摄时间与地点：像报纸的日期栏 —— 先知道「哪年哪月、在哪」，
+          再读下面那段字。没填就整行不出现，不占位。 */}
+      {!editing && (shotOn || place) && (
+        <p className="mem-when">
+          <span className="mem-when-label">拍于</span>
+          {place && <span className="mem-where">{place}</span>}
+          {place && shotOn && (
+            <span className="mem-when-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
+          {shotOn && (
+            <time className="mem-when-day" dateTime={shotOn}>
+              {fmtShotOn(shotOn)}
+            </time>
+          )}
+        </p>
+      )}
+
       {editing ? (
         <div className="mem-edit">
           <textarea
@@ -224,6 +255,28 @@ export default function MemoryItem({
             placeholder="给这条回忆写点什么，留空就只留照片。"
             onChange={(e) => setText(e.target.value)}
           />
+          <div className="mem-whenrow">
+            <label className="mem-whenfield">
+              <span className="mem-whenlabel">拍的哪天</span>
+              <input
+                type="date"
+                className="mem-wheninput"
+                value={dayText}
+                onChange={(e) => setDayText(e.target.value)}
+              />
+            </label>
+            <label className="mem-whenfield is-wide">
+              <span className="mem-whenlabel">哪儿</span>
+              <input
+                type="text"
+                className="mem-wheninput"
+                value={placeText}
+                maxLength={PLACE_LIMIT}
+                placeholder="拍的哪儿"
+                onChange={(e) => setPlaceText(e.target.value)}
+              />
+            </label>
+          </div>
           <TagPicker
             value={tags}
             onChange={setTags}

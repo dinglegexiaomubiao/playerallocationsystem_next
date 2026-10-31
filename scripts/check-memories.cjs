@@ -97,6 +97,7 @@ const call = async (url, opts = {}) => {
   const files = [
     'lib/memories.mjs',
     'lib/memories-tags.mjs',
+    'lib/memories-fields.mjs',
     'lib/memory-store.mjs',
     'lib/memories-view.mjs',
     'lib/image-compress.mjs',
@@ -106,6 +107,7 @@ const call = async (url, opts = {}) => {
     'pages/api/memories/[id]/comments.js',
     'pages/api/memories/[id]/comments/[cid].js',
     'pages/api/memories/[id]/editors.js',
+    'pages/api/accounts/search.js',
     'pages/api/media/[...path].js',
     'pages/api/admin/memories.js',
     'pages/api/admin/memory-editors.js',
@@ -114,11 +116,13 @@ const call = async (url, opts = {}) => {
     'components/MemoryComposer.js',
     'components/MemoryItem.js',
     'components/MemoryGrants.js',
+    'components/AccountPicker.js',
+    'components/ConsentDialog.js',
     'components/TagPicker.js',
     'styles/memories.css',
   ];
   const missing = files.filter((f) => !exists(f));
-  ok(missing.length === 0, '21 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
+  ok(missing.length === 0, '25 个文件都在', missing.length ? '缺 ' + missing.join(', ') : '');
 
   ok(read('components/Layout.js').includes("href: '/memories'"), '主导航有「群友回忆」');
   ok(
@@ -130,6 +134,7 @@ const call = async (url, opts = {}) => {
   ok(read('.gitignore').includes('.uploads/'), '.gitignore 忽略了 .uploads');
 
   const cl = read('lib/changelog.js');
+  ok(cl.includes("version: '1.20.0'"), '更新日志有 1.20.0（出镜同意 + 拍摄时间地点）');
   ok(cl.includes("version: '1.19.0'"), '更新日志有 1.19.0（单条授权）');
   ok(cl.includes("version: '1.18.0'"), '更新日志有 1.18.0（标签）');
   ok(cl.includes("version: '1.17.0'"), '更新日志有 1.17.0');
@@ -147,6 +152,22 @@ const call = async (url, opts = {}) => {
   ok(read('components/MemoryComposer.js').includes('<TagPicker'), '发布框复用标签选择器');
   ok(read('components/MemoryItem.js').includes('<TagPicker'), '编辑态复用标签选择器');
   ok(read('pages/memories/index.js').includes('?tag='), '筛选状态写进 URL（可分享/刷新）');
+
+  // 出镜同意：提示在发布框里，确认框是一个独立组件，两处都在才算接通
+  ok(read('components/MemoryComposer.js').includes('mem-consent'), '发布框里有出镜同意提示');
+  ok(read('components/MemoryComposer.js').includes('<ConsentDialog'), '点发布时会弹同意确认框');
+  ok(read('components/ConsentDialog.js').includes('type="checkbox"'), '确认框里是要亲手勾的勾选框');
+  ok(read('pages/api/memories/index.js').includes('body.consent !== true'), '服务端也要求 consent（不是只靠前端）');
+
+  // 选人在发布框和卡片里共用一个控件
+  ok(read('components/AccountPicker.js').includes('/api/accounts/search'), '选人控件走账号搜索接口');
+  ok(read('components/MemoryComposer.js').includes('<AccountPicker'), '发布框能指定谁能改');
+  ok(read('components/MemoryGrants.js').includes('<AccountPicker'), '卡片里的名单复用同一个控件');
+
+  // 拍摄时间地点
+  ok(read('components/MemoryComposer.js').includes('shotOn'), '发布框能填拍摄日期');
+  ok(read('components/MemoryItem.js').includes('fmtShotOn'), '卡片里显示拍摄日期');
+  ok(read('pages/admin/memories.js').includes('m.consentedAt'), '后台能看到出镜同意的留痕');
 
   // 页面里不能再包 Layout（会渲染两个 header）。判 import 而不是找字符串，
   // 因为文件注释里就写着「不要包 <Layout>」，按字符串判会自己把自己绊倒。
@@ -192,6 +213,22 @@ const call = async (url, opts = {}) => {
   ok(tg.normalizeTags(null).length === 0, 'null 进来返回空数组而不是炸');
   ok(tg.normalizeTags(['   ', '#']).length === 0, '全空/只有井号的标签被丢掉');
 
+  /* 拍摄日期：Date 会把 2 月 30 日静默进位成 3 月 2 日，所以必须自己验一遍 */
+  const fld = await import('../lib/memories-fields.mjs');
+  ok(fld.normalizeShotOn('2026-10-21') === '2026-10-21', '正常日期通过');
+  ok(fld.normalizeShotOn('') === '' && fld.normalizeShotOn(null) === '', '没填日期算合法空值');
+  ok(fld.normalizeShotOn('2026-02-30') === null, '2 月 30 日被拒（不会进位成 3 月 2 日）');
+  ok(fld.normalizeShotOn('2026-13-01') === null, '13 月被拒');
+  ok(fld.normalizeShotOn('2026-1-5') === null, '少补零的日期被拒（只认 YYYY-MM-DD）');
+  ok(fld.normalizeShotOn('2026/10/21') === null, '斜杠格式被拒');
+  ok(fld.normalizeShotOn('1960-01-01') === null, '早于 1990 的日期被拒（一定是打错）');
+  ok(fld.normalizeShotOn('2026-10-21T00:00:00Z') === null, '带时间的串被拒（date 列不接受）');
+  ok(fld.normalizePlace('  深圳   南山 ') === '深圳 南山', '地点折空白并去首尾空格');
+  ok([...fld.normalizePlace('一'.repeat(80))].length === fld.PLACE_LIMIT, '地点截到 40 字');
+  ok(fld.normalizePlace(undefined) === '', '地点不填返回空串');
+  ok(fld.fmtShotOn('2026-10-21') === '2026.10.21', '日期显示成 2026.10.21');
+  ok(fld.fmtShotOn('') === '', '没有日期就显示空（不写 0000.00.00）');
+
   /* ---------------- ③ 链路 ---------------- */
   const ck = cookie();
   console.log('\n[链路 · ' + BASE + ']');
@@ -226,6 +263,27 @@ const call = async (url, opts = {}) => {
     });
     ok(badPath.status === 400, '发布时带非法照片路径被拒（400）');
 
+    /* 出镜同意：有照片就必须带 consent —— 这一条是服务端判的，
+       确认框拦不住直接调接口的人。 */
+    const noConsent = await call('/api/memories', {
+      method: 'POST',
+      cookie: ck,
+      body: { content: '没有确认出镜同意', photos: [{ p, w: 1, h: 1 }] },
+    });
+    ok(
+      noConsent.status === 400,
+      '有照片但没确认出镜同意被拒（400）',
+      (noConsent.json && noConsent.json.error) || ''
+    );
+
+    const badDay = await call('/api/memories', {
+      method: 'POST',
+      cookie: ck,
+      body: { content: '日期不对', photos: [{ p, w: 1, h: 1 }], consent: true, shotOn: '2026-02-30' },
+    });
+    ok(badDay.status === 400, '不存在的日期被拒（400）', (badDay.json && badDay.json.error) || '');
+
+    const me = sessionNameOf(ck);
     const created = await call('/api/memories', {
       method: 'POST',
       cookie: ck,
@@ -234,6 +292,11 @@ const call = async (url, opts = {}) => {
         photos: [{ p, w: 1, h: 1 }],
         // 发布时就带标签，顺带验一次「同一条回忆里重复的标签只留一个」
         tags: ['自检标签Zq', ' 自检标签Zq ', '#聚会'],
+        shotOn: '2026-10-19',
+        place: '深圳南山',
+        consent: true,
+        // 发布时顺手指定谁能改（拿自己当试验品，测完就撤）
+        editors: me ? [me] : [],
       },
     });
     ok(created.status === 201 && created.json && created.json.memory, '发布成功');
@@ -251,6 +314,38 @@ const call = async (url, opts = {}) => {
         created.json.memory &&
         created.json.memory.photos[0].url === '/api/media/' + p,
       '返回体里的照片 URL 由 photoUrl 统一拼接'
+    );
+
+    ok(
+      created.json && created.json.memory && created.json.memory.shotOn === '2026-10-19',
+      '拍摄日期入库并原样返回（不会被时区挪一天）',
+      'shotOn=' + (created.json && created.json.memory && created.json.memory.shotOn)
+    );
+    ok(
+      created.json && created.json.memory && created.json.memory.place === '深圳南山',
+      '拍摄地点入库',
+      'place=' + (created.json && created.json.memory && created.json.memory.place)
+    );
+    ok(
+      created.json && Array.isArray(created.json.rejected) && !created.json.rejected.length,
+      '发布时指定的人全部加上了',
+      'rejected=' + JSON.stringify(created.json && created.json.rejected)
+    );
+    const createdEditors = (created.json && created.json.editors) || [];
+    ok(
+      createdEditors.length === 1 && createdEditors[0].account === String(me).toLowerCase(),
+      '发布时指定的人进了这一条的名单',
+      'account=' + (createdEditors[0] && createdEditors[0].account)
+    );
+
+    // 撤掉这个人，后面还要验「名单初始为空」那条
+    const preDel = await call(
+      `/api/memories/${mid}/editors?account=` + encodeURIComponent(me),
+      { method: 'DELETE', cookie: ck }
+    );
+    ok(
+      preDel.status === 200 && preDel.json && preDel.json.editors.length === 0,
+      '发布时指定的人也能撤掉'
     );
 
     const media = await call('/api/media/' + p);
@@ -305,6 +400,45 @@ const call = async (url, opts = {}) => {
     ok(
       tagged.json && tagged.json.memory.content === '自检：改过的文案',
       '只传 tags 时正文保持不变'
+    );
+
+    /* 拍摄日期与地点：能改、能清空、非法日期要拦住，
+       而且改这两样时正文和标签不能被顺手改掉。 */
+    const meta = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { shotOn: '2026-09-30', place: '广州天河' },
+    });
+    ok(
+      meta.status === 200 &&
+        meta.json &&
+        meta.json.memory &&
+        meta.json.memory.shotOn === '2026-09-30' &&
+        meta.json.memory.place === '广州天河',
+      '拍摄日期和地点都能改'
+    );
+    ok(
+      meta.json &&
+        meta.json.memory.content === '自检：改过的文案' &&
+        meta.json.memory.tags.length === 2,
+      '只改日期地点时正文和标签没被动'
+    );
+
+    const badMeta = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { shotOn: '2026-02-30' },
+    });
+    ok(badMeta.status === 400, '改成语义上不存在的日期被拒（400）', 'status=' + badMeta.status);
+
+    const clearMeta = await call(`/api/memories/${mid}`, {
+      method: 'PATCH',
+      cookie: ck,
+      body: { shotOn: '', place: '' },
+    });
+    ok(
+      clearMeta.json && clearMeta.json.memory.shotOn === '' && clearMeta.json.memory.place === '',
+      '日期和地点可以清空（传空串）'
     );
 
     const manyTags = await call(`/api/memories/${mid}`, {
@@ -413,8 +547,31 @@ const call = async (url, opts = {}) => {
 
     /* 单条授权：只对 memory_id 这一条生效的名单。
        真实账号用 cookie 里的登录名（解出来才知道自己叫什么），
-       加完再撤掉，不给线上留影子数据。 */
-    const me = sessionNameOf(ck);
+       加完再撤掉，不给线上留影子数据。me 在上面创建时已经解过。 */
+    // 选人控件靠这个接口把昵称翻成账号（否则「我明明加了他」）
+    const accAnon = await call('/api/accounts/search?q=' + encodeURIComponent(me));
+    ok(accAnon.status === 401, '未登录搜人被拒（401）', 'status=' + accAnon.status);
+
+    const accHit = await call('/api/accounts/search?q=' + encodeURIComponent(me), { cookie: ck });
+    ok(
+      accHit.status === 200 &&
+        accHit.json &&
+        accHit.json.accounts.some((a) => a.account === String(me).toLowerCase()),
+      '按账号搜得到自己',
+      'n=' + ((accHit.json && accHit.json.accounts.length) || 0)
+    );
+    ok(
+      accHit.json &&
+        accHit.json.accounts.every((a) => !('score' in a) && !('rank' in a) && !('region' in a)),
+      '搜索结果只带账号/昵称/id，不夹带其它资料'
+    );
+
+    const accNone = await call('/api/accounts/search?q=zzz-no-such-zzz', { cookie: ck });
+    ok(
+      accNone.status === 200 && accNone.json && accNone.json.accounts.length === 0,
+      '搜不到时返回空数组而不是报错'
+    );
+
     const grantAnon = await call(`/api/memories/${mid}/editors`);
     ok(grantAnon.status === 401, '未登录读单条授权名单被拒（401）', 'status=' + grantAnon.status);
 

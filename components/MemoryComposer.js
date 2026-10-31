@@ -1,22 +1,27 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../lib/api-client.mjs';
 import { compressImage } from '../lib/image-compress.mjs';
 import { normalizeTags } from '../lib/memories-tags.mjs';
+import { PLACE_LIMIT } from '../lib/memories-fields.mjs';
 import TagPicker from './TagPicker';
+import AccountPicker from './AccountPicker';
+import ConsentDialog from './ConsentDialog';
 
 /**
- * 发一条回忆：一段文字 + 最多 9 张照片 + 最多 5 个标签。
+ * 发一条回忆：一段文字 + 最多 9 张照片 + 最多 5 个标签
+ * + 拍摄的时间和地点 + 指定谁能改这条。
  *
  * 上传时机是「选完图立刻传」，不是「点发布才传」：
  *   - 弱网下 9 张图串行传要十几秒，卡在发布按钮上会让人以为卡死了；
  *   - 单张失败可以只重传那张，不影响已经传好的。
  * 代价是「选了图又不发」会在服务器留孤儿文件，小站可以忽略（也便于人工找回）。
  *
- * 正文长度 800，和 lib/memories.mjs 的 TEXT_LIMIT 对齐；提示语不说「审核」，
- * 只说「发不出去」，因为绝大多数情况是词表命中，跟用户解释规则没意义。
+ * 「谁能改」在发布时就指定：照片是几个人一起拍的，谁能补一句、谁能加个标签，
+ * 发的人当场就知道。发完再回头点「谁能改」加人也可以，但那时候往往已经忘了。
  *
- * 标签不强制：绝大多数照片归不进任何类别，逼人选只会让人乱点。
- * 但一旦要选，候选就当开关用 —— 点一下选中、再点取消，不做下拉菜单。
+ * 出镜同意坚持两步：照片旁边一句提示，点发布时再弹一个必须勾的确认框 ——
+ * 提示会被跳过，勾选框不会。服务端还要求照片非空时必须带 consent，
+ * 所以直接调接口也绕不过去。
  */
 
 const MAX_PHOTOS = 9;
@@ -30,10 +35,24 @@ export default function MemoryComposer({ onCreated }) {
   const [items, setItems] = useState([]);
   const [tags, setTags] = useState([]);
   const [tagDraft, setTagDraft] = useState('');
+  const [shotOn, setShotOn] = useState('');
+  const [place, setPlace] = useState('');
+  // 发布时指定的人：先存本地，发出去的时候一起交给接口（那时才有 memory_id）
+  const [editors, setEditors] = useState([]);
+  const [today, setToday] = useState('');
   const [busy, setBusy] = useState(false);
+  const [consentOpen, setConsentOpen] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const fileRef = useRef(null);
+
+  /* 日期选择器的上限用挂载后算的今天：直接渲染时算会和 SSR 的日期打架
+     （跨零点那一刻两边不一样，React 会报 hydration 不匹配）。 */
+  useEffect(() => {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    setToday(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`);
+  }, []);
 
   const patch = (key, next) =>
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...next } : it)));
@@ -79,13 +98,24 @@ export default function MemoryComposer({ onCreated }) {
 
   const remove = (key) => setItems((prev) => prev.filter((it) => it.key !== key));
 
-  const submit = async () => {
-    if (!canPost) return;
+  const reset = () => {
+    setText('');
+    setItems([]);
+    setTags([]);
+    setTagDraft('');
+    setShotOn('');
+    setPlace('');
+    setEditors([]);
+  };
+
+  const doPost = async () => {
+    if (busy) return;
     setBusy(true);
     setErr('');
     setMsg('');
     // 打完标签没回车就点发布也要算数：这里再合一次，不依赖 blur 事件
     const finalTags = tagDraft.trim() ? normalizeTags([...tags, tagDraft]) : tags;
+    const hasPhotos = uploaded.length > 0;
     try {
       const r = await apiFetch('/api/memories', {
         method: 'POST',
@@ -93,15 +123,21 @@ export default function MemoryComposer({ onCreated }) {
           content: text.trim(),
           photos: uploaded.map((it) => ({ p: it.p, w: it.w, h: it.h })),
           tags: finalTags,
+          shotOn,
+          place,
+          // 走到这里说明确认框已经勾过了（没照片时不弹框，也就不需要这一项）
+          consent: hasPhotos ? true : undefined,
+          editors: editors.map((e) => e.account),
         },
         timeout: 30000,
       });
       if (!r || !r.success || !r.memory) throw new Error((r && r.error) || '没发出去');
-      setText('');
-      setItems([]);
-      setTags([]);
-      setTagDraft('');
+      setConsentOpen(false);
+      reset();
       setMsg('发出去了');
+      // 填错的账号不该无声消失：整条已经发出去，但这几个人没进名单，得说清楚
+      const missed = (r.rejected || []).filter(Boolean);
+      if (missed.length) setErr('发出去了，但这几位没加上：' + missed.join('、'));
       if (onCreated) onCreated(r.memory);
       setTimeout(() => setMsg(''), 2500);
     } catch (e) {
@@ -109,6 +145,16 @@ export default function MemoryComposer({ onCreated }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  /** 点发布：有照片先过确认框，纯文字的回忆没有出镜问题，直接发。 */
+  const submit = () => {
+    if (!canPost) return;
+    if (uploaded.length > 0) {
+      setConsentOpen(true);
+      return;
+    }
+    doPost();
   };
 
   return (
@@ -122,12 +168,53 @@ export default function MemoryComposer({ onCreated }) {
         rows={3}
       />
 
+      {/* 时间与地点：给照片做注解，不是发布时刻。都可以不填。 */}
+      <div className="mem-whenrow">
+        <label className="mem-whenfield">
+          <span className="mem-whenlabel">拍的哪天</span>
+          <input
+            type="date"
+            className="mem-wheninput"
+            value={shotOn}
+            max={today || undefined}
+            onChange={(e) => setShotOn(e.target.value)}
+          />
+        </label>
+        <label className="mem-whenfield is-wide">
+          <span className="mem-whenlabel">哪儿</span>
+          <input
+            type="text"
+            className="mem-wheninput"
+            value={place}
+            maxLength={PLACE_LIMIT}
+            placeholder="深圳南山 / 老王家 / 网吧二楼"
+            onChange={(e) => setPlace(e.target.value)}
+          />
+        </label>
+      </div>
+
       <TagPicker
         value={tags}
         onChange={setTags}
         draft={tagDraft}
         onDraftChange={setTagDraft}
       />
+
+      <div className="mem-tagrow">
+        <span className="mem-taglabel">谁能改</span>
+        <AccountPicker
+          value={editors}
+          onAdd={(hit) => setEditors((prev) => [...prev, hit])}
+          onRemove={(account) => setEditors((prev) => prev.filter((e) => e.account !== account))}
+          placeholder="搜昵称，能补文案和标签"
+          emptyHint="没这个人，换个字试试"
+        />
+      </div>
+
+      <p className="mem-consent">
+        <strong>发之前先问一声。</strong>
+        照片里出现的每个人都要先同意被发到这里；谁不愿意，就把那张删掉，或者等问过了再发。
+      </p>
 
       {items.length > 0 && (
         <div className="mem-thumbs">
@@ -181,6 +268,14 @@ export default function MemoryComposer({ onCreated }) {
         multiple
         hidden
         onChange={pick}
+      />
+
+      <ConsentDialog
+        open={consentOpen}
+        busy={busy}
+        photoCount={uploaded.length}
+        onCancel={() => setConsentOpen(false)}
+        onConfirm={doPost}
       />
     </section>
   );

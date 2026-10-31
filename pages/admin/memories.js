@@ -188,12 +188,30 @@ export default function AdminMemoriesPage({ denied }) {
                       <span className="is-weak">—</span>
                     )}
                   </td>
-                  <td className="is-nowrap">{when(m.createdAt)}</td>
+                  <td className="is-nowrap">
+                    <div>{when(m.createdAt)}</div>
+                    {(m.shotOn || m.place) && (
+                      <div className="is-weak" style={{ fontSize: '0.72rem', marginTop: 2 }}>
+                        拍于 {[m.place, m.shotOn].filter(Boolean).join(' · ')}
+                      </div>
+                    )}
+                  </td>
                   <td className="is-nowrap">
                     {m.deletedAt ? (
                       <span className="adm-chip is-bad">已删 {m.deletedBy || ''}</span>
                     ) : (
                       <span className="adm-chip is-ok">在线</span>
+                    )}
+                    {/* 出镜同意的留痕：发布者点「都同意了」的时刻。删图起争议时，
+                        这是唯一能查的记录，所以在后台露出来（前台不显示）。 */}
+                    {!m.deletedAt && m.consentedAt && (
+                      <span
+                        className="adm-chip"
+                        style={{ marginLeft: 4 }}
+                        title={`发布者确认「照片里的人都同意」：${when(m.consentedAt)}`}
+                      >
+                        同意
+                      </span>
                     )}
                   </td>
                   <td className="adm-ops">

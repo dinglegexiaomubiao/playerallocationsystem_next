@@ -14,12 +14,15 @@ import {
   listMemories,
   createMemory,
   checkTags,
+  checkPlace,
+  addMemoryGrants,
   authorOfAccount,
   allowAction,
   isPhotoPath,
   MAX_PHOTOS,
   TEXT_LIMIT,
 } from '../../../lib/memories.mjs';
+import { normalizeShotOn } from '../../../lib/memories-fields.mjs';
 import { openStored } from '../../../lib/memory-store.mjs';
 
 // 正文最多 800 字 + 9 个照片路径，普通 JSON 足够；这里放宽只是防止异常大包
@@ -89,6 +92,27 @@ export default async function handler(req, res) {
       const tagCheck = checkTags(body.tags);
       if (!tagCheck.ok) return res.status(400).json({ success: false, error: tagCheck.error });
 
+      /* 拍摄日期/地点：只描述照片本身，不参与排序，所以不截断也不复审 ——
+         日期格式不对直接 400（静默丢一个日期比报错更让人困惑），
+         地点走和标签同一套词表。 */
+      const shotOn = normalizeShotOn(body.shotOn);
+      if (shotOn === null) {
+        return res.status(400).json({ success: false, error: '拍摄日期不对，用 2026-10-21 这种格式' });
+      }
+      const placeCheck = checkPlace(body.place);
+      if (!placeCheck.ok) return res.status(400).json({ success: false, error: placeCheck.error });
+
+      /* 出镜同意：有照片就必须带 consent=true。
+         这一条是**服务端**判的，不只是前端的确认框 ——
+         确认框挡不住直接调接口的人，而这一项挡的是「有人被拍进去却不知情」。 */
+      if (photos.length && body.consent !== true) {
+        return res.status(400).json({ success: false, error: '请先确认照片里出现的人都同意出镜' });
+      }
+
+      // 发布时顺手指定「谁能改这条」：账号（或昵称）不存在的会被挑出来，
+      // 但不影响这条回忆本身发出去 —— 一个人填错不该让整条发不出去
+      const wantedEditors = Array.isArray(body.editors) ? body.editors : [];
+
       // 一个人一小时最多 20 条，够用，也能挡住脚本刷屏
       const who = authorOfAccount(session && session.name);
       const gate = allowAction('memory:' + ((session && session.name) || getClientIp(req)), 20);
@@ -105,8 +129,23 @@ export default async function handler(req, res) {
         content: clean,
         photos,
         tags: tagCheck.tags,
+        shotOn,
+        place: placeCheck.place,
+        consent: photos.length > 0 && body.consent === true,
       });
-      return res.status(201).json({ success: true, memory });
+
+      // 指定谁改这条：在回忆建好之后加（要靠 memory_id）。
+      // 失败的那几个人放进 rejected，前端提示「这几个没加上」，不吞掉。
+      const grants = wantedEditors.length
+        ? await addMemoryGrants(memory.id, wantedEditors, (session && session.name) || '')
+        : { rejected: [], editors: [] };
+
+      return res.status(201).json({
+        success: true,
+        memory,
+        editors: grants.editors,
+        rejected: grants.rejected,
+      });
     } catch (e) {
       console.error('[memories] 发布失败:', e);
       const msg = e && e.message === '写点什么或者传张照片' ? e.message : '发布失败，稍后重试';

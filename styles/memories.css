@@ -239,6 +239,146 @@
   font-size: 0.78rem;
 }
 
+/* ---------- 拍摄时间 / 地点（发布框与编辑态共用） ---------- */
+
+.mem-whenrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+
+.mem-whenfield {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* 地点比日期长，抢剩余宽度；日期保持自己的宽度，别被拉成一条 */
+.mem-whenfield.is-wide {
+  flex: 1 1 200px;
+}
+
+.mem-whenlabel {
+  flex: none;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.mem-wheninput {
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+/* 日期用等宽：数字对齐，一眼能看出「10.21」和「1O.21」的区别 */
+.mem-wheninput[type='date'] {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.mem-wheninput:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.mem-wheninput::placeholder {
+  color: var(--text-3);
+}
+
+.mem-whenfield.is-wide .mem-wheninput {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+/* ---------- 出镜同意提示 ---------- */
+
+/* 左侧一道品牌色竖线，而不是整块淡红底：这页没有别的地方有底色块，
+   一旦出现就会抢走照片的注意力。提示要看得见，但不该比照片更响。 */
+.mem-consent {
+  margin: 12px 0 0;
+  padding: 7px 0 7px 10px;
+  border-left: 2px solid var(--brand);
+  color: var(--text-3);
+  font-size: 0.76rem;
+  line-height: 1.7;
+}
+
+.mem-consent strong {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* ---------- 选人（谁能改这条） ---------- */
+
+.mem-acc {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mem-acc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* 候选列表内联展开：浮层会被父容器的 overflow 裁掉，键盘能选、眼睛看不见 */
+.mem-acc-hits {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.mem-acc-hit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.mem-acc-hit:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.mem-acc-hit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mem-acc-id {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-3);
+}
+
+.mem-acc-hit:hover:not(:disabled) .mem-acc-id {
+  color: inherit;
+  opacity: 0.75;
+}
+
 .mem-guest {
   margin: 0 0 26px;
   padding: 14px 16px;
@@ -633,6 +773,38 @@
   word-break: break-word;
 }
 
+/* 日期栏：地点在前、日期在后（人先想知道「哪儿」，再想知道「什么时候」）。
+   整行不发红不加粗 —— 它是注解，不是标题。 */
+.mem-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  color: var(--text-2);
+}
+
+.mem-when-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.mem-where {
+  color: var(--text-2);
+}
+
+.mem-when-sep,
+.mem-when-day {
+  color: var(--text-3);
+}
+
+.mem-when-day {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
 /* ---------- 图片 ---------- */
 
 .mem-grid {
@@ -852,6 +1024,104 @@
 .mem-more {
   margin-top: 26px;
   text-align: center;
+}
+
+/* ---------- 出镜同意确认框 ---------- */
+
+/* 110 而不是 60：站点 header 是 50、右侧浮球最高 92，这个框要盖在所有东西上面 */
+.mem-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--overlay-scrim);
+}
+
+.mem-modal-card {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 20px 22px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  box-shadow: 0 24px 60px -24px rgba(8, 10, 13, 0.55);
+}
+
+.mem-modal-card:focus {
+  outline: none;
+}
+
+.mem-modal-title {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 1.06rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.mem-modal-lede {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text-2);
+}
+
+.mem-modal-list {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  font-size: 0.82rem;
+  line-height: 1.75;
+  color: var(--text-2);
+}
+
+.mem-modal-list li {
+  margin: 2px 0;
+}
+
+/* 必须亲手勾的那一下：整块都能点，做大一点，别让人错点在文字缝隙里 */
+.mem-consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mem-consent-check input {
+  flex: none;
+  margin-top: 3px;
+  accent-color: var(--brand-solid);
+}
+
+.mem-modal-note {
+  margin: 9px 0 0;
+  font-size: 0.72rem;
+  color: var(--text-3);
+}
+
+.mem-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-height: 520px) {
+  .mem-modal {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 720px) {
